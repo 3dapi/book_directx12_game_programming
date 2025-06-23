@@ -17,6 +17,12 @@ inline void SAFE_RELEASE(T*& p)
 	}
 }
 
+struct ConstBufTM
+{
+	XMFLOAT4X4 m{};
+	static const unsigned ALIGNED_SIZE;
+};
+
 struct ConstBufMVP
 {
 	XMFLOAT4X4 m{};
@@ -24,6 +30,14 @@ struct ConstBufMVP
 	XMFLOAT4X4 p{};
 	static const unsigned ALIGNED_SIZE;
 };
+
+struct CONST_BUF
+{
+	ConstBufMVP				buf {};
+	ComPtr<ID3D12Resource>	rsc	{};
+	uint8_t*				ptr	{};
+};
+
 
 struct Vertex
 {
@@ -45,9 +59,8 @@ protected:
 	ComPtr<ID3D12PipelineState>				m_pipelineState;
 	ComPtr<ID3D12Resource>					m_rscVtx;
 	ComPtr<ID3D12Resource>					m_rscIdx;
-	ComPtr<ID3D12Resource>					m_cnstMVP;
-	ConstBufMVP								m_cnstBufMVP{};
-	uint8_t*								m_csnstPtrMVP{};
+
+	CONST_BUF								m_mvp	{};
 	D3D12_VERTEX_BUFFER_VIEW				m_viewVtx;
 	D3D12_INDEX_BUFFER_VIEW					m_viewIdx;
 

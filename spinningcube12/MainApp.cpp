@@ -6,6 +6,7 @@
 #include "SampleVertexShader.h"
 #include "SamplePixelShader.h"
 
+const unsigned ConstBufTM::ALIGNED_SIZE = (sizeof(ConstBufTM) + 255) & ~255;
 const unsigned ConstBufMVP::ALIGNED_SIZE = (sizeof(ConstBufMVP) + 255) & ~255;
 
 
@@ -46,7 +47,6 @@ MainApp::MainApp(const std::shared_ptr<DX::D3DDevice>& deviceResources) :
 	m_radiansPerSecond(XM_PIDIV4),	// rotate 45 degrees per second
 	m_angle(0),
 	m_tracking(false),
-	m_csnstPtrMVP(nullptr),
 	m_pDevice(deviceResources)
 {
 	CreateDeviceDependentResources();
@@ -55,8 +55,8 @@ MainApp::MainApp(const std::shared_ptr<DX::D3DDevice>& deviceResources) :
 
 MainApp::~MainApp()
 {
-	m_cnstMVP->Unmap(0, nullptr);
-	m_csnstPtrMVP = nullptr;
+	m_mvp.rsc->Unmap(0, nullptr);
+	m_mvp.ptr = nullptr;
 }
 
 void MainApp::CreateDeviceDependentResources()
@@ -247,19 +247,13 @@ void MainApp::CreateDeviceDependentResources()
 		}
 
 		CD3DX12_RESOURCE_DESC constantBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(DX::FRAME_BUFFER_COUNT * ConstBufMVP::ALIGNED_SIZE);
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&uploadHeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&constantBufferDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_cnstMVP)));
+		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &constantBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_mvp.rsc)));
 
 		m_d3dDescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 
 		// Create constant buffer views to access the upload buffer.
-		D3D12_GPU_VIRTUAL_ADDRESS cbvGpuAddress = m_cnstMVP->GetGPUVirtualAddress();
+		D3D12_GPU_VIRTUAL_ADDRESS cbvGpuAddress = m_mvp.rsc->GetGPUVirtualAddress();
 		D3D12_CPU_DESCRIPTOR_HANDLE cbvCpuHandle = m_cbvHeap->GetCPUDescriptorHandleForHeapStart();
 		for (int n = 0; n < DX::FRAME_BUFFER_COUNT; n++)
 		{
@@ -275,7 +269,7 @@ void MainApp::CreateDeviceDependentResources()
 
 		// Map the constant buffers.
 		CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-		DX::ThrowIfFailed(m_cnstMVP->Map(0, &readRange, reinterpret_cast<void**>(&m_csnstPtrMVP)));
+		DX::ThrowIfFailed(m_mvp.rsc->Map(0, &readRange, reinterpret_cast<void**>(&m_mvp.ptr)));
 
 
 		// Close the command list and execute it to begin the vertex/index buffer copy into the GPU's default heap.
@@ -315,14 +309,14 @@ void MainApp::CreateWindowSizeDependentResources()
 	
 	// This sample makes use of a right-handed coordinate system using row-major matrices.
 	XMMATRIX perspectiveMatrix = XMMatrixPerspectiveFovLH(fovAngleY, aspectRatio, 0.01f, 100.0f );
-	XMStoreFloat4x4(&m_cnstBufMVP.p, perspectiveMatrix);
+	XMStoreFloat4x4(&m_mvp.buf.p, perspectiveMatrix);
 
 	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
 	static const XMVECTORF32 eye = { 0.0f, 1.0f, -5.0f, 0.0f};
 	static const XMVECTORF32 at = { 0.0f, 1.0f, 0.0f, 0.0f };
 	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
-	XMStoreFloat4x4(&m_cnstBufMVP.v, XMMatrixLookAtLH(eye, at, up));
+	XMStoreFloat4x4(&m_mvp.buf.v, XMMatrixLookAtLH(eye, at, up));
 }
 
 // Called once per frame, rotates the cube and calculates the model and view matrices.
@@ -340,8 +334,8 @@ void MainApp::Update(DX::StepTimer const& timer)
 
 		// Update the constant buffer resource.
 		auto currentFrameIndex = m_pDevice->GetCurrentFrameIndex();
-		UINT8* destination = m_csnstPtrMVP + (currentFrameIndex * ConstBufMVP::ALIGNED_SIZE);
-		memcpy(destination, &m_cnstBufMVP, sizeof(m_cnstBufMVP));
+		UINT8* destination = m_mvp.ptr + (currentFrameIndex * ConstBufMVP::ALIGNED_SIZE);
+		memcpy(destination, &m_mvp.buf, sizeof(ConstBufMVP));
 	}
 }
 
@@ -349,7 +343,7 @@ void MainApp::Update(DX::StepTimer const& timer)
 void MainApp::Rotate(float radians)
 {
 	// Prepare to pass the updated model matrix to the shader.
-	XMStoreFloat4x4(&m_cnstBufMVP.m, XMMatrixRotationY(radians));
+	XMStoreFloat4x4(&m_mvp.buf.m, XMMatrixRotationY(radians));
 }
 
 // Renders one frame using the vertex and pixel shaders.
