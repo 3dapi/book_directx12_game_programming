@@ -7,7 +7,10 @@
 #include <Windows.h>
 #include "GraphicsEngineD3D.h"
 #include "d3dUtil.h"
+#include "G2Util.h"
+
 using std::unique_ptr;
+using namespace G2;
 
 static unique_ptr<EngineD3D> g_engineD3D;
 
@@ -522,7 +525,7 @@ void EngineD3D::LogAdapters()
 	for (size_t i = 0; i < adapterList.size(); ++i)
 	{
 		LogAdapterOutputs(adapterList[i]);
-		_SAFE_RELEASE_(adapterList[i]);
+		SAFE_RELEASE(adapterList[i]);
 	}
 }
 
@@ -541,8 +544,7 @@ void EngineD3D::LogAdapterOutputs(IDXGIAdapter* adapter)
 		OutputDebugString(text.c_str());
 
 		LogOutputDisplayModes(output, m_d3dFormatBackbuffer);
-
-		_SAFE_RELEASE_(output);
+		SAFE_RELEASE(output);
 
 		++i;
 	}

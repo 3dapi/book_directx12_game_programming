@@ -1269,6 +1269,7 @@ static HRESULT CreateD3DResources12(
 		texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 		texDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
+		//AFEW::(D)
 		hr = device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
@@ -1302,6 +1303,7 @@ static HRESULT CreateD3DResources12(
 			}
 			else
 			{
+				//AFEW::(D)
 				cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture.Get(),
 					D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
 

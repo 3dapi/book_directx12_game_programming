@@ -4,6 +4,7 @@
 
 #include "MainApp.h"
 #include "Common/DDSTextureLoader.h"
+#include "Common/G2Util.h"
 
 static MainApp* g_pMain{};
 
@@ -429,22 +430,22 @@ void MainApp::LoadTextures()
 	auto grassTex = std::make_unique<Texture>();
 	grassTex->Name = "grassTex";
 	grassTex->Filename = L"Textures/grass.dds";
-	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, grassTex->Filename.c_str(), grassTex->Resource, grassTex->UploadHeap));
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, grassTex->Filename.c_str(), grassTex->rsc, grassTex->heap));
 
 	auto waterTex = std::make_unique<Texture>();
 	waterTex->Name = "waterTex";
 	waterTex->Filename = L"Textures/water1.dds";
-	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, waterTex->Filename.c_str(), waterTex->Resource, waterTex->UploadHeap));
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, waterTex->Filename.c_str(), waterTex->rsc, waterTex->heap));
 
 	auto fenceTex = std::make_unique<Texture>();
 	fenceTex->Name = "fenceTex";
 	fenceTex->Filename = L"Textures/WireFence.dds";
-	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, fenceTex->Filename.c_str(), fenceTex->Resource, fenceTex->UploadHeap));
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, fenceTex->Filename.c_str(), fenceTex->rsc, fenceTex->heap));
 
 	auto treeArrayTex = std::make_unique<Texture>();
 	treeArrayTex->Name = "treeArrayTex";
 	treeArrayTex->Filename = L"Textures/treeArray2.dds";
-	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, treeArrayTex->Filename.c_str(), treeArrayTex->Resource, treeArrayTex->UploadHeap));
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, treeArrayTex->Filename.c_str(), treeArrayTex->rsc, treeArrayTex->heap));
 
 	mTextures[grassTex->Name] = std::move(grassTex);	mTextures[waterTex->Name] = std::move(waterTex);
 	mTextures[fenceTex->Name] = std::move(fenceTex);
@@ -509,10 +510,10 @@ void MainApp::BuildDescriptorHeaps()
 	//
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	auto grassTex = mTextures["grassTex"]->Resource;
-	auto waterTex = mTextures["waterTex"]->Resource;
-	auto fenceTex = mTextures["fenceTex"]->Resource;
-	auto treeArrayTex = mTextures["treeArrayTex"]->Resource;
+	auto grassTex = mTextures["grassTex"]->rsc;
+	auto waterTex = mTextures["waterTex"]->rsc;
+	auto fenceTex = mTextures["fenceTex"]->rsc;
+	auto treeArrayTex = mTextures["treeArrayTex"]->rsc;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;

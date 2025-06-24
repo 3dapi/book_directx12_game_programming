@@ -39,10 +39,10 @@ struct IG2Factory
 
 struct Texture
 {
-	std::string Name;
 	std::wstring Filename;
-	ComPtr<ID3D12Resource>	Resource	{};
-	ComPtr<ID3D12Resource>	UploadHeap	{};
+	std::string Name;
+	ComPtr<ID3D12Resource>	rsc	{};
+	ComPtr<ID3D12Resource>	heap{};
 };
 
 struct FactoryTexture : public IG2Factory

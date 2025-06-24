@@ -156,6 +156,7 @@
     <ClCompile Include="Common\d3dUtil.cpp" />
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
     <ClCompile Include="Common\G2ConstantsWin.cpp" />
+    <ClCompile Include="Common\G2Util.cpp" />
     <ClCompile Include="Common\GameTimer.cpp" />
     <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\GraphicsEngineD3D.cpp" />
@@ -173,6 +174,7 @@
     <ClInclude Include="Common\DDSTextureLoader.h" />
     <ClInclude Include="Common\G2Constants.h" />
     <ClInclude Include="Common\G2ConstantsWin.h" />
+    <ClInclude Include="Common\G2Util.h" />
     <ClInclude Include="Common\GameTimer.h" />
     <ClInclude Include="Common\GeometryGenerator.h" />
     <ClInclude Include="Common\GraphicsEngineD3D.h" />
