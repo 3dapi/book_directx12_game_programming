@@ -3,21 +3,22 @@
 //***************************************************************************************
 
 #include "MainApp.h"
+#include "Common/DDSTextureLoader.h"
 
-IG2AppFrame* instance()
+
+IG2AppFrame* IG2AppFrame::instance()
 {
-	return MainApp::GetApp();
+	if (!MainApp::m_pMain)
+	{
+		MainApp::m_pMain = new MainApp;
+	}
+	return MainApp::m_pMain;
 }
 
-MainApp* MainApp::m_pMain = nullptr;
-MainApp* MainApp::GetApp()
-{
-	return m_pMain;
-}
-
+MainApp* MainApp::m_pMain = nullptr
+;
 MainApp::MainApp()
 {
-	m_pMain = this;
 	d3dUtil::setFrameReourceNumer(3);
 }
 
@@ -29,15 +30,15 @@ MainApp::~MainApp()
 
 int MainApp::init(const std::any& initialValue /* = */)
 {
+	int hr = D3DWinApp::init(initialValue);
+	if (FAILED(hr))
+		return hr;
+
 	auto d3d = IG2GraphicsD3D::instance();
 	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
 	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
 	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
-
-	int hr = D3DWinApp::init(initialValue);
-	if (FAILED(hr))
-		return hr;
 
 	// Reset the command list to prep for initialization commands.
 	ThrowIfFailed(d3dCommandList->Reset(d3dCommandAlloc, nullptr));
@@ -173,7 +174,8 @@ int MainApp::Render()
 
 	// Swap the back and front buffers
 	hr = d3d->command(CMD_PRESENT);
-	m_frameRscCur->Fence = std::any_cast<UINT64>(d3d->getAttrib(ATT_DEVICE_CURRENT_FENCE_INDEX));
+	auto fence = *std::any_cast<UINT64*>(d3d->getAttrib(ATT_DEVICE_CURRENT_FENCE_INDEX));
+	m_frameRscCur->Fence = fence;
 	return S_OK;
 }
 
@@ -414,30 +416,34 @@ int MainApp::UpdateFrameResource()
 
 void MainApp::LoadTextures()
 {
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
+	auto d3d = IG2GraphicsD3D::instance();
+	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
 
-	//auto grassTex = std::make_unique<Texture>();
-	//grassTex->Name = "grassTex";
-	//grassTex->Filename = L"../Textures/grass.dds";
-	//ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, grassTex->Filename.c_str(), grassTex->Resource, grassTex->UploadHeap));
 
-	//auto waterTex = std::make_unique<Texture>();
-	//waterTex->Name = "waterTex";
-	//waterTex->Filename = L"../Textures/water1.dds";
-	//ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, waterTex->Filename.c_str(), waterTex->Resource, waterTex->UploadHeap));
+	auto grassTex = std::make_unique<Texture>();
+	grassTex->Name = "grassTex";
+	grassTex->Filename = L"Textures/grass.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, grassTex->Filename.c_str(), grassTex->Resource, grassTex->UploadHeap));
 
-	//aut//fenceTex = std::make_unique<Texture>();
-	//fen//Tex->Name = "fenceTex";
-	//fen//Tex->Filename = L"../Textures/WireFence.dds";
-	///hrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, fenceTex->Filename.c_str(), fenceTex->Resource, fenceTex->UploadHeap));
+	auto waterTex = std::make_unique<Texture>();
+	waterTex->Name = "waterTex";
+	waterTex->Filename = L"Textures/water1.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, waterTex->Filename.c_str(), waterTex->Resource, waterTex->UploadHeap));
 
-	///uto treeArrayTex = std::make_unique<Texture>();//	//treeArrayTex->Name = "treeAr//yTex";
-	//treeArrayTex->Filename = L"../Textures///eeArray2.dds";
-	//ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, treeArrayTex->Filename.c_str(), treeArrayTex->Resource, t//eArrayTex->UploadHeap));
+	auto fenceTex = std::make_unique<Texture>();
+	fenceTex->Name = "fenceTex";
+	fenceTex->Filename = L"Textures/WireFence.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, fenceTex->Filename.c_str(), fenceTex->Resource, fenceTex->UploadHeap));
 
-	//mTextures[grassT//->Name] = std::move(grassTex);////mTextures[waterTex->Name] = std::move(waterTex);
-	//mTextures[fenceTex->Name] = std::move(fenceTex);
-	//mTextures[treeArrayTex->Name] = std::move(treeArrayTex);
+	auto treeArrayTex = std::make_unique<Texture>();
+	treeArrayTex->Name = "treeArrayTex";
+	treeArrayTex->Filename = L"Textures/treeArray2.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, treeArrayTex->Filename.c_str(), treeArrayTex->Resource, treeArrayTex->UploadHeap));
+
+	mTextures[grassTex->Name] = std::move(grassTex);	mTextures[waterTex->Name] = std::move(waterTex);
+	mTextures[fenceTex->Name] = std::move(fenceTex);
+	mTextures[treeArrayTex->Name] = std::move(treeArrayTex);
 }
 
 void MainApp::BuildRootSignature()
@@ -808,8 +814,9 @@ void MainApp::BuildTreeSpritesGeometry()
 	mGeometries["treeSpritesGeo"] = std::move(geo);
 }
 
-void MainApp::BuildPSOs()
+int MainApp::BuildPSOs()
 {
+	int hr = S_OK;
 	auto d3d = IG2GraphicsD3D::instance();
 	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
@@ -817,6 +824,8 @@ void MainApp::BuildPSOs()
 	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
 	auto d3dFmtBack      = *std::any_cast<DXGI_FORMAT*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_BACKBUFFER_FORAT));
 	auto d3dFmtDepth     = *std::any_cast<DXGI_FORMAT*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_DEPTH_STENCIL_FORAT));
+	auto d3dMsaa4State   = *std::any_cast<bool*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_STATE));
+	auto d3dMsaa4Quality = *std::any_cast<UINT*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_QUALITY));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc{};
 	//
@@ -833,10 +842,12 @@ void MainApp::BuildPSOs()
 		opaquePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		opaquePsoDesc.NumRenderTargets = 1;
 		opaquePsoDesc.RTVFormats[0] = d3dFmtBack;
-		opaquePsoDesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
-		opaquePsoDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+		opaquePsoDesc.SampleDesc.Count = d3dMsaa4State ? 4 : 1;
+		opaquePsoDesc.SampleDesc.Quality = d3dMsaa4State ? (d3dMsaa4Quality - 1) : 0;
 		opaquePsoDesc.DSVFormat = d3dFmtDepth;
-	ThrowIfFailed(d3dDevice->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&mPSOs["opaque"])));
+	hr = d3dDevice->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&mPSOs["opaque"]));
+	if (FAILED(hr))
+		return hr;
 
 	//
 	// PSO for transparent objects
@@ -855,9 +866,10 @@ void MainApp::BuildPSOs()
 		transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 		transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
 		transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-	transparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
-	ThrowIfFailed(d3dDevice->CreateGraphicsPipelineState(&transparentPsoDesc, IID_PPV_ARGS(&mPSOs["transparent"])));
+		transparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+	hr= d3dDevice->CreateGraphicsPipelineState(&transparentPsoDesc, IID_PPV_ARGS(&mPSOs["transparent"]));
+	if (FAILED(hr))
+		return hr;
 
 	//
 	// PSO for alpha tested objects
@@ -866,7 +878,9 @@ void MainApp::BuildPSOs()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestedPsoDesc = opaquePsoDesc;
 		alphaTestedPsoDesc.PS = { reinterpret_cast<BYTE*>(mShaders["alphaTestedPS"]->GetBufferPointer()), mShaders["alphaTestedPS"]->GetBufferSize() };
 		alphaTestedPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed(d3dDevice->CreateGraphicsPipelineState(&alphaTestedPsoDesc, IID_PPV_ARGS(&mPSOs["alphaTested"])));
+	hr = d3dDevice->CreateGraphicsPipelineState(&alphaTestedPsoDesc, IID_PPV_ARGS(&mPSOs["alphaTested"]));
+	if (FAILED(hr))
+		return hr;
 
 	//
 	// PSO for tree sprites
@@ -878,7 +892,11 @@ void MainApp::BuildPSOs()
 		treeSpritePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 		treeSpritePsoDesc.InputLayout = { mTreeSpriteInputLayout.data(), (UINT)mTreeSpriteInputLayout.size() };
 		treeSpritePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed(d3dDevice->CreateGraphicsPipelineState(&treeSpritePsoDesc, IID_PPV_ARGS(&mPSOs["treeSprites"])));
+	hr = d3dDevice->CreateGraphicsPipelineState(&treeSpritePsoDesc, IID_PPV_ARGS(&mPSOs["treeSprites"]));
+	if (FAILED(hr))
+		return hr;
+
+	return S_OK;
 }
 
 void MainApp::BuildFrameResources()

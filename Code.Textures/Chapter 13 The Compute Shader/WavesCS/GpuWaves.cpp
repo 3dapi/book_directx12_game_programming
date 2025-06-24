@@ -11,7 +11,7 @@
 GpuWaves::GpuWaves(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, 
 	               int m, int n, float dx, float dt, float speed, float damping)
 {
-	md3dDevice = device;
+	m_d3dDevice = device;
 
 	mNumRows = m;
 	mNumCols = n;
@@ -98,7 +98,7 @@ void GpuWaves::BuildResources(ID3D12GraphicsCommandList* cmdList)
 	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,
@@ -106,7 +106,7 @@ void GpuWaves::BuildResources(ID3D12GraphicsCommandList* cmdList)
 		nullptr,
 		IID_PPV_ARGS(&mPrevSol)));
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,
@@ -114,7 +114,7 @@ void GpuWaves::BuildResources(ID3D12GraphicsCommandList* cmdList)
 		nullptr,
 		IID_PPV_ARGS(&mCurrSol)));
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,
@@ -130,7 +130,7 @@ void GpuWaves::BuildResources(ID3D12GraphicsCommandList* cmdList)
 	const UINT num2DSubresources = texDesc.DepthOrArraySize * texDesc.MipLevels;
 	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(mCurrSol.Get(), 0, num2DSubresources);
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
@@ -138,7 +138,7 @@ void GpuWaves::BuildResources(ID3D12GraphicsCommandList* cmdList)
 		nullptr,
 		IID_PPV_ARGS(mPrevUploadBuffer.GetAddressOf())));
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
@@ -196,13 +196,13 @@ void GpuWaves::BuildDescriptors(
 	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 	uavDesc.Texture2D.MipSlice = 0;
 
-	md3dDevice->CreateShaderResourceView(mPrevSol.Get(), &srvDesc, hCpuDescriptor);
-	md3dDevice->CreateShaderResourceView(mCurrSol.Get(), &srvDesc, hCpuDescriptor.Offset(1, descriptorSize));
-	md3dDevice->CreateShaderResourceView(mNextSol.Get(), &srvDesc, hCpuDescriptor.Offset(1, descriptorSize));
+	m_d3dDevice->CreateShaderResourceView(mPrevSol.Get(), &srvDesc, hCpuDescriptor);
+	m_d3dDevice->CreateShaderResourceView(mCurrSol.Get(), &srvDesc, hCpuDescriptor.Offset(1, descriptorSize));
+	m_d3dDevice->CreateShaderResourceView(mNextSol.Get(), &srvDesc, hCpuDescriptor.Offset(1, descriptorSize));
 
-	md3dDevice->CreateUnorderedAccessView(mPrevSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
-	md3dDevice->CreateUnorderedAccessView(mCurrSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
-	md3dDevice->CreateUnorderedAccessView(mNextSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
+	m_d3dDevice->CreateUnorderedAccessView(mPrevSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
+	m_d3dDevice->CreateUnorderedAccessView(mCurrSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
+	m_d3dDevice->CreateUnorderedAccessView(mNextSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
 
 	// Save references to the GPU descriptors. 
 	mPrevSolSrv = hGpuDescriptor;

@@ -14,6 +14,7 @@
 #include <DirectXMath.h>
 #include <DirectXColors.h>
 #include <wrl.h>
+#include "include/d3dx12/d3dx12.h"
 #include "G2ConstantsWin.h"
 
 using namespace DirectX;
@@ -39,7 +40,7 @@ public:
 	std::any	getCurrentBackBuffer()			override;
 
 public:
-	bool	InitDirect3D();
+	int		InitDevice();
 	void	CreateCommandObjects();
 	void	CreateSwapChain();
 	void	CreateRtvAndDsvDescriptorHeaps();
@@ -51,20 +52,18 @@ public:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
 
-	void CalculateFrameStats();
-
 	void LogAdapters();
 	void LogAdapterOutputs(IDXGIAdapter* adapter);
 	void LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format);
 	int  Set4xMsaaState(bool msst);
+	IDXGIAdapter* GetHardwareAdapter(IDXGIFactory1* pFactory, bool requestHighPerformanceAdapter = false);
 
 protected:
-	HWND	m_hWnd			{};
-	::SIZE	m_screenSize	{1280, 600};
-
+	HWND        m_hWnd				{};
+	::SIZE      m_screenSize		{1280, 600};
 	// Set true to use 4X MSAA (?.1.8).  The default is false.
-	bool      m4xMsaaState = false;    // 4X MSAA enabled
-	UINT      m4xMsaaQuality = 0;      // quality level of 4X MSAA
+	bool        m_msaa4State		{};    // 4X MSAA enabled
+	UINT        m_msaa4Quality		{};      // quality level of 4X MSAA
 
 	// Derived class should set these in derived constructor to customize starting values.
 	D3D_DRIVER_TYPE						m_d3dDriverType			= D3D_DRIVER_TYPE_HARDWARE;

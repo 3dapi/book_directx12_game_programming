@@ -8,7 +8,7 @@ BlurFilter::BlurFilter(ID3D12Device* device,
 	                   UINT width, UINT height,
                        DXGI_FORMAT format)
 {
-	md3dDevice = device;
+	m_d3dDevice = device;
 
 	mWidth = width;
 	mHeight = height;
@@ -176,11 +176,11 @@ void BlurFilter::BuildDescriptors()
 	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 	uavDesc.Texture2D.MipSlice = 0;
 
-	md3dDevice->CreateShaderResourceView(mBlurMap0.Get(), &srvDesc, mBlur0CpuSrv);
-	md3dDevice->CreateUnorderedAccessView(mBlurMap0.Get(), nullptr, &uavDesc, mBlur0CpuUav);
+	m_d3dDevice->CreateShaderResourceView(mBlurMap0.Get(), &srvDesc, mBlur0CpuSrv);
+	m_d3dDevice->CreateUnorderedAccessView(mBlurMap0.Get(), nullptr, &uavDesc, mBlur0CpuUav);
 
-	md3dDevice->CreateShaderResourceView(mBlurMap1.Get(), &srvDesc, mBlur1CpuSrv);
-	md3dDevice->CreateUnorderedAccessView(mBlurMap1.Get(), nullptr, &uavDesc, mBlur1CpuUav);
+	m_d3dDevice->CreateShaderResourceView(mBlurMap1.Get(), &srvDesc, mBlur1CpuSrv);
+	m_d3dDevice->CreateUnorderedAccessView(mBlurMap1.Get(), nullptr, &uavDesc, mBlur1CpuUav);
 }
 
 void BlurFilter::BuildResources()
@@ -205,7 +205,7 @@ void BlurFilter::BuildResources()
 	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,
@@ -213,7 +213,7 @@ void BlurFilter::BuildResources()
 		nullptr,
 		IID_PPV_ARGS(&mBlurMap0)));
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,

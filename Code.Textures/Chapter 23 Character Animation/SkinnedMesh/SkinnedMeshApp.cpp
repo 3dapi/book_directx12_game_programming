@@ -255,7 +255,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 
 SkinnedMeshApp::~SkinnedMeshApp()
 {
-    if(md3dDevice != nullptr)
+    if(m_d3dDevice != nullptr)
         FlushCommandQueue();
 }
 
@@ -265,16 +265,16 @@ bool SkinnedMeshApp::Initialize()
         return false;
 
     // Reset the command list to prep for initialization commands.
-    ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
+    ThrowIfFailed(m_d3dCommandList->Reset(m_d3dCommandAlloc.Get(), nullptr));
 
 	mCamera.SetPosition(0.0f, 2.0f, -15.0f);
  
-    mShadowMap = std::make_unique<ShadowMap>(md3dDevice.Get(),
+    mShadowMap = std::make_unique<ShadowMap>(m_d3dDevice.Get(),
         2048, 2048);
 
     mSsao = std::make_unique<Ssao>(
-        md3dDevice.Get(),
-        mCommandList.Get(),
+        m_d3dDevice.Get(),
+        m_d3dCommandList.Get(),
         mClientWidth, mClientHeight);
 
     LoadSkinnedModel();
@@ -292,9 +292,9 @@ bool SkinnedMeshApp::Initialize()
     mSsao->SetPSOs(mPSOs["ssao"].Get(), mPSOs["ssaoBlur"].Get());
 
     // Execute the initialization commands.
-    ThrowIfFailed(mCommandList->Close());
-    ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-    mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+    ThrowIfFailed(m_d3dCommandList->Close());
+    ID3D12CommandList* cmdsLists[] = { m_d3dCommandList.Get() };
+    m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
     // Wait until initialization is complete.
     FlushCommandQueue();
@@ -306,11 +306,11 @@ void SkinnedMeshApp::CreateRtvAndDsvDescriptorHeaps()
 {
     // Add +1 for screen normal map, +2 for ambient maps.
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-    rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 3;
+    rtvHeapDesc.NumDescriptors = FRAME_BUFFER_COUNT + 3;
     rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     rtvHeapDesc.NodeMask = 0;
-    ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
+    ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(
         &rtvHeapDesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf())));
 
     // Add +1 DSV for shadow map.
@@ -319,7 +319,7 @@ void SkinnedMeshApp::CreateRtvAndDsvDescriptorHeaps()
     dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     dsvHeapDesc.NodeMask = 0;
-    ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
+    ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(
         &dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
 }
  
@@ -334,7 +334,7 @@ void SkinnedMeshApp::OnResize()
         mSsao->OnResize(mClientWidth, mClientHeight);
 
         // Resources changed, so need to rebuild descriptors.
-        mSsao->RebuildDescriptors(mDepthStencilBuffer.Get());
+        mSsao->RebuildDescriptors(m_d3dDepthBuffer.Get());
     }
 }
 
@@ -348,10 +348,10 @@ void SkinnedMeshApp::Update(const GameTimer& gt)
 
     // Has the GPU finished processing the commands of the current frame resource?
     // If not, wait until the GPU has completed commands up to this fence point.
-    if(m_frameRscCur->Fence != 0 && mFence->GetCompletedValue() < m_frameRscCur->Fence)
+    if(m_frameRscCur->Fence != 0 && m_d3dFence->GetCompletedValue() < m_frameRscCur->Fence)
     {
         HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-        ThrowIfFailed(mFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
+        ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
         WaitForSingleObject(eventHandle, INFINITE);
         CloseHandle(eventHandle);
     }
@@ -390,12 +390,12 @@ void SkinnedMeshApp::Draw(const GameTimer& gt)
 
     // A command list can be reset after it has been added to the command queue via ExecuteCommandList.
     // Reusing the command list reuses memory.
-    ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["opaque"].Get()));
+    ThrowIfFailed(m_d3dCommandList->Reset(cmdListAlloc.Get(), mPSOs["opaque"].Get()));
 
     ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
-    mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+    m_d3dCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
-    mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
+    m_d3dCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
 	//
 	// Shadow map pass.
@@ -404,15 +404,15 @@ void SkinnedMeshApp::Draw(const GameTimer& gt)
     // Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
     // set as a root descriptor.
     auto matBuffer = m_frameRscCur->MaterialBuffer->Resource();
-    mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
+    m_d3dCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
 	
     // Bind null SRV for shadow map pass.
-    mCommandList->SetGraphicsRootDescriptorTable(4, mNullSrv);	 
+    m_d3dCommandList->SetGraphicsRootDescriptorTable(4, mNullSrv);	 
 
     // Bind all the textures used in this scene.  Observe
     // that we only have to specify the first descriptor in the table.  
     // The root signature knows how many descriptors are expected in the table.
-    mCommandList->SetGraphicsRootDescriptorTable(5, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    m_d3dCommandList->SetGraphicsRootDescriptorTable(5, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
     DrawSceneToShadowMap();
 
@@ -426,44 +426,44 @@ void SkinnedMeshApp::Draw(const GameTimer& gt)
 	//
 	// 
 	
-    mCommandList->SetGraphicsRootSignature(mSsaoRootSignature.Get());
-    mSsao->ComputeSsao(mCommandList.Get(), m_frameRscCur, 2);
+    m_d3dCommandList->SetGraphicsRootSignature(mSsaoRootSignature.Get());
+    mSsao->ComputeSsao(m_d3dCommandList.Get(), m_frameRscCur, 2);
 	
 	//
 	// Main rendering pass.
 	//
 	
-    mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
+    m_d3dCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
     // Rebind state whenever graphics root signature changes.
 
     // Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
     // set as a root descriptor.
     matBuffer = m_frameRscCur->MaterialBuffer->Resource();
-    mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
+    m_d3dCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
 
 
-    mCommandList->RSSetViewports(1, &mScreenViewport);
-    mCommandList->RSSetScissorRects(1, &mScissorRect);
+    m_d3dCommandList->RSSetViewports(1, &mScreenViewport);
+    m_d3dCommandList->RSSetScissorRects(1, &mScissorRect);
 
     // Indicate a state transition on the resource usage.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
     // Clear the back buffer and depth buffer.
-    mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-    mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+    m_d3dCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+    m_d3dCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     // Specify the buffers we are going to render to.
-    mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+    m_d3dCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
 	// Bind all the textures used in this scene.  Observe
     // that we only have to specify the first descriptor in the table.  
     // The root signature knows how many descriptors are expected in the table.
-    mCommandList->SetGraphicsRootDescriptorTable(5, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+    m_d3dCommandList->SetGraphicsRootDescriptorTable(5, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 	
     auto passCB = m_frameRscCur->PassCB->Resource();
-	mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	m_d3dCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
     // Bind the sky cube map.  For our demos, we just use one "world" cube map representing the environment
     // from far away, so all objects will use the same cube map and we only need to set it once per-frame.  
@@ -472,42 +472,42 @@ void SkinnedMeshApp::Draw(const GameTimer& gt)
 
     CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
     skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
-    mCommandList->SetGraphicsRootDescriptorTable(4, skyTexDescriptor);
+    m_d3dCommandList->SetGraphicsRootDescriptorTable(4, skyTexDescriptor);
 
-    mCommandList->SetPipelineState(mPSOs["opaque"].Get());
-    DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
+    m_d3dCommandList->SetPipelineState(mPSOs["opaque"].Get());
+    DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
 
-    mCommandList->SetPipelineState(mPSOs["skinnedOpaque"].Get());
-    DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
+    m_d3dCommandList->SetPipelineState(mPSOs["skinnedOpaque"].Get());
+    DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
 
-    mCommandList->SetPipelineState(mPSOs["debug"].Get());
-    DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Debug]);
+    m_d3dCommandList->SetPipelineState(mPSOs["debug"].Get());
+    DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::Debug]);
 
-	mCommandList->SetPipelineState(mPSOs["sky"].Get());
-	DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Sky]);
+	m_d3dCommandList->SetPipelineState(mPSOs["sky"].Get());
+	DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::Sky]);
 
     // Indicate a state transition on the resource usage.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
     // Done recording commands.
-    ThrowIfFailed(mCommandList->Close());
+    ThrowIfFailed(m_d3dCommandList->Close());
 
     // Add the command list to the queue for execution.
-    ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-    mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+    ID3D12CommandList* cmdsLists[] = { m_d3dCommandList.Get() };
+    m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
     // Swap the back and front buffers
-    ThrowIfFailed(mSwapChain->Present(0, 0));
-	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
+    ThrowIfFailed(m_d3dSwapChain->Present(0, 0));
+	m_d3dIndexBackBuffer = (m_d3dIndexBackBuffer + 1) % FRAME_BUFFER_COUNT;
 
     // Advance the fence value to mark commands up to this fence point.
-    m_frameRscCur->Fence = ++mCurrentFence;
+    m_frameRscCur->Fence = ++m_d3dIndexFence;
 
     // Add an instruction to the command queue to set a new fence point. 
     // Because we are on the GPU timeline, the new fence point won't be 
     // set until the GPU finishes processing all the commands prior to this Signal().
-    mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+    m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
 }
 
 void SkinnedMeshApp::OnMouseDown(WPARAM btnState, int x, int y)
@@ -838,8 +838,8 @@ void SkinnedMeshApp::LoadTextures()
             auto texMap = std::make_unique<Texture>();
             texMap->Name = texNames[i];
             texMap->Filename = texFilenames[i];
-            ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
-                mCommandList.Get(), texMap->Filename.c_str(),
+            ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_d3dDevice.Get(),
+                m_d3dCommandList.Get(), texMap->Filename.c_str(),
                 texMap->Resource, texMap->UploadHeap));
 
             mTextures[texMap->Name] = std::move(texMap);
@@ -885,7 +885,7 @@ void SkinnedMeshApp::BuildRootSignature()
     }
     ThrowIfFailed(hr);
 
-    ThrowIfFailed(md3dDevice->CreateRootSignature(
+    ThrowIfFailed(m_d3dDevice->CreateRootSignature(
 		0,
         serializedRootSig->GetBufferPointer(),
         serializedRootSig->GetBufferSize(),
@@ -963,7 +963,7 @@ void SkinnedMeshApp::BuildSsaoRootSignature()
     }
     ThrowIfFailed(hr);
 
-    ThrowIfFailed(md3dDevice->CreateRootSignature(
+    ThrowIfFailed(m_d3dDevice->CreateRootSignature(
         0,
         serializedRootSig->GetBufferPointer(),
         serializedRootSig->GetBufferSize(),
@@ -979,7 +979,7 @@ void SkinnedMeshApp::BuildDescriptorHeaps()
 	srvHeapDesc.NumDescriptors = 64;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
+	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
 
 	//
 	// Fill out the heap with actual descriptors.
@@ -1018,7 +1018,7 @@ void SkinnedMeshApp::BuildDescriptorHeaps()
 	{
 		srvDesc.Format = tex2DList[i]->GetDesc().Format;
 		srvDesc.Texture2D.MipLevels = tex2DList[i]->GetDesc().MipLevels;
-		md3dDevice->CreateShaderResourceView(tex2DList[i].Get(), &srvDesc, hDescriptor);
+		m_d3dDevice->CreateShaderResourceView(tex2DList[i].Get(), &srvDesc, hDescriptor);
 
 		// next descriptor
 		hDescriptor.Offset(1, mCbvSrvUavDescriptorSize);
@@ -1029,7 +1029,7 @@ void SkinnedMeshApp::BuildDescriptorHeaps()
 	srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
 	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 	srvDesc.Format = skyCubeMap->GetDesc().Format;
-	md3dDevice->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, hDescriptor);
+	m_d3dDevice->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, hDescriptor);
 	
 	mSkyTexHeapIndex = (UINT)tex2DList.size();
     mShadowMapHeapIndex = mSkyTexHeapIndex + 1;
@@ -1042,7 +1042,7 @@ void SkinnedMeshApp::BuildDescriptorHeaps()
     auto nullSrv = GetCpuSrv(mNullCubeSrvIndex);
     mNullSrv = GetGpuSrv(mNullCubeSrvIndex);
 
-    md3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+    m_d3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
     nullSrv.Offset(1, mCbvSrvUavDescriptorSize);
 
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -1050,10 +1050,10 @@ void SkinnedMeshApp::BuildDescriptorHeaps()
     srvDesc.Texture2D.MostDetailedMip = 0;
     srvDesc.Texture2D.MipLevels = 1;
     srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-    md3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+    m_d3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
     nullSrv.Offset(1, mCbvSrvUavDescriptorSize);
-    md3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+    m_d3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
     mShadowMap->BuildDescriptors(
         GetCpuSrv(mShadowMapHeapIndex),
@@ -1061,10 +1061,10 @@ void SkinnedMeshApp::BuildDescriptorHeaps()
         GetDsv(1));
 
     mSsao->BuildDescriptors(
-        mDepthStencilBuffer.Get(),
+        m_d3dDepthBuffer.Get(),
         GetCpuSrv(mSsaoHeapIndexStart),
         GetGpuSrv(mSsaoHeapIndexStart),
-        GetRtv(SwapChainBufferCount),
+        GetRtv(FRAME_BUFFER_COUNT),
         mCbvSrvUavDescriptorSize,
         mRtvDescriptorSize);
 }
@@ -1254,11 +1254,11 @@ void SkinnedMeshApp::BuildShapeGeometry()
 	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
 	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
 
-	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-		mCommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
+	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_d3dDevice.Get(),
+		m_d3dCommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
 
-	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-		mCommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_d3dDevice.Get(),
+		m_d3dCommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
 
 	geo->VertexByteStride = sizeof(Vertex);
 	geo->VertexBufferByteSize = vbByteSize;
@@ -1301,11 +1301,11 @@ void SkinnedMeshApp::LoadSkinnedModel()
 	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
 	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
 
-	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-		mCommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
+	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_d3dDevice.Get(),
+		m_d3dCommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
 
-	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-		mCommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_d3dDevice.Get(),
+		m_d3dCommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
 
 	geo->VertexByteStride = sizeof(SkinnedVertex);
 	geo->VertexBufferByteSize = vbByteSize;
@@ -1357,7 +1357,7 @@ void SkinnedMeshApp::BuildPSOs()
 	opaquePsoDesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
 	opaquePsoDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
 	opaquePsoDesc.DSVFormat = mDepthStencilFormat;
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&mPSOs["opaque"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&mPSOs["opaque"])));
 
     //
     // PSO for skinned pass.
@@ -1374,7 +1374,7 @@ void SkinnedMeshApp::BuildPSOs()
         reinterpret_cast<BYTE*>(mShaders["opaquePS"]->GetBufferPointer()),
         mShaders["opaquePS"]->GetBufferSize()
     };
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skinnedOpaquePsoDesc, IID_PPV_ARGS(&mPSOs["skinnedOpaque"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&skinnedOpaquePsoDesc, IID_PPV_ARGS(&mPSOs["skinnedOpaque"])));
 
     //
     // PSO for shadow map pass.
@@ -1398,7 +1398,7 @@ void SkinnedMeshApp::BuildPSOs()
     // Shadow map pass does not have a render target.
     smapPsoDesc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
     smapPsoDesc.NumRenderTargets = 0;
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&smapPsoDesc, IID_PPV_ARGS(&mPSOs["shadow_opaque"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&smapPsoDesc, IID_PPV_ARGS(&mPSOs["shadow_opaque"])));
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC skinnedSmapPsoDesc = smapPsoDesc;
     skinnedSmapPsoDesc.InputLayout = { mSkinnedInputLayout.data(), (UINT)mSkinnedInputLayout.size() };
@@ -1412,7 +1412,7 @@ void SkinnedMeshApp::BuildPSOs()
         reinterpret_cast<BYTE*>(mShaders["shadowOpaquePS"]->GetBufferPointer()),
         mShaders["shadowOpaquePS"]->GetBufferSize()
     };
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skinnedSmapPsoDesc, IID_PPV_ARGS(&mPSOs["skinnedShadow_opaque"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&skinnedSmapPsoDesc, IID_PPV_ARGS(&mPSOs["skinnedShadow_opaque"])));
 
     //
     // PSO for debug layer.
@@ -1429,7 +1429,7 @@ void SkinnedMeshApp::BuildPSOs()
         reinterpret_cast<BYTE*>(mShaders["debugPS"]->GetBufferPointer()),
         mShaders["debugPS"]->GetBufferSize()
     };
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&debugPsoDesc, IID_PPV_ARGS(&mPSOs["debug"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&debugPsoDesc, IID_PPV_ARGS(&mPSOs["debug"])));
 
     //
     // PSO for drawing normals.
@@ -1449,7 +1449,7 @@ void SkinnedMeshApp::BuildPSOs()
     drawNormalsPsoDesc.SampleDesc.Count = 1;
     drawNormalsPsoDesc.SampleDesc.Quality = 0;
     drawNormalsPsoDesc.DSVFormat = mDepthStencilFormat;
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&drawNormalsPsoDesc, IID_PPV_ARGS(&mPSOs["drawNormals"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&drawNormalsPsoDesc, IID_PPV_ARGS(&mPSOs["drawNormals"])));
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC skinnedDrawNormalsPsoDesc = drawNormalsPsoDesc;
     skinnedDrawNormalsPsoDesc.InputLayout = { mSkinnedInputLayout.data(), (UINT)mSkinnedInputLayout.size() };
@@ -1463,7 +1463,7 @@ void SkinnedMeshApp::BuildPSOs()
         reinterpret_cast<BYTE*>(mShaders["drawNormalsPS"]->GetBufferPointer()),
         mShaders["drawNormalsPS"]->GetBufferSize()
     };
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skinnedDrawNormalsPsoDesc, IID_PPV_ARGS(&mPSOs["skinnedDrawNormals"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&skinnedDrawNormalsPsoDesc, IID_PPV_ARGS(&mPSOs["skinnedDrawNormals"])));
 
     //
     // PSO for SSAO.
@@ -1489,7 +1489,7 @@ void SkinnedMeshApp::BuildPSOs()
     ssaoPsoDesc.SampleDesc.Count = 1;
     ssaoPsoDesc.SampleDesc.Quality = 0;
     ssaoPsoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&ssaoPsoDesc, IID_PPV_ARGS(&mPSOs["ssao"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&ssaoPsoDesc, IID_PPV_ARGS(&mPSOs["ssao"])));
 
     //
     // PSO for SSAO blur.
@@ -1505,7 +1505,7 @@ void SkinnedMeshApp::BuildPSOs()
         reinterpret_cast<BYTE*>(mShaders["ssaoBlurPS"]->GetBufferPointer()),
         mShaders["ssaoBlurPS"]->GetBufferSize()
     };
-    ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&ssaoBlurPsoDesc, IID_PPV_ARGS(&mPSOs["ssaoBlur"])));
+    ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&ssaoBlurPsoDesc, IID_PPV_ARGS(&mPSOs["ssaoBlur"])));
 
 	//
 	// PSO for sky.
@@ -1530,7 +1530,7 @@ void SkinnedMeshApp::BuildPSOs()
 		reinterpret_cast<BYTE*>(mShaders["skyPS"]->GetBufferPointer()),
 		mShaders["skyPS"]->GetBufferSize()
 	};
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skyPsoDesc, IID_PPV_ARGS(&mPSOs["sky"])));
+	ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&skyPsoDesc, IID_PPV_ARGS(&mPSOs["sky"])));
 
 }
 
@@ -1538,7 +1538,7 @@ void SkinnedMeshApp::BuildFrameResources()
 {
     for(int i = 0; i < gNumFrameResources; ++i)
     {
-        mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
+        mFrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get(),
             2, (UINT)mAllRitems.size(), 
             1,
             (UINT)mMaterials.size()));
@@ -1797,69 +1797,69 @@ void SkinnedMeshApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const s
 
 void SkinnedMeshApp::DrawSceneToShadowMap()
 {
-    mCommandList->RSSetViewports(1, &mShadowMap->Viewport());
-    mCommandList->RSSetScissorRects(1, &mShadowMap->ScissorRect());
+    m_d3dCommandList->RSSetViewports(1, &mShadowMap->Viewport());
+    m_d3dCommandList->RSSetScissorRects(1, &mShadowMap->ScissorRect());
 
     // Change to DEPTH_WRITE.
-    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mShadowMap->Resource(),
+    m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mShadowMap->Resource(),
         D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
     // Clear the back buffer and depth buffer.
-    mCommandList->ClearDepthStencilView(mShadowMap->Dsv(), 
+    m_d3dCommandList->ClearDepthStencilView(mShadowMap->Dsv(), 
         D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     // Specify the buffers we are going to render to.
-    mCommandList->OMSetRenderTargets(0, nullptr, false, &mShadowMap->Dsv());
+    m_d3dCommandList->OMSetRenderTargets(0, nullptr, false, &mShadowMap->Dsv());
 
     // Bind the pass constant buffer for the shadow map pass.
     UINT passCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(PassConstants));
     auto passCB = m_frameRscCur->PassCB->Resource();
     D3D12_GPU_VIRTUAL_ADDRESS passCBAddress = passCB->GetGPUVirtualAddress() + 1*passCBByteSize;
-    mCommandList->SetGraphicsRootConstantBufferView(2, passCBAddress);
+    m_d3dCommandList->SetGraphicsRootConstantBufferView(2, passCBAddress);
 
-    mCommandList->SetPipelineState(mPSOs["shadow_opaque"].Get());
-    DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
+    m_d3dCommandList->SetPipelineState(mPSOs["shadow_opaque"].Get());
+    DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
 
-    mCommandList->SetPipelineState(mPSOs["skinnedShadow_opaque"].Get());
-    DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
+    m_d3dCommandList->SetPipelineState(mPSOs["skinnedShadow_opaque"].Get());
+    DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
 
     // Change back to GENERIC_READ so we can read the texture in a shader.
-    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mShadowMap->Resource(),
+    m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mShadowMap->Resource(),
         D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
  
 void SkinnedMeshApp::DrawNormalsAndDepth()
 {
-	mCommandList->RSSetViewports(1, &mScreenViewport);
-    mCommandList->RSSetScissorRects(1, &mScissorRect);
+	m_d3dCommandList->RSSetViewports(1, &mScreenViewport);
+    m_d3dCommandList->RSSetScissorRects(1, &mScissorRect);
 
 	auto normalMap = mSsao->NormalMap();
 	auto normalMapRtv = mSsao->NormalMapRtv();
 	
     // Change to RENDER_TARGET.
-    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(normalMap,
+    m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(normalMap,
         D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Clear the screen normal map and depth buffer.
 	float clearValue[] = {0.0f, 0.0f, 1.0f, 0.0f};
-    mCommandList->ClearRenderTargetView(normalMapRtv, clearValue, 0, nullptr);
-    mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+    m_d3dCommandList->ClearRenderTargetView(normalMapRtv, clearValue, 0, nullptr);
+    m_d3dCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	// Specify the buffers we are going to render to.
-    mCommandList->OMSetRenderTargets(1, &normalMapRtv, true, &DepthStencilView());
+    m_d3dCommandList->OMSetRenderTargets(1, &normalMapRtv, true, &DepthStencilView());
 
     // Bind the constant buffer for this pass.
     auto passCB = m_frameRscCur->PassCB->Resource();
-    mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+    m_d3dCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
-    mCommandList->SetPipelineState(mPSOs["drawNormals"].Get());
-    DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
+    m_d3dCommandList->SetPipelineState(mPSOs["drawNormals"].Get());
+    DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
 
-    mCommandList->SetPipelineState(mPSOs["skinnedDrawNormals"].Get());
-    DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
+    m_d3dCommandList->SetPipelineState(mPSOs["skinnedDrawNormals"].Get());
+    DrawRenderItems(m_d3dCommandList.Get(), mRitemLayer[(int)RenderLayer::SkinnedOpaque]);
 
     // Change back to GENERIC_READ so we can read the texture in a shader.
-    mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(normalMap,
+    m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(normalMap,
         D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
 CD3DX12_CPU_DESCRIPTOR_HANDLE SkinnedMeshApp::GetCpuSrv(int index)const

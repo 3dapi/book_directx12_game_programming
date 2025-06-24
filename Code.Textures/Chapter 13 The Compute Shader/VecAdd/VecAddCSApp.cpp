@@ -175,7 +175,7 @@ VecAddCSApp::VecAddCSApp(HINSTANCE hInstance)
 
 VecAddCSApp::~VecAddCSApp()
 {
-    if(md3dDevice != nullptr)
+    if(m_d3dDevice != nullptr)
         FlushCommandQueue();
 }
 
@@ -185,11 +185,11 @@ bool VecAddCSApp::Initialize()
         return false;
 
     // Reset the command list to prep for initialization commands.
-    ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
+    ThrowIfFailed(m_d3dCommandList->Reset(m_d3dCommandAlloc.Get(), nullptr));
 
     // Get the increment size of a descriptor in this heap type.  This is hardware specific, 
 	// so we have to query this information.
-    mCbvSrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    mCbvSrvDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	BuildBuffers();
     BuildRootSignature();
@@ -199,9 +199,9 @@ bool VecAddCSApp::Initialize()
     BuildPSOs();
 
     // Execute the initialization commands.
-    ThrowIfFailed(mCommandList->Close());
-    ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-    mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+    ThrowIfFailed(m_d3dCommandList->Close());
+    ID3D12CommandList* cmdsLists[] = { m_d3dCommandList.Get() };
+    m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
     // Wait until initialization is complete.
     FlushCommandQueue();
@@ -228,10 +228,10 @@ void VecAddCSApp::Update(const GameTimer& gt)
 
     // Has the GPU finished processing the commands of the current frame resource?
     // If not, wait until the GPU has completed commands up to this fence point.
-    if(m_frameRscCur->Fence != 0 && mFence->GetCompletedValue() < m_frameRscCur->Fence)
+    if(m_frameRscCur->Fence != 0 && m_d3dFence->GetCompletedValue() < m_frameRscCur->Fence)
     {
         HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-        ThrowIfFailed(mFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
+        ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
         WaitForSingleObject(eventHandle, INFINITE);
         CloseHandle(eventHandle);
     }
@@ -247,46 +247,46 @@ void VecAddCSApp::Draw(const GameTimer& gt)
 
     // A command list can be reset after it has been added to the command queue via ExecuteCommandList.
     // Reusing the command list reuses memory.
-    ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["opaque"].Get()));
+    ThrowIfFailed(m_d3dCommandList->Reset(cmdListAlloc.Get(), mPSOs["opaque"].Get()));
 
-    mCommandList->RSSetViewports(1, &mScreenViewport);
-    mCommandList->RSSetScissorRects(1, &mScissorRect);
+    m_d3dCommandList->RSSetViewports(1, &mScreenViewport);
+    m_d3dCommandList->RSSetScissorRects(1, &mScissorRect);
 
     // Indicate a state transition on the resource usage.
-//	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+//	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 //		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
     // Clear the back buffer and depth buffer.
-    mCommandList->ClearRenderTargetView(CurrentBackBufferView(), (float*)&mMainPassCB.FogColor, 0, nullptr);
-    mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+    m_d3dCommandList->ClearRenderTargetView(CurrentBackBufferView(), (float*)&mMainPassCB.FogColor, 0, nullptr);
+    m_d3dCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
     // Specify the buffers we are going to render to.
-    mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+    m_d3dCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
 
 
     // Indicate a state transition on the resource usage.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
     // Done recording commands.
-    ThrowIfFailed(mCommandList->Close());
+    ThrowIfFailed(m_d3dCommandList->Close());
 
     // Add the command list to the queue for execution.
-    ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-    mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+    ID3D12CommandList* cmdsLists[] = { m_d3dCommandList.Get() };
+    m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
     // Swap the back and front buffers
-    ThrowIfFailed(mSwapChain->Present(0, 0));
-	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
+    ThrowIfFailed(m_d3dSwapChain->Present(0, 0));
+	m_d3dIndexBackBuffer = (m_d3dIndexBackBuffer + 1) % FRAME_BUFFER_COUNT;
 
     // Advance the fence value to mark commands up to this fence point.
-    m_frameRscCur->Fence = ++mCurrentFence;
+    m_frameRscCur->Fence = ++m_d3dIndexFence;
 
     // Add an instruction to the command queue to set a new fence point. 
     // Because we are on the GPU timeline, the new fence point won't be 
     // set until the GPU finishes processing all the commands prior to this Signal().
-    mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+    m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
 }
 
 void VecAddCSApp::OnMouseDown(WPARAM btnState, int x, int y)
@@ -338,35 +338,35 @@ void VecAddCSApp::DoComputeWork()
 {
 	// Reuse the memory associated with command recording.
 	// We can only reset when the associated command lists have finished execution on the GPU.
-	ThrowIfFailed(mDirectCmdListAlloc->Reset());
+	ThrowIfFailed(m_d3dCommandAlloc->Reset());
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 	// Reusing the command list reuses memory.
-	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), mPSOs["vecAdd"].Get()));
+	ThrowIfFailed(m_d3dCommandList->Reset(m_d3dCommandAlloc.Get(), mPSOs["vecAdd"].Get()));
 
-	mCommandList->SetComputeRootSignature(mRootSignature.Get());
+	m_d3dCommandList->SetComputeRootSignature(mRootSignature.Get());
 
-	mCommandList->SetComputeRootShaderResourceView(0, mInputBufferA->GetGPUVirtualAddress());
-	mCommandList->SetComputeRootShaderResourceView(1, mInputBufferB->GetGPUVirtualAddress());
-	mCommandList->SetComputeRootUnorderedAccessView(2, mOutputBuffer->GetGPUVirtualAddress());
+	m_d3dCommandList->SetComputeRootShaderResourceView(0, mInputBufferA->GetGPUVirtualAddress());
+	m_d3dCommandList->SetComputeRootShaderResourceView(1, mInputBufferB->GetGPUVirtualAddress());
+	m_d3dCommandList->SetComputeRootUnorderedAccessView(2, mOutputBuffer->GetGPUVirtualAddress());
  
-	mCommandList->Dispatch(1, 1, 1);
+	m_d3dCommandList->Dispatch(1, 1, 1);
 
 	// Schedule to copy the data to the default buffer to the readback buffer.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mOutputBuffer.Get(),
+	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mOutputBuffer.Get(),
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
-	mCommandList->CopyResource(mReadBackBuffer.Get(), mOutputBuffer.Get());
+	m_d3dCommandList->CopyResource(mReadBackBuffer.Get(), mOutputBuffer.Get());
 
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mOutputBuffer.Get(),
+	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mOutputBuffer.Get(),
 		D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON));
 
 	// Done recording commands.
-	ThrowIfFailed(mCommandList->Close());
+	ThrowIfFailed(m_d3dCommandList->Close());
 
 	// Add the command list to the queue for execution.
-	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	ID3D12CommandList* cmdsLists[] = { m_d3dCommandList.Get() };
+	m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// Wait for the work to finish.
 	FlushCommandQueue();
@@ -404,21 +404,21 @@ void VecAddCSApp::BuildBuffers()
 
 	// Create some buffers to be used as SRVs.
 	mInputBufferA = d3dUtil::CreateDefaultBuffer(
-		md3dDevice.Get(),
-		mCommandList.Get(),
+		m_d3dDevice.Get(),
+		m_d3dCommandList.Get(),
 		dataA.data(),
 		byteSize,
 		mInputUploadBufferA);
 
 	mInputBufferB = d3dUtil::CreateDefaultBuffer(
-		md3dDevice.Get(),
-		mCommandList.Get(),
+		m_d3dDevice.Get(),
+		m_d3dCommandList.Get(),
 		dataB.data(),
 		byteSize,
 		mInputUploadBufferB);
 
 	// Create the buffer that will be a UAV.
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(byteSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
@@ -426,7 +426,7 @@ void VecAddCSApp::BuildBuffers()
 		nullptr,
 		IID_PPV_ARGS(&mOutputBuffer)));
 	
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(byteSize),
@@ -462,7 +462,7 @@ void VecAddCSApp::BuildRootSignature()
     }
     ThrowIfFailed(hr);
 
-    ThrowIfFailed(md3dDevice->CreateRootSignature(
+    ThrowIfFailed(m_d3dDevice->CreateRootSignature(
 		0,
         serializedRootSig->GetBufferPointer(),
         serializedRootSig->GetBufferSize(),
@@ -489,14 +489,14 @@ void VecAddCSApp::BuildPSOs()
 		mShaders["vecAddCS"]->GetBufferSize()
 	};
 	computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["vecAdd"])));
+	ThrowIfFailed(m_d3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["vecAdd"])));
 }
 
 void VecAddCSApp::BuildFrameResources()
 {
     for(int i = 0; i < gNumFrameResources; ++i)
     {
-        mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
+        mFrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get(),
             1));
     }
 }

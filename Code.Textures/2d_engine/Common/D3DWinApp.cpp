@@ -89,11 +89,11 @@ int D3DWinApp::init(const std::any& initialValue)
 		return false;
 
 	auto d3d = IG2Graphics::instance();
-	int hr = d3d->init(std::make_tuple(mhMainWnd, m_screenSize, m4xMsaaState));
+	int hr = d3d->init(std::make_tuple(mhMainWnd, m_screenSize, m_msaa4State));
 	if(FAILED(hr))
 		return false;
 
-    Resize(false);
+    Resize();
 	return true;
 }
  
@@ -254,8 +254,8 @@ LRESULT D3DWinApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 			else if ((int)wParam == VK_F2)
 			{
-				m4xMsaaState = !m4xMsaaState;
-				IG2Graphics::instance()->command(CMD_MSAASTATE4X, m4xMsaaState);
+				m_msaa4State = !m_msaa4State;
+				IG2Graphics::instance()->command(CMD_MSAASTATE4X, m_msaa4State);
 			}
 
 			return 0;

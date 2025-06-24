@@ -8,7 +8,7 @@ SobelFilter::SobelFilter(ID3D12Device* device,
 	                   UINT width, UINT height,
                        DXGI_FORMAT format)
 {
-	md3dDevice = device;
+	m_d3dDevice = device;
 
 	mWidth = width;
 	mHeight = height;
@@ -93,8 +93,8 @@ void SobelFilter::BuildDescriptors()
 	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 	uavDesc.Texture2D.MipSlice = 0;
 
-	md3dDevice->CreateShaderResourceView(mOutput.Get(), &srvDesc, mhCpuSrv);
-	md3dDevice->CreateUnorderedAccessView(mOutput.Get(), nullptr, &uavDesc, mhCpuUav);
+	m_d3dDevice->CreateShaderResourceView(mOutput.Get(), &srvDesc, mhCpuSrv);
+	m_d3dDevice->CreateUnorderedAccessView(mOutput.Get(), nullptr, &uavDesc, mhCpuUav);
 }
 
 void SobelFilter::BuildResource()
@@ -119,7 +119,7 @@ void SobelFilter::BuildResource()
 	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,

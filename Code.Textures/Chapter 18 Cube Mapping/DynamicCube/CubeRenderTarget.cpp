@@ -8,7 +8,7 @@ CubeRenderTarget::CubeRenderTarget(ID3D12Device* device,
 	                       UINT width, UINT height,
                            DXGI_FORMAT format)
 {
-	md3dDevice = device;
+	m_d3dDevice = device;
 
 	mWidth = width;
 	mHeight = height;
@@ -85,7 +85,7 @@ void CubeRenderTarget::BuildDescriptors()
 	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 
 	// Create SRV to the entire cubemap resource.
-	md3dDevice->CreateShaderResourceView(mCubeMap.Get(), &srvDesc, mhCpuSrv);
+	m_d3dDevice->CreateShaderResourceView(mCubeMap.Get(), &srvDesc, mhCpuSrv);
 
 	// Create RTV to each cube face.
 	for(int i = 0; i < 6; ++i)
@@ -103,7 +103,7 @@ void CubeRenderTarget::BuildDescriptors()
 		rtvDesc.Texture2DArray.ArraySize = 1;
 
 		// Create RTV to ith cubemap face.
-		md3dDevice->CreateRenderTargetView(mCubeMap.Get(), &rtvDesc, mhCpuRtv[i]);
+		m_d3dDevice->CreateRenderTargetView(mCubeMap.Get(), &rtvDesc, mhCpuRtv[i]);
 	}
 }
 
@@ -129,7 +129,7 @@ void CubeRenderTarget::BuildResource()
 	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,

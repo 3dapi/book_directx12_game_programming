@@ -8,7 +8,7 @@ RenderTarget::RenderTarget(ID3D12Device* device,
 	                       UINT width, UINT height,
                            DXGI_FORMAT format)
 {
-	md3dDevice = device;
+	m_d3dDevice = device;
 
 	mWidth = width;
 	mHeight = height;
@@ -67,9 +67,9 @@ void RenderTarget::BuildDescriptors()
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = 1;
 
-	md3dDevice->CreateShaderResourceView(mOffscreenTex.Get(), &srvDesc, mhCpuSrv);
+	m_d3dDevice->CreateShaderResourceView(mOffscreenTex.Get(), &srvDesc, mhCpuSrv);
 
-	md3dDevice->CreateRenderTargetView(mOffscreenTex.Get(), nullptr, mhCpuRtv);
+	m_d3dDevice->CreateRenderTargetView(mOffscreenTex.Get(), nullptr, mhCpuRtv);
 }
 
 void RenderTarget::BuildResource()
@@ -94,7 +94,7 @@ void RenderTarget::BuildResource()
 	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texDesc,

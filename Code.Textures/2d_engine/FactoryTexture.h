@@ -40,8 +40,9 @@ struct IG2Factory
 struct Texture
 {
 	std::string Name;
-	ComPtr<ID3D12Resource> Resource = nullptr;
-	ComPtr<ID3D12Resource> UploadHeap = nullptr;
+	std::wstring Filename;
+	ComPtr<ID3D12Resource>	Resource	{};
+	ComPtr<ID3D12Resource>	UploadHeap	{};
 };
 
 struct FactoryTexture : public IG2Factory

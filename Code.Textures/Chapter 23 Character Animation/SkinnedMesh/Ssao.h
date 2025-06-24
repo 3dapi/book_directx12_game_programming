@@ -87,7 +87,7 @@ private:
 
 
 private:
-	ID3D12Device* md3dDevice;
+	ID3D12Device* m_d3dDevice;
 
     Microsoft::WRL::ComPtr<ID3D12RootSignature> mSsaoRootSig;
     

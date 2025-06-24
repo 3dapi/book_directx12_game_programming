@@ -68,7 +68,7 @@ private:
 	float mTimeStep;
 	float mSpatialStep;
 
-	ID3D12Device* md3dDevice = nullptr;
+	ID3D12Device* m_d3dDevice = nullptr;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE mPrevSolSrv;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE mCurrSolSrv;

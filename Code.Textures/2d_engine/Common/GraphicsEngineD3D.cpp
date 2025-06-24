@@ -38,6 +38,8 @@ std::any EngineD3D::getAttrib(int nAttrib)
 
 		case EG2GRAPHICS_D3D::ATT_DEVICE_VIEWPORT:				return &m_d3dViewport;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_SCISSOR_RECT:			return &m_d3dScissor;
+		case EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_STATE:		return &m_msaa4State;
+		case EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_QUALITY:	return &m_msaa4Quality;
 	}
 	return nullptr;
 	return std::any();
@@ -85,7 +87,6 @@ std::any EngineD3D::getDevice()
 {
 	return m_d3dDevice.Get();
 }
-
 std::any EngineD3D::getRootSignature()
 {
 	return std::any();
@@ -101,10 +102,6 @@ std::any EngineD3D::getCommandQueue()
 std::any EngineD3D::getCommandList()
 {
 	return m_d3dCommandList.Get();
-}
-std::any EngineD3D::getRenderTarget()
-{
-	return std::any();
 }
 std::any EngineD3D::getBackBufferView()
 {
@@ -123,7 +120,6 @@ int  EngineD3D::getCurrentBackbufferdex()	const
 {
 	return m_d3dIndexBackBuffer;
 }
-
 std::any EngineD3D::getCurrentBackBuffer()
 {
 	auto ret = CurrentBackBuffer();
@@ -137,13 +133,16 @@ int EngineD3D::init(const std::any& initialValue)
 	auto [hWnd, size, m4xmssa] = std::any_cast<std::tuple<HWND, ::SIZE, bool> >(initialValue);
 	m_hWnd = hWnd;
 	m_screenSize = size;
-	m4xMsaaState = m4xmssa;
-	return 0;
+	m_msaa4State = m4xmssa;
+
+	int hr = InitDevice();
+	return hr;
 }
 
 
-bool EngineD3D::InitDirect3D()
+int EngineD3D::InitDevice()
 {
+	int hr = S_OK;
 #if defined(DEBUG) || defined(_DEBUG) 
 	// Enable the D3D12 debug layer.
 	{
@@ -173,8 +172,7 @@ bool EngineD3D::InitDirect3D()
 			IID_PPV_ARGS(&m_d3dDevice)));
 	}
 
-	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE,
-		IID_PPV_ARGS(&m_d3dFence)));
+	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3dFence)));
 
 	m_sizeDescriptorB = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	m_sizeDescriptorD = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -194,8 +192,8 @@ bool EngineD3D::InitDirect3D()
 		&msQualityLevels,
 		sizeof(msQualityLevels)));
 
-	m4xMsaaQuality = msQualityLevels.NumQualityLevels;
-	assert(m4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
+	m_msaa4Quality = msQualityLevels.NumQualityLevels;
+	assert(m_msaa4Quality > 0 && "Unexpected MSAA quality level.");
 
 #ifdef _DEBUG
 	LogAdapters();
@@ -205,7 +203,7 @@ bool EngineD3D::InitDirect3D()
 	CreateSwapChain();
 	CreateRtvAndDsvDescriptorHeaps();
 
-	return true;
+	return S_OK;
 }
 
 void EngineD3D::CreateCommandObjects()
@@ -241,8 +239,8 @@ void EngineD3D::CreateSwapChain()
 	sd.BufferDesc.Format = m_d3dFormatBackbuffer;
 	sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	sd.SampleDesc.Count = m4xMsaaState ? 4 : 1;
-	sd.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+	sd.SampleDesc.Count = m_msaa4State ? 4 : 1;
+	sd.SampleDesc.Quality = m_msaa4State ? (m_msaa4Quality - 1) : 0;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	sd.BufferCount = FRAME_BUFFER_COUNT;
 	sd.OutputWindow = m_hWnd;
@@ -276,8 +274,10 @@ void EngineD3D::CreateRtvAndDsvDescriptorHeaps()
 
 int EngineD3D::Resize()
 {
-	if (!m_d3dDevice || !m_d3dSwapChain || !m_d3dCommandAlloc)
-		return E_FAIL;
+	int hr = S_OK;
+	assert(m_d3dDevice);
+	assert(m_d3dSwapChain);
+	assert(m_d3dCommandAlloc);
 
 	// Flush before changing any resources.
 	FlushCommandQueue();
@@ -286,15 +286,13 @@ int EngineD3D::Resize()
 
 	// Release the previous resources we will be recreating.
 	for (int i = 0; i < FRAME_BUFFER_COUNT; ++i)
+	{
 		m_d3dBackBuffer[i].Reset();
+	}
 	m_d3dDepthBuffer.Reset();
 
 	// Resize the swap chain.
-	ThrowIfFailed(m_d3dSwapChain->ResizeBuffers(
-		FRAME_BUFFER_COUNT,
-		m_screenSize.cx, m_screenSize.cy,
-		m_d3dFormatBackbuffer,
-		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
+	ThrowIfFailed(m_d3dSwapChain->ResizeBuffers(FRAME_BUFFER_COUNT, m_screenSize.cx, m_screenSize.cy, m_d3dFormatBackbuffer, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
 
 	m_d3dIndexBackBuffer = 0;
 
@@ -315,8 +313,8 @@ int EngineD3D::Resize()
 	descDepth.DepthOrArraySize = 1;
 	descDepth.MipLevels = 1;
 	descDepth.Format = m_d3dFormatDepthStencil;
-	descDepth.SampleDesc.Count = m4xMsaaState ? 4 : 1;
-	descDepth.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+	descDepth.SampleDesc.Count = m_msaa4State ? 4 : 1;
+	descDepth.SampleDesc.Quality = m_msaa4State ? (m_msaa4Quality - 1) : 0;
 	descDepth.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	descDepth.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -366,14 +364,12 @@ int EngineD3D::FlushCommandQueue()
 	HRESULT hr = S_OK;
 
 	// Advance the fence value to mark commands up to this fence point.
-	++m_d3dIndexFence;
+	m_d3dIndexFence++;
 
 	// Add an instruction to the command queue to set a new fence point.  Because we 
 	// are on the GPU timeline, the new fence point won't be set until the GPU finishes
 	// processing all the commands prior to this Signal().
-	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
-	if (FAILED(hr))
-		return hr;
+	ThrowIfFailed(m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence));
 
 	// Wait until the GPU has completed commands up to this fence point.
 	if (m_d3dFence->GetCompletedValue() < m_d3dIndexFence)
@@ -400,7 +396,7 @@ int EngineD3D::Present()
 
 	m_d3dIndexBackBuffer = (m_d3dIndexBackBuffer + 1) % FRAME_BUFFER_COUNT;
 	++m_d3dIndexFence;
-	m_d3dCommandQue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
+	m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
 	return S_OK;
 }
 
@@ -496,11 +492,68 @@ void EngineD3D::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 
 int EngineD3D::Set4xMsaaState(bool msst)
 {
-	if (m4xMsaaState == msst)
+	if (m_msaa4State == msst)
 		return E_FAIL;
 
-	m4xMsaaState = msst;
+	m_msaa4State = msst;
 	this->CreateSwapChain();
 	int hr = this->Resize();
 	return hr;
+}
+
+
+IDXGIAdapter* EngineD3D::GetHardwareAdapter(IDXGIFactory1* pFactory, bool requestHighPerformanceAdapter)
+{
+	ComPtr<IDXGIAdapter1> adapter;
+	ComPtr<IDXGIFactory6> factory6;
+	if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6))))
+	{
+		for (
+			UINT adapterIndex = 0;
+			SUCCEEDED(factory6->EnumAdapterByGpuPreference(
+				adapterIndex,
+				requestHighPerformanceAdapter == true ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED,
+				IID_PPV_ARGS(&adapter)));
+			++adapterIndex)
+		{
+			DXGI_ADAPTER_DESC1 desc;
+			adapter->GetDesc1(&desc);
+			if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				// Don't select the Basic Render Driver adapter.
+				// If you want a software adapter, pass in "/warp" on the command line.
+				continue;
+			}
+			// Check to see whether the adapter supports Direct3D 12, but don't create the
+			// actual device yet.
+			if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+			{
+				break;
+			}
+		}
+	}
+	if (adapter.Get() == nullptr)
+	{
+		for (UINT adapterIndex = 0; SUCCEEDED(pFactory->EnumAdapters1(adapterIndex, &adapter)); ++adapterIndex)
+		{
+			DXGI_ADAPTER_DESC1 desc;
+			adapter->GetDesc1(&desc);
+
+			if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				// Don't select the Basic Render Driver adapter.
+				// If you want a software adapter, pass in "/warp" on the command line.
+				continue;
+			}
+
+			// Check to see whether the adapter supports Direct3D 12, but don't create the
+			// actual device yet.
+			if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+			{
+				break;
+			}
+		}
+	}
+	IDXGIAdapter1* pAdapter = adapter.Detach();
+	return pAdapter;
 }

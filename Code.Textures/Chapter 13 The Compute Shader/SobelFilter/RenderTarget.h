@@ -38,7 +38,7 @@ private:
 
 private:
 
-	ID3D12Device* md3dDevice = nullptr;
+	ID3D12Device* m_d3dDevice = nullptr;
 
 	UINT mWidth = 0;
 	UINT mHeight = 0;

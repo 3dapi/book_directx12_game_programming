@@ -18,8 +18,8 @@ public:
 	int		Run()												override;
 	LRESULT	MsgProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l)	override;
 	int		Resize(bool update=true)							override;
-	int		Update(const std::any& t)							override {};
-	int		Render()											override {};
+	int		Update(const std::any& t)							override { return S_OK; };
+	int		Render()											override { return S_OK; };
 	void	OnMouseDown(WPARAM btnState, const ::POINT& p)		override {};
 	void	OnMouseUp(WPARAM btnState, const ::POINT&)			override {};
 	void	OnMouseMove(WPARAM btnState, const ::POINT&)		override {};
@@ -43,7 +43,7 @@ protected:
 	bool		mMaximized = false;  // is the application maximized?
 	bool		mResizing = false;   // are the resize bars being dragged?
     bool		mFullscreenState = false;// fullscreen enabled
-	bool		m4xMsaaState		{};
+	bool		m_msaa4State		{};
 	::SIZE		m_screenSize {1280, 600};
 
 	GameTimer mTimer;
