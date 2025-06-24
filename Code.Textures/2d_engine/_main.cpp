@@ -13,8 +13,14 @@
 #endif
 #include "MainApp.h"
 
+#if 0
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, PSTR cmdLine, int showCmd)
 {
+#else
+int main(int, char**)
+{
+    HINSTANCE hInstance = (HINSTANCE)GetModuleHandle(nullptr);
+#endif
 #if defined(DEBUG) | defined(_DEBUG)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif

@@ -2,6 +2,7 @@
 // d3dApp.cpp by Frank Luna (C) 2015 All Rights Reserved.
 //***************************************************************************************
 
+#include <iostream>
 #include <memory>
 #include <Windows.h>
 #include "GraphicsEngineD3D.h"
@@ -282,6 +283,12 @@ int EngineD3D::Resize()
 	// Flush before changing any resources.
 	FlushCommandQueue();
 
+	BOOL isFullscreen = FALSE;
+	if (SUCCEEDED(m_d3dSwapChain->GetFullscreenState(&isFullscreen, nullptr)) && isFullscreen)
+	{
+		m_d3dSwapChain->SetFullscreenState(FALSE, nullptr);
+	}
+
 	ThrowIfFailed(m_d3dCommandList->Reset(m_d3dCommandAlloc.Get(), nullptr));
 
 	// Release the previous resources we will be recreating.
@@ -292,7 +299,14 @@ int EngineD3D::Resize()
 	m_d3dDepthBuffer.Reset();
 
 	// Resize the swap chain.
-	ThrowIfFailed(m_d3dSwapChain->ResizeBuffers(FRAME_BUFFER_COUNT, m_screenSize.cx, m_screenSize.cy, m_d3dFormatBackbuffer, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
+	hr = m_d3dSwapChain->ResizeBuffers(FRAME_BUFFER_COUNT, m_screenSize.cx, m_screenSize.cy, m_d3dFormatBackbuffer, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+	if (FAILED(hr))
+	{
+		HRESULT reason = m_d3dDevice->GetDeviceRemovedReason();
+		std::cout << "ResizeBuffers FAILED: 0x" << std::hex << hr << "\n";
+		std::cout << "DeviceRemovedReason : 0x" << std::hex << reason << "\n";
+		return hr;
+	}
 
 	m_d3dIndexBackBuffer = 0;
 
@@ -322,20 +336,13 @@ int EngineD3D::Resize()
 	optClear.Format = m_d3dFormatDepthStencil;
 	optClear.DepthStencil.Depth = 1.0f;
 	optClear.DepthStencil.Stencil = 0;
-	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&descDepth,
-		D3D12_RESOURCE_STATE_COMMON,
-		&optClear,
-		IID_PPV_ARGS(m_d3dDepthBuffer.GetAddressOf())));
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &descDepth, D3D12_RESOURCE_STATE_COMMON, &optClear, IID_PPV_ARGS(m_d3dDepthBuffer.GetAddressOf())));
 
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
 	m_d3dDevice->CreateDepthStencilView(m_d3dDepthBuffer.Get(), nullptr, DepthStencilView());
 
 	// Transition the resource from its initial state to be used as a depth buffer.
-	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_d3dDepthBuffer.Get(),
-		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_d3dDepthBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
 	// Execute the resize commands.
 	ThrowIfFailed(m_d3dCommandList->Close());

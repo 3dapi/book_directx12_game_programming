@@ -71,6 +71,15 @@ int D3DWinApp::Run()
 int D3DWinApp::Render3D()
 {
 	int hr = S_OK;
+
+	if (m_willResize)
+	{
+		auto d3d = IG2Graphics::instance();
+		hr = d3d->command(CMD_FLUSH_COMMAND_QUEUE);  // 🔧 Resize 전 GPU 대기
+		hr = d3d->command(CMD_SCREEN_RESIZE, m_screenSize);
+		m_willResize = false;
+	}
+
 	mTimer.Tick();
 	if(mAppPaused)
 	{
@@ -100,8 +109,8 @@ int D3DWinApp::init(const std::any& initialValue)
 int D3DWinApp::Resize(bool update)
 {
 	int hr = S_OK;
-	if(update)
-		hr = IG2Graphics::instance()->command(CMD_SCREEN_RESIZE, m_screenSize);
+	if (update)
+		m_willResize = true;
 	return hr;
 }
  

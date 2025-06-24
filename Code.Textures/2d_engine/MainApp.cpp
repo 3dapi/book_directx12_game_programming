@@ -172,8 +172,11 @@ int MainApp::Render()
 	ID3D12CommandList* cmdsLists[] = { d3dCommandList };
 	d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
-	// Swap the back and front buffers
-	hr = d3d->command(CMD_PRESENT);
+	// 1. 화면 표시.
+	hr = d3d->command(EG2GRAPHICS_D3D::CMD_PRESENT);
+	// 2. GPU가 해당 작업을 완료할 때까지 대기.
+	hr = d3d->command(EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE);
+	// 3. 현재 Fence 값을 저장.
 	auto fence = *std::any_cast<UINT64*>(d3d->getAttrib(ATT_DEVICE_CURRENT_FENCE_INDEX));
 	m_frameRscCur->Fence = fence;
 	return S_OK;

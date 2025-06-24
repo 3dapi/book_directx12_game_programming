@@ -45,6 +45,7 @@ protected:
     bool		mFullscreenState = false;// fullscreen enabled
 	bool		m_msaa4State		{};
 	::SIZE		m_screenSize {1280, 600};
+	bool		m_willResize			{};
 
 	GameTimer mTimer;
 };
