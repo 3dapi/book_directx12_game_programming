@@ -98,8 +98,8 @@ private:
 private:
 
     std::vector<std::unique_ptr<FrameResource>> mFrameResources;
-    FrameResource* mCurrFrameResource = nullptr;
-    int mCurrFrameResourceIndex = 0;
+    FrameResource* m_frameRscCur = nullptr;
+    int m_frameRscIdx = 0;
 
     UINT mCbvSrvDescriptorSize = 0;
 
@@ -215,15 +215,15 @@ void InstancingAndCullingApp::Update(const GameTimer& gt)
     OnKeyboardInput(gt);
 
     // Cycle through the circular frame resource array.
-    mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % gNumFrameResources;
-    mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
+    m_frameRscIdx = (m_frameRscIdx + 1) % gNumFrameResources;
+    m_frameRscCur = mFrameResources[m_frameRscIdx].get();
 
     // Has the GPU finished processing the commands of the current frame resource?
     // If not, wait until the GPU has completed commands up to this fence point.
-    if(mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
+    if(m_frameRscCur->Fence != 0 && mFence->GetCompletedValue() < m_frameRscCur->Fence)
     {
         HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-        ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
+        ThrowIfFailed(mFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
         WaitForSingleObject(eventHandle, INFINITE);
         CloseHandle(eventHandle);
     }
@@ -236,7 +236,7 @@ void InstancingAndCullingApp::Update(const GameTimer& gt)
 
 void InstancingAndCullingApp::Draw(const GameTimer& gt)
 {
-    auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+    auto cmdListAlloc = m_frameRscCur->CmdListAlloc;
 
     // Reuse the memory associated with command recording.
     // We can only reset when the associated command lists have finished execution on the GPU.
@@ -267,10 +267,10 @@ void InstancingAndCullingApp::Draw(const GameTimer& gt)
 
 	// Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
 	// set as a root descriptor.
-	auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+	auto matBuffer = m_frameRscCur->MaterialBuffer->Resource();
 	mCommandList->SetGraphicsRootShaderResourceView(1, matBuffer->GetGPUVirtualAddress());
 
-	auto passCB = mCurrFrameResource->PassCB->Resource();
+	auto passCB = m_frameRscCur->PassCB->Resource();
 	mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
 	// Bind all the textures used in this scene.
@@ -294,7 +294,7 @@ void InstancingAndCullingApp::Draw(const GameTimer& gt)
 	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
 
     // Advance the fence value to mark commands up to this fence point.
-    mCurrFrameResource->Fence = ++mCurrentFence;
+    m_frameRscCur->Fence = ++mCurrentFence;
 
     // Add an instruction to the command queue to set a new fence point. 
     // Because we are on the GPU timeline, the new fence point won't be 
@@ -366,7 +366,7 @@ void InstancingAndCullingApp::UpdateInstanceData(const GameTimer& gt)
 	XMMATRIX view = mCamera.GetView();
 	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
 
-	auto currInstanceBuffer = mCurrFrameResource->InstanceBuffer.get();
+	auto currInstanceBuffer = m_frameRscCur->InstanceBuffer.get();
 	for(auto& e : mAllRitems)
 	{
 		const auto& instanceData = e->Instances;
@@ -413,7 +413,7 @@ void InstancingAndCullingApp::UpdateInstanceData(const GameTimer& gt)
 
 void InstancingAndCullingApp::UpdateMaterialBuffer(const GameTimer& gt)
 {
-	auto currMaterialBuffer = mCurrFrameResource->MaterialBuffer.get();
+	auto currMaterialBuffer = m_frameRscCur->MaterialBuffer.get();
 	for(auto& e : mMaterials)
 	{
 		// Only update the cbuffer data if the constants have changed.  If the cbuffer
@@ -469,7 +469,7 @@ void InstancingAndCullingApp::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
 	mMainPassCB.Lights[2].Strength = { 0.2f, 0.2f, 0.2f };
 
-	auto currPassCB = mCurrFrameResource->PassCB.get();
+	auto currPassCB = m_frameRscCur->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
 }
 
@@ -955,7 +955,7 @@ void InstancingAndCullingApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList
 
 		// Set the instance buffer to use for this render-item.  For structured buffers, we can bypass 
 		// the heap and set as a root descriptor.
-		auto instanceBuffer = mCurrFrameResource->InstanceBuffer->Resource();
+		auto instanceBuffer = m_frameRscCur->InstanceBuffer->Resource();
 		mCommandList->SetGraphicsRootShaderResourceView(0, instanceBuffer->GetGPUVirtualAddress());
 
         cmdList->DrawIndexedInstanced(ri->IndexCount, ri->InstanceCount, ri->StartIndexLocation, ri->BaseVertexLocation, 0);

@@ -109,9 +109,9 @@ private:
 
 private:
 
-    std::vector<std::unique_ptr<FrameResource>> mFrameResources;
-    FrameResource* mCurrFrameResource = nullptr;
-    int mCurrFrameResourceIndex = 0;
+    std::vector<std::unique_ptr<FrameResource>> m_frameRscLst;
+    FrameResource*								m_frameRscCur = nullptr;
+    int											m_frameRscIdx = 0;
 
     UINT mCbvSrvDescriptorSize = 0;
 
@@ -238,15 +238,15 @@ void TreeBillboardsApp::Update(const GameTimer& gt)
 	UpdateCamera(gt);
 
     // Cycle through the circular frame resource array.
-    mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % gNumFrameResources;
-    mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
+    m_frameRscIdx = (m_frameRscIdx + 1) % gNumFrameResources;
+    m_frameRscCur = m_frameRscLst[m_frameRscIdx].get();
 
     // Has the GPU finished processing the commands of the current frame resource?
     // If not, wait until the GPU has completed commands up to this fence point.
-    if(mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
+    if(m_frameRscCur->Fence != 0 && mFence->GetCompletedValue() < m_frameRscCur->Fence)
     {
         HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-        ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
+        ThrowIfFailed(mFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
         WaitForSingleObject(eventHandle, INFINITE);
         CloseHandle(eventHandle);
     }
@@ -260,7 +260,7 @@ void TreeBillboardsApp::Update(const GameTimer& gt)
 
 void TreeBillboardsApp::Draw(const GameTimer& gt)
 {
-    auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+    auto cmdListAlloc = m_frameRscCur->CmdListAlloc;
 
     // Reuse the memory associated with command recording.
     // We can only reset when the associated command lists have finished execution on the GPU.
@@ -289,7 +289,7 @@ void TreeBillboardsApp::Draw(const GameTimer& gt)
 
 	mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
-	auto passCB = mCurrFrameResource->PassCB->Resource();
+	auto passCB = m_frameRscCur->PassCB->Resource();
 	mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
     DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
@@ -319,7 +319,7 @@ void TreeBillboardsApp::Draw(const GameTimer& gt)
 	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
 
     // Advance the fence value to mark commands up to this fence point.
-    mCurrFrameResource->Fence = ++mCurrentFence;
+    m_frameRscCur->Fence = ++mCurrentFence;
 
     // Add an instruction to the command queue to set a new fence point. 
     // Because we are on the GPU timeline, the new fence point won't be 
@@ -418,7 +418,7 @@ void TreeBillboardsApp::AnimateMaterials(const GameTimer& gt)
 
 void TreeBillboardsApp::UpdateObjectCBs(const GameTimer& gt)
 {
-	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
+	auto currObjectCB = m_frameRscCur->ObjectCB.get();
 	for(auto& e : mAllRitems)
 	{
 		// Only update the cbuffer data if the constants have changed.  
@@ -442,7 +442,7 @@ void TreeBillboardsApp::UpdateObjectCBs(const GameTimer& gt)
 
 void TreeBillboardsApp::UpdateMaterialCBs(const GameTimer& gt)
 {
-	auto currMaterialCB = mCurrFrameResource->MaterialCB.get();
+	auto currMaterialCB = m_frameRscCur->MaterialCB.get();
 	for(auto& e : mMaterials)
 	{
 		// Only update the cbuffer data if the constants have changed.  If the cbuffer
@@ -497,7 +497,7 @@ void TreeBillboardsApp::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
 	mMainPassCB.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 
-	auto currPassCB = mCurrFrameResource->PassCB.get();
+	auto currPassCB = m_frameRscCur->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
 }
 
@@ -521,7 +521,7 @@ void TreeBillboardsApp::UpdateWaves(const GameTimer& gt)
 	mWaves->Update(gt.DeltaTime());
 
 	// Update the wave vertex buffer with the new solution.
-	auto currWavesVB = mCurrFrameResource->WavesVB.get();
+	auto currWavesVB = m_frameRscCur->WavesVB.get();
 	for(int i = 0; i < mWaves->VertexCount(); ++i)
 	{
 		Vertex v;
@@ -1027,7 +1027,7 @@ void TreeBillboardsApp::BuildFrameResources()
 {
     for(int i = 0; i < gNumFrameResources; ++i)
     {
-        mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
+        m_frameRscLst.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
             1, (UINT)mAllRitems.size(), (UINT)mMaterials.size(), mWaves->VertexCount()));
     }
 }
@@ -1139,8 +1139,8 @@ void TreeBillboardsApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, cons
     UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
     UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
 
-	auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-	auto matCB = mCurrFrameResource->MaterialCB->Resource();
+	auto objectCB = m_frameRscCur->ObjectCB->Resource();
+	auto matCB = m_frameRscCur->MaterialCB->Resource();
 
     // For each render item...
     for(size_t i = 0; i < ritems.size(); ++i)

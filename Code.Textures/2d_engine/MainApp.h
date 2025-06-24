@@ -33,7 +33,7 @@ struct RenderItem
 	// Because we have an object cbuffer for each FrameResource, we have to apply the
 	// update to each FrameResource.  Thus, when we modify obect data we should set 
 	// NumFramesDirty = gNumFrameResources so that each frame resource gets the update.
-	int NumFramesDirty = d3dUtil::getFrameReourceNumer();
+	int NumFramesDirty = d3dUtil::getFrameRscCount();
 
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjCBIndex = -1;
@@ -68,9 +68,9 @@ public:
 	MainApp();
 	virtual ~MainApp();
 	int		init(const std::any& initialValue = {})			override;
-	void	OnResize(bool update)							override;
-	void	Update(const std::any& t)						override;
-	void	Render()										override;
+	int		Resize(bool update)								override;
+	int		Update(const std::any& t)						override;
+	int		Render()										override;
 
 	void	OnMouseDown(WPARAM btnState, const ::POINT& )	override;
 	void	OnMouseUp(WPARAM btnState, const ::POINT& )		override;
@@ -83,7 +83,8 @@ private:
 	void UpdateObjectCBs(const GameTimer& gt);
 	void UpdateMaterialCBs(const GameTimer& gt);
 	void UpdateMainPassCB(const GameTimer& gt);
-	void UpdateWaves(const GameTimer& gt); 
+	void UpdateWaves(const GameTimer& gt);
+	int	 UpdateFrameResource();
 
 	void LoadTextures();
     void BuildRootSignature();
@@ -106,9 +107,9 @@ private:
 
 private:
 
-    std::vector<std::unique_ptr<FrameResource>> mFrameResources;
-    FrameResource* mCurrFrameResource = nullptr;
-    int mCurrFrameResourceIndex = 0;
+	std::vector<std::unique_ptr<FrameResource>> m_frameRscLst;
+	FrameResource*	m_frameRscCur = nullptr;
+	int				m_frameRscIdx = 0;
 
     UINT mCbvSrvDescriptorSize = 0;
 

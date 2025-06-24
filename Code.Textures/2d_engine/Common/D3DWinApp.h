@@ -17,9 +17,9 @@ public:
 	int		init(const std::any& initialValue = {})				override;
 	int		Run()												override;
 	LRESULT	MsgProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l)	override;
-	void	OnResize(bool update=true)							override;
-	void	Update(const std::any& t)							override {};
-	void	Render()											override {};
+	int		Resize(bool update=true)							override;
+	int		Update(const std::any& t)							override {};
+	int		Render()											override {};
 	void	OnMouseDown(WPARAM btnState, const ::POINT& p)		override {};
 	void	OnMouseUp(WPARAM btnState, const ::POINT&)			override {};
 	void	OnMouseMove(WPARAM btnState, const ::POINT&)		override {};

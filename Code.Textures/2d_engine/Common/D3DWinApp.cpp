@@ -14,11 +14,6 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return IG2AppFrameWin::instance()->MsgProc(hwnd, msg, wParam, lParam);
 }
 
-D3DWinApp::D3DWinApp(HINSTANCE hInstance)
-:	mhAppInst(hInstance)
-{
-}
-
 D3DWinApp::~D3DWinApp()
 {
 }
@@ -43,7 +38,7 @@ void D3DWinApp::Set4xMsaaState(bool value)
 	int hr = IG2Graphics::instance()->command(EG2GRAPHICS_D3D::CMD_MSAASTATE4X, value);
 	if(SUCCEEDED(hr))
 	{
-		OnResize(false);
+		Resize(false);
 	}
 }
 
@@ -93,20 +88,21 @@ int D3DWinApp::init(const std::any& initialValue)
 	if(!InitMainWindow())
 		return false;
 
-	auto engine = IG2Graphics::instance();
-	int hr = engine->init(std::make_tuple(mhMainWnd, m_screenSize, m4xMsaaState));
+	auto d3d = IG2Graphics::instance();
+	int hr = d3d->init(std::make_tuple(mhMainWnd, m_screenSize, m4xMsaaState));
 	if(FAILED(hr))
 		return false;
 
-    OnResize(false);
+    Resize(false);
 	return true;
 }
  
-void D3DWinApp::OnResize(bool update)
+int D3DWinApp::Resize(bool update)
 {
-	int hr = 0;
+	int hr = S_OK;
 	if(update)
 		hr = IG2Graphics::instance()->command(CMD_SCREEN_RESIZE, m_screenSize);
+	return hr;
 }
  
 LRESULT D3DWinApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -152,7 +148,7 @@ LRESULT D3DWinApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				mAppPaused = false;
 				mMinimized = false;
 				mMaximized = true;
-				OnResize();
+				Resize();
 			}
 			else if (wParam == SIZE_RESTORED)
 			{
@@ -162,7 +158,7 @@ LRESULT D3DWinApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					mAppPaused = false;
 					mMinimized = false;
-					OnResize();
+					Resize();
 				}
 
 				// Restoring from maximized state?
@@ -170,7 +166,7 @@ LRESULT D3DWinApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					mAppPaused = false;
 					mMaximized = false;
-					OnResize();
+					Resize();
 				}
 				else if (mResizing)
 				{
@@ -185,7 +181,7 @@ LRESULT D3DWinApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 				else // API call such as SetWindowPos or m_d3dSwapChain->SetFullscreenState.
 				{
-					OnResize();
+					Resize();
 				}
 			}
 			return 0;
@@ -206,7 +202,7 @@ LRESULT D3DWinApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			mAppPaused = false;
 			mResizing = false;
 			mTimer.Start();
-			OnResize();
+			Resize();
 			return 0;
 		}
 

@@ -4,14 +4,14 @@
 #include <fstream>
 
 
-static int gNumFrameResources = 3;
+static int g_FrameResourceCount = 3;
 void d3dUtil::setFrameReourceNumer(int v)
 {
-    gNumFrameResources = v;
+    g_FrameResourceCount = v;
 }
-int d3dUtil::getFrameReourceNumer()
+int d3dUtil::getFrameRscCount()
 {
-	return gNumFrameResources;
+	return g_FrameResourceCount;
 }
 
 using Microsoft::WRL::ComPtr;

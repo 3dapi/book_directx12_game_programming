@@ -99,8 +99,8 @@ private:
 private:
 
     std::vector<std::unique_ptr<FrameResource>> mFrameResources;
-    FrameResource* mCurrFrameResource = nullptr;
-    int mCurrFrameResourceIndex = 0;
+    FrameResource* m_frameRscCur = nullptr;
+    int m_frameRscIdx = 0;
 
     UINT mCbvSrvDescriptorSize = 0;
 
@@ -225,15 +225,15 @@ void BezierPatchApp::Update(const GameTimer& gt)
 	UpdateCamera(gt);
 
     // Cycle through the circular frame resource array.
-    mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % gNumFrameResources;
-    mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
+    m_frameRscIdx = (m_frameRscIdx + 1) % gNumFrameResources;
+    m_frameRscCur = mFrameResources[m_frameRscIdx].get();
 
     // Has the GPU finished processing the commands of the current frame resource?
     // If not, wait until the GPU has completed commands up to this fence point.
-    if(mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
+    if(m_frameRscCur->Fence != 0 && mFence->GetCompletedValue() < m_frameRscCur->Fence)
     {
         HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-        ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
+        ThrowIfFailed(mFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
         WaitForSingleObject(eventHandle, INFINITE);
         CloseHandle(eventHandle);
     }
@@ -246,7 +246,7 @@ void BezierPatchApp::Update(const GameTimer& gt)
 
 void BezierPatchApp::Draw(const GameTimer& gt)
 {
-    auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+    auto cmdListAlloc = m_frameRscCur->CmdListAlloc;
 
     // Reuse the memory associated with command recording.
     // We can only reset when the associated command lists have finished execution on the GPU.
@@ -277,7 +277,7 @@ void BezierPatchApp::Draw(const GameTimer& gt)
 
 	UINT passCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(PassConstants));
 
-	auto passCB = mCurrFrameResource->PassCB->Resource();
+	auto passCB = m_frameRscCur->PassCB->Resource();
 	mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 	
     DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
@@ -298,7 +298,7 @@ void BezierPatchApp::Draw(const GameTimer& gt)
 	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
 
     // Advance the fence value to mark commands up to this fence point.
-    mCurrFrameResource->Fence = ++mCurrentFence;
+    m_frameRscCur->Fence = ++mCurrentFence;
 
     // Add an instruction to the command queue to set a new fence point. 
     // Because we are on the GPU timeline, the new fence point won't be 
@@ -378,7 +378,7 @@ void BezierPatchApp::AnimateMaterials(const GameTimer& gt)
 
 void BezierPatchApp::UpdateObjectCBs(const GameTimer& gt)
 {
-	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
+	auto currObjectCB = m_frameRscCur->ObjectCB.get();
 	for(auto& e : mAllRitems)
 	{
 		// Only update the cbuffer data if the constants have changed.  
@@ -402,7 +402,7 @@ void BezierPatchApp::UpdateObjectCBs(const GameTimer& gt)
 
 void BezierPatchApp::UpdateMaterialCBs(const GameTimer& gt)
 {
-	auto currMaterialCB = mCurrFrameResource->MaterialCB.get();
+	auto currMaterialCB = m_frameRscCur->MaterialCB.get();
 	for(auto& e : mMaterials)
 	{
 		// Only update the cbuffer data if the constants have changed.  If the cbuffer
@@ -458,7 +458,7 @@ void BezierPatchApp::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 
 	// Main pass stored in index 2
-	auto currPassCB = mCurrFrameResource->PassCB.get();
+	auto currPassCB = m_frameRscCur->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
 }
 
@@ -757,8 +757,8 @@ void BezierPatchApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const s
     UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
     UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
 
-	auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-	auto matCB = mCurrFrameResource->MaterialCB->Resource();
+	auto objectCB = m_frameRscCur->ObjectCB->Resource();
+	auto matCB = m_frameRscCur->MaterialCB->Resource();
 
     // For each render item...
     for(size_t i = 0; i < ritems.size(); ++i)

@@ -114,8 +114,8 @@ private:
 private:
 
     std::vector<std::unique_ptr<FrameResource>> mFrameResources;
-    FrameResource* mCurrFrameResource = nullptr;
-    int mCurrFrameResourceIndex = 0;
+    FrameResource* m_frameRscCur = nullptr;
+    int m_frameRscIdx = 0;
 
     ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
     ComPtr<ID3D12RootSignature> mSsaoRootSignature = nullptr;
@@ -300,15 +300,15 @@ void SsaoApp::Update(const GameTimer& gt)
     OnKeyboardInput(gt);
 
     // Cycle through the circular frame resource array.
-    mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % gNumFrameResources;
-    mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
+    m_frameRscIdx = (m_frameRscIdx + 1) % gNumFrameResources;
+    m_frameRscCur = mFrameResources[m_frameRscIdx].get();
 
     // Has the GPU finished processing the commands of the current frame resource?
     // If not, wait until the GPU has completed commands up to this fence point.
-    if(mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
+    if(m_frameRscCur->Fence != 0 && mFence->GetCompletedValue() < m_frameRscCur->Fence)
     {
         HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-        ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
+        ThrowIfFailed(mFence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle));
         WaitForSingleObject(eventHandle, INFINITE);
         CloseHandle(eventHandle);
     }
@@ -338,7 +338,7 @@ void SsaoApp::Update(const GameTimer& gt)
 
 void SsaoApp::Draw(const GameTimer& gt)
 {
-    auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+    auto cmdListAlloc = m_frameRscCur->CmdListAlloc;
 
     // Reuse the memory associated with command recording.
     // We can only reset when the associated command lists have finished execution on the GPU.
@@ -359,7 +359,7 @@ void SsaoApp::Draw(const GameTimer& gt)
 
     // Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
     // set as a root descriptor.
-    auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+    auto matBuffer = m_frameRscCur->MaterialBuffer->Resource();
     mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
 	
     // Bind null SRV for shadow map pass.
@@ -383,7 +383,7 @@ void SsaoApp::Draw(const GameTimer& gt)
 	// 
 	
     mCommandList->SetGraphicsRootSignature(mSsaoRootSignature.Get());
-    mSsao->ComputeSsao(mCommandList.Get(), mCurrFrameResource, 3);
+    mSsao->ComputeSsao(mCommandList.Get(), m_frameRscCur, 3);
 	
 	//
 	// Main rendering pass.
@@ -395,7 +395,7 @@ void SsaoApp::Draw(const GameTimer& gt)
 
     // Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
     // set as a root descriptor.
-    matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+    matBuffer = m_frameRscCur->MaterialBuffer->Resource();
     mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
 
 
@@ -420,7 +420,7 @@ void SsaoApp::Draw(const GameTimer& gt)
     // The root signature knows how many descriptors are expected in the table.
     mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 	
-    auto passCB = mCurrFrameResource->PassCB->Resource();
+    auto passCB = m_frameRscCur->PassCB->Resource();
 	mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
     // Bind the sky cube map.  For our demos, we just use one "world" cube map representing the environment
@@ -457,7 +457,7 @@ void SsaoApp::Draw(const GameTimer& gt)
 	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
 
     // Advance the fence value to mark commands up to this fence point.
-    mCurrFrameResource->Fence = ++mCurrentFence;
+    m_frameRscCur->Fence = ++mCurrentFence;
 
     // Add an instruction to the command queue to set a new fence point. 
     // Because we are on the GPU timeline, the new fence point won't be 
@@ -520,7 +520,7 @@ void SsaoApp::AnimateMaterials(const GameTimer& gt)
 
 void SsaoApp::UpdateObjectCBs(const GameTimer& gt)
 {
-	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
+	auto currObjectCB = m_frameRscCur->ObjectCB.get();
 	for(auto& e : mAllRitems)
 	{
 		// Only update the cbuffer data if the constants have changed.  
@@ -545,7 +545,7 @@ void SsaoApp::UpdateObjectCBs(const GameTimer& gt)
 
 void SsaoApp::UpdateMaterialBuffer(const GameTimer& gt)
 {
-	auto currMaterialBuffer = mCurrFrameResource->MaterialBuffer.get();
+	auto currMaterialBuffer = m_frameRscCur->MaterialBuffer.get();
 	for(auto& e : mMaterials)
 	{
 		// Only update the cbuffer data if the constants have changed.  If the cbuffer
@@ -654,7 +654,7 @@ void SsaoApp::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.Lights[2].Direction = mRotatedLightDirections[2];
 	mMainPassCB.Lights[2].Strength = { 0.0f, 0.0f, 0.0f };
  
-	auto currPassCB = mCurrFrameResource->PassCB.get();
+	auto currPassCB = m_frameRscCur->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
 }
 
@@ -683,7 +683,7 @@ void SsaoApp::UpdateShadowPassCB(const GameTimer& gt)
     mShadowPassCB.NearZ = mLightNearZ;
     mShadowPassCB.FarZ = mLightFarZ;
 
-    auto currPassCB = mCurrFrameResource->PassCB.get();
+    auto currPassCB = m_frameRscCur->PassCB.get();
     currPassCB->CopyData(1, mShadowPassCB);
 }
 
@@ -719,7 +719,7 @@ void SsaoApp::UpdateSsaoCB(const GameTimer& gt)
     ssaoCB.OcclusionFadeEnd = 1.0f;
     ssaoCB.SurfaceEpsilon = 0.05f;
  
-    auto currSsaoCB = mCurrFrameResource->SsaoCB.get();
+    auto currSsaoCB = m_frameRscCur->SsaoCB.get();
     currSsaoCB->CopyData(0, ssaoCB);
 }
 
@@ -1644,7 +1644,7 @@ void SsaoApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vec
 {
     UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
  
-	auto objectCB = mCurrFrameResource->ObjectCB->Resource();
+	auto objectCB = m_frameRscCur->ObjectCB->Resource();
 
     // For each render item...
     for(size_t i = 0; i < ritems.size(); ++i)
@@ -1681,7 +1681,7 @@ void SsaoApp::DrawSceneToShadowMap()
 
     // Bind the pass constant buffer for the shadow map pass.
     UINT passCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(PassConstants));
-    auto passCB = mCurrFrameResource->PassCB->Resource();
+    auto passCB = m_frameRscCur->PassCB->Resource();
     D3D12_GPU_VIRTUAL_ADDRESS passCBAddress = passCB->GetGPUVirtualAddress() + 1*passCBByteSize;
     mCommandList->SetGraphicsRootConstantBufferView(1, passCBAddress);
 
@@ -1715,7 +1715,7 @@ void SsaoApp::DrawNormalsAndDepth()
     mCommandList->OMSetRenderTargets(1, &normalMapRtv, true, &DepthStencilView());
 
     // Bind the constant buffer for this pass.
-    auto passCB = mCurrFrameResource->PassCB->Resource();
+    auto passCB = m_frameRscCur->PassCB->Resource();
     mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
     mCommandList->SetPipelineState(mPSOs["drawNormals"].Get());

@@ -27,13 +27,14 @@ EG2GRAPHICS EngineD3D::type() const
 
 std::any EngineD3D::getAttrib(int nAttrib)
 {
-	switch (nCmd)
+	switch ((EG2GRAPHICS_D3D)nAttrib)
 	{
 		case EG2GRAPHICS_D3D::ATT_DEVICE:						return m_d3dDevice;
 		case EG2GRAPHICS_D3D::ATT_SCREEN_SIZE:					return &m_screenSize;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_BACKBUFFER_FORAT:		return &m_d3dFormatBackbuffer;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_DEPTH_STENCIL_FORAT:	return &m_d3dFormatDepthStencil;
-		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FRAME_INDEX:	return &m_d3dCurrentBackBufferIndex;
+		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FRAME_INDEX:	return &m_d3dIndexBackBuffer;
+		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FENCE_INDEX:	return &m_d3dIndexFence;
 
 		case EG2GRAPHICS_D3D::ATT_DEVICE_VIEWPORT:				return &m_d3dViewport;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_SCISSOR_RECT:			return &m_d3dScissor;
@@ -65,6 +66,14 @@ int EngineD3D::command(int nCmd, const std::any& v)
 			m_screenSize = std::any_cast<::SIZE>(v);
 			return this->Resize();
 		}
+		case EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE:
+		{
+			return this->FlushCommandQueue();
+		}
+		case EG2GRAPHICS_D3D::CMD_PRESENT:
+		{
+			return this->Present();
+		}
 		default:
 			break;
 	}
@@ -83,11 +92,11 @@ std::any EngineD3D::getRootSignature()
 }
 std::any EngineD3D::getCommandAllocator()
 {
-	return std::any();
+	return m_d3dCommandAlloc.Get();
 }
 std::any EngineD3D::getCommandQueue()
 {
-	return std::any();
+	return m_d3dCommandQueue.Get();
 }
 std::any EngineD3D::getCommandList()
 {
@@ -97,17 +106,28 @@ std::any EngineD3D::getRenderTarget()
 {
 	return std::any();
 }
-std::any EngineD3D::getRenderTargetView()
+std::any EngineD3D::getBackBufferView()
 {
-	return std::any();
+	auto ret = CurrentBackBufferView();
+	return ret;
 }
 std::any EngineD3D::getDepthStencilView()
 {
-	return std::any();
+	return DepthStencilView();
 }
-int  EngineD3D::getCurrentFrameIndex()	const
+std::any EngineD3D::getFence()
 {
-	return m_d3dCurrentBackBufferIndex;
+	return m_d3dFence.Get();
+}
+int  EngineD3D::getCurrentBackbufferdex()	const
+{
+	return m_d3dIndexBackBuffer;
+}
+
+std::any EngineD3D::getCurrentBackBuffer()
+{
+	auto ret = CurrentBackBuffer();
+	return ret;
 }
 
 int EngineD3D::init(const std::any& initialValue)
@@ -154,10 +174,10 @@ bool EngineD3D::InitDirect3D()
 	}
 
 	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE,
-		IID_PPV_ARGS(&mFence)));
+		IID_PPV_ARGS(&m_d3dFence)));
 
-	mRtvDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	mDsvDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	m_sizeDescriptorB = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_sizeDescriptorD = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 	mCbvSrvUavDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	// Check 4X MSAA quality support for our back buffer format.
@@ -244,14 +264,14 @@ void EngineD3D::CreateRtvAndDsvDescriptorHeaps()
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	rtvHeapDesc.NodeMask = 0;
-	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf())));
+	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(m_heapBackBuffer.GetAddressOf())));
 
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
 	dsvHeapDesc.NumDescriptors = 1;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	dsvHeapDesc.NodeMask = 0;
-	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
+	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(m_heapDepthStencil.GetAddressOf())));
 }
 
 int EngineD3D::Resize()
@@ -266,8 +286,8 @@ int EngineD3D::Resize()
 
 	// Release the previous resources we will be recreating.
 	for (int i = 0; i < FRAME_BUFFER_COUNT; ++i)
-		m_d3dFrameBufferRenderTarget[i].Reset();
-	m_d3dFrameBufferDepthStencil.Reset();
+		m_d3dBackBuffer[i].Reset();
+	m_d3dDepthBuffer.Reset();
 
 	// Resize the swap chain.
 	ThrowIfFailed(m_d3dSwapChain->ResizeBuffers(
@@ -276,14 +296,14 @@ int EngineD3D::Resize()
 		m_d3dFormatBackbuffer,
 		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
 
-	m_d3dCurrentBackBufferIndex = 0;
+	m_d3dIndexBackBuffer = 0;
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(m_heapBackBuffer->GetCPUDescriptorHandleForHeapStart());
 	for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
 	{
-		ThrowIfFailed(m_d3dSwapChain->GetBuffer(i, IID_PPV_ARGS(&m_d3dFrameBufferRenderTarget[i])));
-		m_d3dDevice->CreateRenderTargetView(m_d3dFrameBufferRenderTarget[i].Get(), nullptr, rtvHeapHandle);
-		rtvHeapHandle.Offset(1, mRtvDescriptorSize);
+		ThrowIfFailed(m_d3dSwapChain->GetBuffer(i, IID_PPV_ARGS(&m_d3dBackBuffer[i])));
+		m_d3dDevice->CreateRenderTargetView(m_d3dBackBuffer[i].Get(), nullptr, rtvHeapHandle);
+		rtvHeapHandle.Offset(1, m_sizeDescriptorB);
 	}
 
 	// Create the depth/stencil buffer and view.
@@ -310,13 +330,13 @@ int EngineD3D::Resize()
 		&descDepth,
 		D3D12_RESOURCE_STATE_COMMON,
 		&optClear,
-		IID_PPV_ARGS(m_d3dFrameBufferDepthStencil.GetAddressOf())));
+		IID_PPV_ARGS(m_d3dDepthBuffer.GetAddressOf())));
 
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
-	m_d3dDevice->CreateDepthStencilView(m_d3dFrameBufferDepthStencil.Get(), nullptr, DepthStencilView());
+	m_d3dDevice->CreateDepthStencilView(m_d3dDepthBuffer.Get(), nullptr, DepthStencilView());
 
 	// Transition the resource from its initial state to be used as a depth buffer.
-	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_d3dFrameBufferDepthStencil.Get(),
+	m_d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_d3dDepthBuffer.Get(),
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
 	// Execute the resize commands.
@@ -341,46 +361,62 @@ int EngineD3D::Resize()
 }
 
 
-void EngineD3D::FlushCommandQueue()
+int EngineD3D::FlushCommandQueue()
 {
+	HRESULT hr = S_OK;
+
 	// Advance the fence value to mark commands up to this fence point.
-	mCurrentFence++;
+	++m_d3dIndexFence;
 
 	// Add an instruction to the command queue to set a new fence point.  Because we 
 	// are on the GPU timeline, the new fence point won't be set until the GPU finishes
 	// processing all the commands prior to this Signal().
-	ThrowIfFailed(m_d3dCommandQueue->Signal(mFence.Get(), mCurrentFence));
+	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
+	if (FAILED(hr))
+		return hr;
 
 	// Wait until the GPU has completed commands up to this fence point.
-	if (mFence->GetCompletedValue() < mCurrentFence)
+	if (m_d3dFence->GetCompletedValue() < m_d3dIndexFence)
 	{
 		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
 
 		// Fire event when GPU hits current fence.  
-		ThrowIfFailed(mFence->SetEventOnCompletion(mCurrentFence, eventHandle));
+		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dIndexFence, eventHandle));
 
 		// Wait until the GPU hits current fence event is fired.
 		WaitForSingleObject(eventHandle, INFINITE);
 		CloseHandle(eventHandle);
 	}
+
+	return S_OK;
 }
 
-ID3D12Resource* EngineD3D::CurrentBackBuffer()const
+int EngineD3D::Present()
 {
-	return m_d3dFrameBufferRenderTarget[m_d3dCurrentBackBufferIndex].Get();
+	int hr = S_OK;
+	hr = m_d3dSwapChain->Present(0, 0);
+	if (FAILED(hr))
+		return hr;
+
+	m_d3dIndexBackBuffer = (m_d3dIndexBackBuffer + 1) % FRAME_BUFFER_COUNT;
+	++m_d3dIndexFence;
+	m_d3dCommandQue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
+	return S_OK;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE EngineD3D::CurrentBackBufferView()const
+ID3D12Resource* EngineD3D::CurrentBackBuffer() const
 {
-	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
-		mRtvHeap->GetCPUDescriptorHandleForHeapStart(),
-		m_d3dCurrentBackBufferIndex,
-		mRtvDescriptorSize);
+	return m_d3dBackBuffer[m_d3dIndexBackBuffer].Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE EngineD3D::DepthStencilView()const
+CD3DX12_CPU_DESCRIPTOR_HANDLE EngineD3D::CurrentBackBufferView() const
 {
-	return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_heapBackBuffer->GetCPUDescriptorHandleForHeapStart(), m_d3dIndexBackBuffer, m_sizeDescriptorB);
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE EngineD3D::DepthStencilView() const
+{
+	return m_heapDepthStencil->GetCPUDescriptorHandleForHeapStart();
 }
 
 void EngineD3D::LogAdapters()
