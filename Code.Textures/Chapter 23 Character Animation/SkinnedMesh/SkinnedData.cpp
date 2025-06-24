@@ -1,4 +1,4 @@
-#include "SkinnedData.h"
+﻿#include "SkinnedData.h"
 
 using namespace DirectX;
 

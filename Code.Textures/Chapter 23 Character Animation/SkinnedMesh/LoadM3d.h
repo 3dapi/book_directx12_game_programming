@@ -1,4 +1,4 @@
-#ifndef LOADM3D_H
+﻿#ifndef LOADM3D_H
 #define LOADM3D_H
 
 #include "SkinnedData.h"

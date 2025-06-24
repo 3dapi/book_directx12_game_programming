@@ -1,4 +1,4 @@
-// SpinningCube.cpp : Defines the entry point for the application.
+﻿// SpinningCube.cpp : Defines the entry point for the application.
 //
 
 #pragma comment(lib, "d3d12")

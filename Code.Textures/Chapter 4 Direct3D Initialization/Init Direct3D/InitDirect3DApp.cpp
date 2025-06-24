@@ -1,4 +1,4 @@
-//***************************************************************************************
+﻿//***************************************************************************************
 // Init Direct3D.cpp by Frank Luna (C) 2015 All Rights Reserved.
 //
 // Demonstrates the sample framework by initializing Direct3D, clearing 

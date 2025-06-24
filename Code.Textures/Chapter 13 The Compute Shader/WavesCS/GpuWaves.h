@@ -1,4 +1,4 @@
-//***************************************************************************************
+﻿//***************************************************************************************
 // GpuWaves.h by Frank Luna (C) 2011 All Rights Reserved.
 //
 // Performs the calculations for the wave simulation using the ComputeShader on the GPU.  

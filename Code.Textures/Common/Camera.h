@@ -1,4 +1,4 @@
-//***************************************************************************************
+﻿//***************************************************************************************
 // Camera.h by Frank Luna (C) 2011 All Rights Reserved.
 //   
 // Simple first person style camera class that lets the viewer explore the 3D scene.

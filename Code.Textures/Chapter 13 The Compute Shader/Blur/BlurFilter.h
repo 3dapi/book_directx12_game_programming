@@ -1,4 +1,4 @@
-//***************************************************************************************
+﻿//***************************************************************************************
 // BlurFilter.h by Frank Luna (C) 2011 All Rights Reserved.
 //
 // Performs a blur operation on the topmost mip level of an input texture.
