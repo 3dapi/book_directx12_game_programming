@@ -1,0 +1,98 @@
+﻿#pragma once
+#ifndef _GraphicsEngineD3D_H_
+#define _GraphicsEngineD3D_H_
+
+#include <any>
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <Windows.h>
+#include <winerror.h>
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include <d3dcompiler.h>
+#include <DirectXMath.h>
+#include <DirectXColors.h>
+#include <wrl.h>
+#include "G2ConstantsWin.h"
+
+using namespace DirectX;
+using namespace Microsoft::WRL;
+
+class EngineD3D : public IG2GraphicsD3D
+{
+public:
+	EG2GRAPHICS type() const override;
+	int			init(const std::any& initialValue = {})			override;
+	std::any	getAttrib(int nAttrib)							override;
+	int			setAttrib(int nAttrib, const std::any& v = {})	override;
+	int			command(int nCmd, const std::any& v = {})		override;
+	std::any	getDevice()						override;
+	std::any	getRootSignature()				override;
+	std::any	getCommandAllocator()			override;
+	std::any	getCommandQueue()				override;
+	std::any	getCommandList()				override;
+	std::any	getRenderTarget()				override;
+	std::any	getRenderTargetView()			override;
+	std::any	getDepthStencilView()			override;
+	int			getCurrentFrameIndex()	const	override;
+
+public:
+	bool InitDirect3D();
+	void CreateCommandObjects();
+	void CreateSwapChain();
+	void CreateRtvAndDsvDescriptorHeaps();
+	int		Resize();
+	void	FlushCommandQueue();
+
+	ID3D12Resource* CurrentBackBuffer()const;
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
+	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
+
+	void CalculateFrameStats();
+
+	void LogAdapters();
+	void LogAdapterOutputs(IDXGIAdapter* adapter);
+	void LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format);
+	int  Set4xMsaaState(bool msst);
+
+protected:
+	HWND	m_hWnd			{};
+	::SIZE	m_screenSize	{1280, 600};
+
+	// Set true to use 4X MSAA (?.1.8).  The default is false.
+	bool      m4xMsaaState = false;    // 4X MSAA enabled
+	UINT      m4xMsaaQuality = 0;      // quality level of 4X MSAA
+
+	// Derived class should set these in derived constructor to customize starting values.
+	D3D_DRIVER_TYPE				m_d3dDriverType = D3D_DRIVER_TYPE_HARDWARE;
+	DXGI_FORMAT					m_d3dFormatBackbuffer = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT					m_d3dFormatDepthStencil = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	ComPtr<IDXGIFactory4>       m_dxgiFactory;
+	ComPtr<IDXGISwapChain>      m_d3dSwapChain;
+	ComPtr<ID3D12Device>        m_d3dDevice;
+
+	ComPtr<ID3D12Fence> mFence;
+	UINT64 mCurrentFence = 0;
+
+	ComPtr<ID3D12CommandQueue>          m_d3dCommandQueue;
+	ComPtr<ID3D12CommandAllocator>      m_d3dCommandAlloc;
+	ComPtr<ID3D12GraphicsCommandList>   m_d3dCommandList;
+
+	ComPtr<ID3D12Resource>              m_d3dFrameBufferRenderTarget[FRAME_BUFFER_COUNT];
+	ComPtr<ID3D12Resource>              m_d3dFrameBufferDepthStencil;
+	int m_d3dCurrentBackBufferIndex = 0;
+
+	ComPtr<ID3D12DescriptorHeap> mRtvHeap;
+	ComPtr<ID3D12DescriptorHeap> mDsvHeap;
+
+	D3D12_VIEWPORT m_d3dViewport;
+	D3D12_RECT     m_d3dScissor;
+
+	UINT mRtvDescriptorSize = 0;
+	UINT mDsvDescriptorSize = 0;
+	UINT mCbvSrvUavDescriptorSize = 0;
+};
+
+
+#endif // _GraphicsEngineD3D_H_
