@@ -16,6 +16,7 @@ struct IG2AppFrame
 
 	static IG2AppFrame* instance();
 	virtual int init(const std::any& initialValue = {}) = 0;
+	virtual int destroy() = 0;
 };
 
 enum EG2GRAPHICS
@@ -34,6 +35,7 @@ struct IG2Graphics
 	static IG2Graphics* instance();
 	virtual EG2GRAPHICS type() const = 0;
 	virtual int init(const std::any& initialValue = {}) = 0;
+	virtual int destroy() = 0;
 
 	virtual std::any getAttrib(int nAttrib) = 0;
 	virtual int      setAttrib(int nAttrib, const std::any& v = {}) = 0;

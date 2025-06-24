@@ -32,7 +32,8 @@ int main(int, char**)
         if(FAILED(hr))
             return 0;
 
-        return appMain->Run();
+        hr = appMain->Run();
+        delete appMain;
     }
     catch(DxException& e)
     {

@@ -50,11 +50,10 @@ enum class RenderLayer : int
 class MainApp : public D3DWinApp
 {
 public:
-	static MainApp* m_pMain;
-public:
 	MainApp();
 	virtual ~MainApp();
 	int		init(const std::any& initialValue = {})			override;
+	int		destroy()										override;
 	int		Resize(bool update)								override;
 	int		Update(const std::any& t)						override;
 	int		Render()										override;

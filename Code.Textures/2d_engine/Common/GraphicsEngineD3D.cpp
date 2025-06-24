@@ -140,39 +140,22 @@ int EngineD3D::init(const std::any& initialValue)
 	return hr;
 }
 
+int EngineD3D::destroy()
+{
+	return this->ReleaseDevice();
+}
+
 
 int EngineD3D::InitDevice()
 {
 	int hr = S_OK;
-#if defined(DEBUG) || defined(_DEBUG) 
-	// Enable the D3D12 debug layer.
-	{
-		ComPtr<ID3D12Debug> debugController;
-		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
-		debugController->EnableDebugLayer();
-	}
-#endif
 
-	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_dxgiFactory)));
+	// 1. create device
+	hr = CreateDevice();
+	if (FAILED(hr))
+		return hr;
 
-	// Try to create hardware device.
-	HRESULT hardwareResult = D3D12CreateDevice(
-		nullptr,             // default adapter
-		D3D_FEATURE_LEVEL_11_0,
-		IID_PPV_ARGS(&m_d3dDevice));
-
-	// Fallback to WARP device.
-	if (FAILED(hardwareResult))
-	{
-		ComPtr<IDXGIAdapter> pWarpAdapter;
-		ThrowIfFailed(m_dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&pWarpAdapter)));
-
-		ThrowIfFailed(D3D12CreateDevice(
-			pWarpAdapter.Get(),
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&m_d3dDevice)));
-	}
-
+	// 1. Create synchronization objects.
 	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3dFence)));
 
 	m_sizeDescriptorB = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -203,6 +186,99 @@ int EngineD3D::InitDevice()
 	CreateCommandObjects();
 	CreateSwapChain();
 	CreateRtvAndDsvDescriptorHeaps();
+
+	return S_OK;
+}
+
+int EngineD3D::CreateDevice()
+{
+	int hr = S_OK;
+	UINT dxgiFactoryFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG) 
+	// Enable the debug layer (requires the Graphics Tools "optional feature").
+	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
+	{
+		ComPtr<ID3D12Debug> debugController;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+		{
+			debugController->EnableDebugLayer();
+			// Enable additional debug layers.
+			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+		}
+	}
+#endif
+	hr = CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&m_dxgiFactory));
+	if (FAILED(hr))
+		return hr;
+
+	// 1. create device with best feature
+	D3D_FEATURE_LEVEL featureLevels[] =
+	{
+		D3D_FEATURE_LEVEL_12_2,
+		D3D_FEATURE_LEVEL_12_1,
+		D3D_FEATURE_LEVEL_12_0,
+		D3D_FEATURE_LEVEL_11_1,
+		D3D_FEATURE_LEVEL_11_0,
+		D3D_FEATURE_LEVEL_10_1,
+		D3D_FEATURE_LEVEL_10_0,
+	};
+
+	IDXGIAdapter* pAdapter = GetHardwareAdapter(m_dxgiFactory.Get());
+	// 1.1 Hardware mode
+	for (int i = 0; i < sizeof(featureLevels) / sizeof(featureLevels[0]); ++i)
+	{
+		hr = D3D12CreateDevice(pAdapter, featureLevels[i], IID_PPV_ARGS(&m_d3dDevice));
+		if (SUCCEEDED(hr))
+		{
+			m_featureLevel = featureLevels[i];
+			m_driverType = D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE;
+			break;
+		}
+	}
+	SAFE_RELEASE(pAdapter);
+	// 1.2 WARP (Window Advanced Rasterization Platform) Mode
+	if (FAILED(hr))
+	{
+		hr = m_dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&pAdapter));
+		if (SUCCEEDED(hr))
+		{
+			for (int i = 0; i < sizeof(featureLevels) / sizeof(featureLevels[0]); ++i)
+			{
+				hr = D3D12CreateDevice(pAdapter, featureLevels[i], IID_PPV_ARGS(&m_d3dDevice));
+				if (SUCCEEDED(hr))
+				{
+					m_featureLevel = featureLevels[i];
+					m_driverType = D3D_DRIVER_TYPE_WARP;
+					break;
+				}
+			}
+		}
+		SAFE_RELEASE(pAdapter);
+	}
+	if (!m_featureLevel)
+		return E_FAIL;
+
+	return S_OK;
+}
+
+int EngineD3D::ReleaseDevice()
+{
+	FlushCommandQueue();
+
+	m_d3dSwapChain.Reset();
+	m_d3dFence.Reset();
+	m_d3dCommandQueue.Reset();
+	m_d3dCommandAlloc.Reset();
+	m_d3dCommandList.Reset();
+	for (int i = 0; i < FRAME_BUFFER_COUNT; ++i)
+	{
+		m_d3dBackBuffer[i].Reset();
+	}
+	m_d3dDepthBuffer.Reset();
+	m_heapBackBuffer.Reset();
+	m_heapDepthStencil.Reset();
+	m_d3dDevice.Reset();
+	m_dxgiFactory.Reset();
 
 	return S_OK;
 }

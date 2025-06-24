@@ -36,16 +36,16 @@ protected:
 
 protected:
     std::wstring mMainWndCaption = L"d3d App";
-    HINSTANCE	mhAppInst = nullptr; // application instance handle
-    HWND		mhMainWnd = nullptr; // main window handle
-	bool		mAppPaused = false;  // is the application paused?
-	bool		mMinimized = false;  // is the application minimized?
-	bool		mMaximized = false;  // is the application maximized?
-	bool		mResizing = false;   // are the resize bars being dragged?
-    bool		mFullscreenState = false;// fullscreen enabled
+    HINSTANCE	mhAppInst			{};	// application instance handle
+    HWND		mhMainWnd			{};	// main window handle
+	bool		mAppPaused			{};	// is the application paused?
+	bool		mMinimized			{};	// is the application minimized?
+	bool		mMaximized			{};	// is the application maximized?
+	bool		mResizing			{};	// are the resize bars being dragged?
+    bool		mFullscreenState	{}; // fullscreen enabled
 	bool		m_msaa4State		{};
-	::SIZE		m_screenSize {1280, 600};
-	bool		m_willResize			{};
+	::SIZE		m_screenSize		{1280, 600};
+	bool		m_willResize		{};
 
 	GameTimer mTimer;
 };

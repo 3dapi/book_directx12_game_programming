@@ -63,7 +63,7 @@ int D3DWinApp::Run()
         }
     }
 
-	//IG2Graphics::instance()->FlushCommandQueue();
+	IG2Graphics::instance()->destroy();
 
 	return (int)msg.wParam;
 }

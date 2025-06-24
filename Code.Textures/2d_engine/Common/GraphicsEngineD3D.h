@@ -25,6 +25,7 @@ class EngineD3D : public IG2GraphicsD3D
 public:
 	EG2GRAPHICS type() const override;
 	int			init(const std::any& initialValue = {})			override;
+	int			destroy()										override;
 	std::any	getAttrib(int nAttrib)							override;
 	int			setAttrib(int nAttrib, const std::any& v = {})	override;
 	int			command(int nCmd, const std::any& v = {})		override;
@@ -41,6 +42,8 @@ public:
 
 public:
 	int		InitDevice();
+	int		CreateDevice();
+	int		ReleaseDevice();
 	void	CreateCommandObjects();
 	void	CreateSwapChain();
 	void	CreateRtvAndDsvDescriptorHeaps();
@@ -66,32 +69,33 @@ protected:
 	UINT        m_msaa4Quality		{};      // quality level of 4X MSAA
 
 	// Derived class should set these in derived constructor to customize starting values.
-	D3D_DRIVER_TYPE						m_d3dDriverType			= D3D_DRIVER_TYPE_HARDWARE;
-	DXGI_FORMAT							m_d3dFormatBackbuffer	= DXGI_FORMAT_R8G8B8A8_UNORM;
-	DXGI_FORMAT							m_d3dFormatDepthStencil	= DXGI_FORMAT_D24_UNORM_S8_UINT;
+	DXGI_FORMAT                         m_d3dFormatBackbuffer   { DXGI_FORMAT_R8G8B8A8_UNORM };
+	DXGI_FORMAT                         m_d3dFormatDepthStencil { DXGI_FORMAT_D24_UNORM_S8_UINT };
 
-	ComPtr<IDXGIFactory4>               m_dxgiFactory       {};
-	ComPtr<IDXGISwapChain>              m_d3dSwapChain      {};
-	ComPtr<ID3D12Device>                m_d3dDevice         {};
-	ComPtr<ID3D12Fence>                 m_d3dFence          {};
-	UINT64                              m_d3dIndexFence     {};
+	ComPtr<IDXGIFactory4>               m_dxgiFactory           {};
+	D3D_FEATURE_LEVEL                   m_featureLevel          {};
+	D3D_DRIVER_TYPE                     m_driverType            {};
+	ComPtr<ID3D12Device>                m_d3dDevice             {};
+	ComPtr<IDXGISwapChain>              m_d3dSwapChain          {};
+	ComPtr<ID3D12Fence>                 m_d3dFence              {};
+	UINT64                              m_d3dIndexFence         {};
 
-	ComPtr<ID3D12CommandQueue>          m_d3dCommandQueue   {};
-	ComPtr<ID3D12CommandAllocator>      m_d3dCommandAlloc   {};
-	ComPtr<ID3D12GraphicsCommandList>   m_d3dCommandList    {};
+	ComPtr<ID3D12CommandQueue>          m_d3dCommandQueue       {};
+	ComPtr<ID3D12CommandAllocator>      m_d3dCommandAlloc       {};
+	ComPtr<ID3D12GraphicsCommandList>   m_d3dCommandList        {};
 
-	ComPtr<ID3D12Resource>              m_d3dBackBuffer     [FRAME_BUFFER_COUNT]{};
-	ComPtr<ID3D12Resource>              m_d3dDepthBuffer    {};
-	UINT                                m_d3dIndexBackBuffer{};
+	ComPtr<ID3D12Resource>              m_d3dBackBuffer         [FRAME_BUFFER_COUNT]{};
+	ComPtr<ID3D12Resource>              m_d3dDepthBuffer        {};
+	UINT                                m_d3dIndexBackBuffer    {};
 
-	ComPtr<ID3D12DescriptorHeap>        m_heapBackBuffer    {};
-	ComPtr<ID3D12DescriptorHeap>        m_heapDepthStencil  {};
+	ComPtr<ID3D12DescriptorHeap>        m_heapBackBuffer        {};
+	ComPtr<ID3D12DescriptorHeap>        m_heapDepthStencil      {};
 
-	D3D12_VIEWPORT                      m_d3dViewport       {};
-	D3D12_RECT                          m_d3dScissor        {};
-	UINT                                m_sizeDescriptorB   {};	// back buffer
-	UINT                                m_sizeDescriptorD   {};	// depth stencil
-	UINT                                mCbvSrvUavDescriptorSize = 0;
+	D3D12_VIEWPORT                      m_d3dViewport           {};
+	D3D12_RECT                          m_d3dScissor            {};
+	UINT                                m_sizeDescriptorB       {};	// back buffer
+	UINT                                m_sizeDescriptorD       {};	// depth stencil
+	UINT                                mCbvSrvUavDescriptorSize{};
 };
 
 

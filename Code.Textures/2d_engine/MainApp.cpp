@@ -5,18 +5,17 @@
 #include "MainApp.h"
 #include "Common/DDSTextureLoader.h"
 
+static MainApp* g_pMain{};
 
 IG2AppFrame* IG2AppFrame::instance()
 {
-	if (!MainApp::m_pMain)
+	if (!g_pMain)
 	{
-		MainApp::m_pMain = new MainApp;
+		g_pMain = new MainApp;
 	}
-	return MainApp::m_pMain;
+	return g_pMain;
 }
 
-MainApp* MainApp::m_pMain = nullptr
-;
 MainApp::MainApp()
 {
 	d3dUtil::setFrameReourceNumer(3);
@@ -24,8 +23,6 @@ MainApp::MainApp()
 
 MainApp::~MainApp()
 {
-	//if(d3dDevice != nullptr)
-	//    FlushCommandQueue();
 }
 
 int MainApp::init(const std::any& initialValue /* = */)
@@ -70,6 +67,11 @@ int MainApp::init(const std::any& initialValue /* = */)
 	// Wait until initialization is complete.
 	hr = d3d->command(CMD_FLUSH_COMMAND_QUEUE);
 
+	return S_OK;
+}
+
+int MainApp::destroy()
+{
 	return S_OK;
 }
 
