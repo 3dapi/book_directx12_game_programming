@@ -90,7 +90,7 @@ inline std::wstring mbToWstr(const std::string& str)
 	return wstr;
 }
 
-ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string& shaderModel, const std::string& entryPoint);
+ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string& shaderModel, const std::string& entryPoint, const void* macros = {});
 //HRESULT		DXCreateDDSTextureFromFile(ID3D12Device* device , ID3D12GraphicsCommandList* cmdList, const std::string& szFileName , ComPtr<ID3D12Resource>& texture, ComPtr<ID3D12Resource>& uploadHeap);
 
 } // namespace G2

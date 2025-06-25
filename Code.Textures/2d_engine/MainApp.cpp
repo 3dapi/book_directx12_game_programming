@@ -2,9 +2,12 @@
 // MainApp.cpp by Frank Luna (C) 2015 All Rights Reserved.
 //***************************************************************************************
 
+#include <d3d12.h>
 #include "MainApp.h"
 #include "Common/DDSTextureLoader.h"
-#include <d3d12.h>
+#include "Common/G2.FactoryTexture.h"
+#include "Common/G2.FactoryShader.h"
+
 using namespace G2;
 
 static MainApp* g_pMain{};
@@ -423,16 +426,13 @@ int MainApp::UpdateFrameResource()
 
 void MainApp::LoadTextures()
 {
-	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
-
-	FactoryTexture::instance()->Load(std::make_tuple(std::string("grassTex")	, std::string("Textures/grass.dds"		)));
-	FactoryTexture::instance()->Load(std::make_tuple(std::string("waterTex")	, std::string("Textures/water1.dds"		)));
-	FactoryTexture::instance()->Load(std::make_tuple(std::string("fenceTex")	, std::string("Textures/WireFence.dds"	)));
-	FactoryTexture::instance()->Load(std::make_tuple(std::string("treeArrayTex"), std::string("Textures/treeArray2.dds"	)));
-	FactoryTexture::instance()->Load(std::make_tuple(std::string("grassTex")	, std::string("Textures/WireFence.dds"	)));
-	FactoryTexture::instance()->Load(std::make_tuple(std::string("grassTex")	, std::string("Textures/treeArray2.dds"	)));
+	auto tex_manager = FactoryTexture::instance();
+	tex_manager->Load("grassTex"	, "Textures/grass.dds"		);
+	tex_manager->Load("waterTex"	, "Textures/water1.dds"		);
+	tex_manager->Load("fenceTex"	, "Textures/WireFence.dds"  );
+	tex_manager->Load("treeArrayTex", "Textures/treeArray2.dds" );
+	tex_manager->Load("grassTex"	, "Textures/WireFence.dds"	);
+	tex_manager->Load("grassTex"	, "Textures/treeArray2.dds"	);
 }
 
 void MainApp::BuildRootSignature()
@@ -582,13 +582,13 @@ void MainApp::BuildShadersAndInputLayouts()
 		NULL, NULL
 	};
 
-	mShaders["standardVS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", nullptr, "VS", "vs_5_0");
-	mShaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", defines, "PS", "ps_5_0");
-	mShaders["alphaTestedPS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", alphaTestDefines, "PS", "ps_5_0");
-
-	mShaders["treeSpriteVS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", nullptr, "VS", "vs_5_0");
-	mShaders["treeSpriteGS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", nullptr, "GS", "gs_5_0");
-	mShaders["treeSpritePS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", alphaTestDefines, "PS", "ps_5_0");
+	auto shader_manager = FactoryShader::instance();
+	shader_manager->Load("standardVS"   , "Shaders/Default.hlsl"   , "vs_5_0", "VS"                  );
+	shader_manager->Load("opaquePS"     , "Shaders/Default.hlsl"   , "ps_5_0", "PS", defines         );
+	shader_manager->Load("alphaTestedPS", "Shaders/Default.hlsl"   , "ps_5_0", "PS", alphaTestDefines);
+	shader_manager->Load("treeSpriteVS" , "Shaders/TreeSprite.hlsl", "vs_5_0", "VS"                  );
+	shader_manager->Load("treeSpriteGS" , "Shaders/TreeSprite.hlsl", "gs_5_0", "GS", nullptr         );
+	shader_manager->Load("treeSpritePS" , "Shaders/TreeSprite.hlsl", "ps_5_0", "PS"                  );
 
 	mStdInputLayout =
 	{
@@ -855,10 +855,14 @@ int MainApp::BuildPSOs()
 	//
 	// PSO for opaque objects.
 	//
+	auto shader_manager = FactoryShader::instance();
+	auto pshader_vs = shader_manager->Find("standardVS")->rs;
+	auto pshader_ps = shader_manager->Find("opaquePS")->rs;
+
 		opaquePsoDesc.InputLayout = { mStdInputLayout.data(), (UINT)mStdInputLayout.size() };
 		opaquePsoDesc.pRootSignature = mRootSignature.Get();
-		opaquePsoDesc.VS = { reinterpret_cast<BYTE*>(mShaders["standardVS"]->GetBufferPointer()), mShaders["standardVS"]->GetBufferSize() };
-		opaquePsoDesc.PS = { 			reinterpret_cast<BYTE*>(mShaders["opaquePS"]->GetBufferPointer()), mShaders["opaquePS"]->GetBufferSize() };
+		opaquePsoDesc.VS = { pshader_vs->GetBufferPointer(), pshader_vs->GetBufferSize() };
+		opaquePsoDesc.PS = { pshader_ps->GetBufferPointer(), pshader_ps->GetBufferSize() };
 		opaquePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		opaquePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		opaquePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
@@ -900,7 +904,9 @@ int MainApp::BuildPSOs()
 	//
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestedPsoDesc = opaquePsoDesc;
-		alphaTestedPsoDesc.PS = { reinterpret_cast<BYTE*>(mShaders["alphaTestedPS"]->GetBufferPointer()), mShaders["alphaTestedPS"]->GetBufferSize() };
+	auto pshader_a = shader_manager->Find("alphaTestedPS")->rs;
+
+		alphaTestedPsoDesc.PS = { pshader_a->GetBufferPointer(), pshader_a->GetBufferSize() };
 		alphaTestedPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 	hr = d3dDevice->CreateGraphicsPipelineState(&alphaTestedPsoDesc, IID_PPV_ARGS(&mPSOs["alphaTested"]));
 	if (FAILED(hr))
@@ -910,9 +916,13 @@ int MainApp::BuildPSOs()
 	// PSO for tree sprites
 	//
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC treeSpritePsoDesc = opaquePsoDesc;
-		treeSpritePsoDesc.VS = { reinterpret_cast<BYTE*>(mShaders["treeSpriteVS"]->GetBufferPointer()), mShaders["treeSpriteVS"]->GetBufferSize() };
-		treeSpritePsoDesc.GS = { reinterpret_cast<BYTE*>(mShaders["treeSpriteGS"]->GetBufferPointer()), mShaders["treeSpriteGS"]->GetBufferSize() };
-		treeSpritePsoDesc.PS = { reinterpret_cast<BYTE*>(mShaders["treeSpritePS"]->GetBufferPointer()), mShaders["treeSpritePS"]->GetBufferSize() };
+	auto pshader_tree_vs = shader_manager->Find("treeSpriteVS")->rs;
+	auto pshader_tree_gs = shader_manager->Find("treeSpriteGS")->rs;
+	auto pshader_tree_ps = shader_manager->Find("treeSpritePS")->rs;
+
+		treeSpritePsoDesc.VS = { pshader_tree_vs->GetBufferPointer(), pshader_tree_vs->GetBufferSize() };
+		treeSpritePsoDesc.GS = { pshader_tree_gs->GetBufferPointer(), pshader_tree_gs->GetBufferSize() };
+		treeSpritePsoDesc.PS = { pshader_tree_ps->GetBufferPointer(), pshader_tree_ps->GetBufferSize() };
 		treeSpritePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 		treeSpritePsoDesc.InputLayout = { mTreeSpriteInputLayout.data(), (UINT)mTreeSpriteInputLayout.size() };
 		treeSpritePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;

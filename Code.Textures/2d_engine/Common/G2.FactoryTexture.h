@@ -14,22 +14,23 @@ namespace G2 {
 
 struct TD3D_TEXTURE
 {
-	std::string name;
-	std::string file;
+	std::string				name;	// texture name
+	std::string				file;	// texture file
 	ComPtr<ID3D12Resource>	rs{};	// resource
 	ComPtr<ID3D12Resource>	uh{};	// upload heap
 };
 
-class FactoryTexture : public IG2Factory<TD3D_TEXTURE>
+class FactoryTexture : public IG2Factory<FactoryTexture, TD3D_TEXTURE>
 {
 public:
 	static FactoryTexture* instance();
-protected:
-	TD3D_TEXTURE* ResourceLoad(const std::any& optional) override;
+public:
+	TD3D_TEXTURE* ResourceLoad(const std::string& name, const std::string& file);
 	TD3D_TEXTURE* ResourceFind(const std::string& name) override;
 	int ResourceUnLoad(const std::string& name)         override;
 	int ResourceUnLoadAll()                             override;
 };
 
 } // namespace G2
+
 #endif // __G2_FACTORY_TEXTURE_H__

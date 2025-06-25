@@ -2,9 +2,9 @@
 #include <iostream>
 #include <memory>
 #include <Windows.h>
-#include "EngineD3D.h"
 #include "d3dUtil.h"
 #include "G2.Util.h"
+#include "G2.EngineD3D.h"
 
 using std::unique_ptr;
 using namespace G2;

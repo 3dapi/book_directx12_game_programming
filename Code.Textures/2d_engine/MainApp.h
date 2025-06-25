@@ -1,8 +1,13 @@
-﻿//***************************************************************************************
-// MainApp.cpp by Frank Luna (C) 2015 All Rights Reserved.
-//***************************************************************************************
-
+﻿
 #pragma once
+
+#include <array>
+#include <memory>
+#include <vector>
+
+#include <Windows.h>
+#include <wrl.h>
+#include <d3d12.h>
 
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
@@ -10,7 +15,6 @@
 #include "FrameResource.h"
 #include "Waves.h"
 #include "Common/D3DWinApp.h"
-#include "Common/G2.FactoryTexture.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;

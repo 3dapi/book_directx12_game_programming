@@ -16,7 +16,7 @@
 
 namespace G2 {
 
-ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string& shaderModel, const std::string& entryPoint)
+ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string& shaderModel, const std::string& entryPoint, const void* macros)
 {
 	UINT shaderFlags{};
 #ifdef _DEBUG
@@ -25,7 +25,7 @@ ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string
 	auto wFileName = mbToWstr(fileName);
 	ComPtr<ID3DBlob> pErrorBlob{};
 	ID3DBlob* pBlobRet{};
-	int hr = D3DCompileFromFile(wFileName.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint.c_str(), shaderModel.c_str(), shaderFlags, 0, &pBlobRet, &pErrorBlob);
+	int hr = D3DCompileFromFile(wFileName.c_str(), (const D3D_SHADER_MACRO*)macros, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint.c_str(), shaderModel.c_str(), shaderFlags, 0, &pBlobRet, &pErrorBlob);
 	if (FAILED(hr))
 	{
 		if (pErrorBlob)

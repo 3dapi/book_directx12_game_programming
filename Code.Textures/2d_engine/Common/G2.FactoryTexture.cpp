@@ -2,11 +2,12 @@
 #include <tuple>
 #include "d3dUtil.h"
 #include "G2.ConstantsWin.h"
-#include "G2.FactoryTexture.h"
 #include "DDSTextureLoader.h"
+#include "G2.FactoryTexture.h"
+#include "G2.Util.h"
 
+using std::string;
 namespace G2 {
-
 
 FactoryTexture* FactoryTexture::instance()
 {
@@ -14,12 +15,11 @@ FactoryTexture* FactoryTexture::instance()
 	return &inst;
 }
 
-TD3D_TEXTURE* FactoryTexture::ResourceLoad(const std::any& optional)
+TD3D_TEXTURE* FactoryTexture::ResourceLoad(const std::string& name, const std::string& file)
 {
 	auto d3d            = IG2GraphicsD3D::instance();
 	auto d3dDevice      = std::any_cast<ID3D12Device*>(d3d->getDevice());
 	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
-	auto [name, file]   = std::any_cast<std::tuple<std::string, std::string>>(optional);
 
 	auto itr = this->m_db.find(name);
 	if (itr != this->m_db.end())

@@ -6,6 +6,7 @@
 #include "G2.FactoryShader.h"
 #include "G2.Util.h"
 
+using std::string;
 namespace G2 {
 
 FactoryShader* FactoryShader::instance()
@@ -14,18 +15,12 @@ FactoryShader* FactoryShader::instance()
 	return &inst;
 }
 
-// optional: name, file, shader model, entrypoint
-TD3D_SHADER* FactoryShader::ResourceLoad(const std::any& optional)
+// optional: name, file, shader model, entrypoint, shader macro
+TD3D_SHADER* FactoryShader::ResourceLoad(const string& name, const string& file, const string& sm, const string& ep, const void* macros)
 {
 	auto d3d            = IG2GraphicsD3D::instance();
 	auto d3dDevice      = std::any_cast<ID3D12Device*>(d3d->getDevice());
 	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
-	auto [name, file, sm, ep]
-						= std::any_cast<
-								std::tuple<	std::string
-											, std::string
-											, std::string
-											, std::string	> >(optional);
 
 	auto itr = this->m_db.find(name);
 	if (itr != this->m_db.end())
@@ -39,7 +34,7 @@ TD3D_SHADER* FactoryShader::ResourceLoad(const std::any& optional)
 	pItem->file = file;
 	pItem->sm = sm;
 	pItem->ep = ep;
-	auto rs = DXCompileShaderFromFile(file, sm, ep);
+	auto rs = DXCompileShaderFromFile(file, sm, ep, macros);
 	if (rs == nullptr)
 		return {};
 
@@ -49,7 +44,7 @@ TD3D_SHADER* FactoryShader::ResourceLoad(const std::any& optional)
 	auto ret = it->second.get();
 	return ret;
 }
-TD3D_SHADER* FactoryShader::ResourceFind(const std::string& name)
+TD3D_SHADER* FactoryShader::ResourceFind(const string& name)
 {
 	auto itr = this->m_db.find(name);
 	if (itr != this->m_db.end())
@@ -59,7 +54,7 @@ TD3D_SHADER* FactoryShader::ResourceFind(const std::string& name)
 	static TD3D_SHADER dummy{ "<none>", "<none>" };
 	return &dummy;
 }
-int FactoryShader::ResourceUnLoad(const std::string& name)
+int FactoryShader::ResourceUnLoad(const string& name)
 {
 	auto itr = this->m_db.find(name);
 	if (itr != this->m_db.end())

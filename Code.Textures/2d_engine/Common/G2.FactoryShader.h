@@ -21,16 +21,22 @@ struct TD3D_SHADER
 	ComPtr<ID3DBlob>	rs{};	// resource
 };
 
-class FactoryShader : public IG2Factory<TD3D_SHADER>
+class FactoryShader : public IG2Factory<FactoryShader, TD3D_SHADER>
 {
 public:
 	static FactoryShader* instance();
-protected:
-	// optional: name, file, shader model, entrypoint
-	TD3D_SHADER* ResourceLoad(const std::any& optional)  override;
-	TD3D_SHADER* ResourceFind(const std::string& name)   override;
-	int ResourceUnLoad(const std::string& name)     override;
-	int ResourceUnLoadAll()                         override;
+
+	TD3D_SHADER* ResourceLoad(const std::string& name,
+		const std::string& file,
+		const std::string& sm,
+		const std::string& ep,
+		const void* macros = nullptr);
+
+public:
+	// 필요 시 아래 함수들을 오버라이드 가능
+	TD3D_SHADER* ResourceFind(const std::string& name) override;
+	int ResourceUnLoad(const std::string& name) override;
+	int ResourceUnLoadAll() override;
 };
 
 } // namespace G2
