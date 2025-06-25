@@ -36,7 +36,6 @@ public:
 	// 필요 시 아래 함수들을 오버라이드 가능
 	TD3D_SHADER* ResourceFind(const std::string& name) override;
 	int ResourceUnLoad(const std::string& name) override;
-	int ResourceUnLoadAll() override;
 };
 
 } // namespace G2

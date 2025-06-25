@@ -1,5 +1,6 @@
 ﻿
 #include <tuple>
+#include <string>
 #include "d3dUtil.h"
 #include "G2.ConstantsWin.h"
 #include "DDSTextureLoader.h"

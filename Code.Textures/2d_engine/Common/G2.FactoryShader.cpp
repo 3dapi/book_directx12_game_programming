@@ -1,10 +1,11 @@
 ﻿
 #include <tuple>
+#include <string>
 #include "d3dUtil.h"
 #include "G2.ConstantsWin.h"
 #include "d3dUtil.h"
-#include "G2.FactoryShader.h"
 #include "G2.Util.h"
+#include "G2.FactoryShader.h"
 
 using std::string;
 namespace G2 {
@@ -63,11 +64,6 @@ int FactoryShader::ResourceUnLoad(const string& name)
 		return S_OK;
 	}
 	return E_FAIL;
-}
-int FactoryShader::ResourceUnLoadAll()
-{
-	m_db.clear();
-	return S_OK;
 }
 
 } // namespace G2

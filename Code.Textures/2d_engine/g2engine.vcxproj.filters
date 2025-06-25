@@ -63,6 +63,9 @@
     <ClCompile Include="Common\G2.Util.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Common\G2.FactoryPipelineState.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\MathHelper.h">
@@ -117,6 +120,9 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\G2.Util.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\G2.FactoryPipelineState.h">
       <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>

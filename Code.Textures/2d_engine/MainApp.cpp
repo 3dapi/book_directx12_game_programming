@@ -7,6 +7,7 @@
 #include "Common/DDSTextureLoader.h"
 #include "Common/G2.FactoryTexture.h"
 #include "Common/G2.FactoryShader.h"
+#include "Common/G2.FactoryPipelineState.h"
 
 using namespace G2;
 
@@ -122,6 +123,8 @@ int MainApp::Render()
 	auto d3dBackBuffer   = std::any_cast<ID3D12Resource*            >(d3d->getCurrentBackBuffer());
 	auto d3dBackBufferV  = std::any_cast<CD3DX12_CPU_DESCRIPTOR_HANDLE>(d3d->getBackBufferView());
 	auto d3dDepthV       = std::any_cast<D3D12_CPU_DESCRIPTOR_HANDLE>(d3d->getDepthStencilView());
+
+	auto pls_manager = FactoryPipelineState::instance();
 
 	// Reuse the memory associated with command recording.
 	// We can only reset when the associated command lists have finished execution on the GPU.
