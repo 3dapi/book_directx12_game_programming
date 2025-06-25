@@ -39,9 +39,6 @@
     <ClCompile Include="Common\DDSTextureLoader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="FactoryTexture.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="FrameResource.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -55,6 +52,9 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Common\G2ConstantsWin.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\FactoryTexture.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -77,13 +77,7 @@
     <ClInclude Include="Common\d3dUtil.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Common\d3dx12.h">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="Common\DDSTextureLoader.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="FactoryTexture.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="FrameResource.h">
@@ -104,8 +98,17 @@
     <ClInclude Include="Common\G2ConstantsWin.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Common\d3dx12.h">
+      <Filter>h</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\FactoryTexture.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Common\FactoryTexture.inl">
+      <Filter>Common</Filter>
+    </None>
   </ItemGroup>
 </Project>

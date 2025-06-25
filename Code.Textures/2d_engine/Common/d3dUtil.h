@@ -30,7 +30,7 @@
 #include <DirectXColors.h>
 #include <DirectXCollision.h>
 
-#include "d3dx12.h"
+#include "d3dx12/d3dx12.h"
 #include "DDSTextureLoader.h"
 #include "MathHelper.h"
 
@@ -59,11 +59,24 @@ inline void d3dSetDebugName(ID3D12DeviceChild* obj, const char* name)
     }
 }
 
-inline std::wstring AnsiToWString(const std::string& str)
+inline std::wstring utf8ToWstr(const std::string& str)
 {
-    WCHAR buffer[512];
-    MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, buffer, 512);
-    return std::wstring(buffer);
+	int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+	if (1 >= len)
+		return L"";
+	std::wstring wstr(len-1, 0);
+	MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &wstr[0], len);
+	return wstr;
+}
+
+inline std::wstring ansiToWstr(const std::string& str)
+{
+	int len = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, nullptr, 0);
+	if (1 >= len)
+		return  L"";
+	std::wstring wstr(len-1, 0);
+	MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, &wstr[0], len);
+	return wstr;
 }
 
 /*
@@ -75,7 +88,7 @@ inline std::wstring AnsiToWString(const std::string& str)
         if(!ignoreAssert && !(x))                                   \
         {                                                           \
             Debug::AssertResult result = Debug::ShowAssertDialog(   \
-            (L#x), description, AnsiToWString(__FILE__), __LINE__); \
+            (L#x), description, ansiToWstr(__FILE__), __LINE__); \
         if(result == Debug::AssertIgnore)                           \
         {                                                           \
             ignoreAssert = true;                                    \
@@ -271,11 +284,11 @@ struct Material
 };
 
 #ifndef ThrowIfFailed
-#define ThrowIfFailed(x)                                              \
-{                                                                     \
-    HRESULT hr__ = (x);                                               \
-    std::wstring wfn = AnsiToWString(__FILE__);                       \
-    if(FAILED(hr__)) { throw DxException(hr__, L#x, wfn, __LINE__); } \
+#define ThrowIfFailed(x) {                              \
+    if(FAILED(x)) {                                     \
+		std::wstring f = ansiToWstr(__FILE__);          \
+		throw DxException(x, L#x, f, __LINE__);         \
+	}                                                   \
 }
 #endif
 
@@ -285,7 +298,6 @@ struct Material
 #include <Windows.h>
 #include <d3dcommon.h>
 #include <d3d12.h>
-
 
 template<typename T>
 inline void SAFE_DELETE(T*& p)
@@ -352,7 +364,5 @@ inline void SAFE_RELEASE_VECTOR(std::vector<T*>& vec) {
 	}
 	vec.clear();
 }
-
-std::wstring string2Wstring(const std::string& str);
 
 #endif //#define __D3DUTIL_H__

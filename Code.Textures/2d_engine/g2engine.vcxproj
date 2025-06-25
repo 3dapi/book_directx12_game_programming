@@ -155,12 +155,12 @@
     <ClCompile Include="Common\D3DWinApp.cpp" />
     <ClCompile Include="Common\d3dUtil.cpp" />
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
+    <ClCompile Include="Common\FactoryTexture.cpp" />
     <ClCompile Include="Common\G2ConstantsWin.cpp" />
     <ClCompile Include="Common\GameTimer.cpp" />
     <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\GraphicsEngineD3D.cpp" />
     <ClCompile Include="Common\MathHelper.cpp" />
-    <ClCompile Include="FactoryTexture.cpp" />
     <ClCompile Include="FrameResource.cpp" />
     <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="Waves.cpp" />
@@ -171,6 +171,7 @@
     <ClInclude Include="Common\d3dUtil.h" />
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\DDSTextureLoader.h" />
+    <ClInclude Include="Common\FactoryTexture.h" />
     <ClInclude Include="Common\G2Constants.h" />
     <ClInclude Include="Common\G2ConstantsWin.h" />
     <ClInclude Include="Common\GameTimer.h" />
@@ -178,12 +179,12 @@
     <ClInclude Include="Common\GraphicsEngineD3D.h" />
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
-    <ClInclude Include="FactoryTexture.h" />
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="MainApp.h" />
     <ClInclude Include="Waves.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Common\FactoryTexture.inl" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
