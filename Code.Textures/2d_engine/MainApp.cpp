@@ -5,10 +5,11 @@
 #include "MainApp.h"
 #include "Common/DDSTextureLoader.h"
 #include <d3d12.h>
+using namespace G2;
 
 static MainApp* g_pMain{};
 
-IG2AppFrame* IG2AppFrame::instance()
+G2::IG2AppFrame* G2::IG2AppFrame::instance()
 {
 	if (!g_pMain)
 	{
@@ -490,44 +491,79 @@ void MainApp::BuildDescriptorHeaps()
 	//
 	// Fill out the heap with actual descriptors.
 	//
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	auto texture_factory = FactoryTexture::instance();
-	auto grassTex = texture_factory->Find("grassTex")->rs;
-	auto waterTex = texture_factory->Find("waterTex")->rs;
-	auto fenceTex = texture_factory->Find("fenceTex")->rs;
-	auto treeArrayTex = texture_factory->Find( "treeArrayTex")->rs;
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		auto texture_factory = FactoryTexture::instance();
+		auto grassTex = texture_factory->Find("grassTex")->rs;
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = grassTex->GetDesc().Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = -1;
+		d3dDevice->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
+	}
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		auto texture_factory = FactoryTexture::instance();
+		auto waterTex = texture_factory->Find("waterTex")->rs;
+		hDescriptor.Offset(1, mCbvSrvDescriptorSize *1);
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = grassTex->GetDesc().Format;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = -1;
-	d3dDevice->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = waterTex->GetDesc().Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = -1;
+		srvDesc.Format = waterTex->GetDesc().Format;
+		d3dDevice->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
+	}
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		auto texture_factory = FactoryTexture::instance();
+		auto fenceTex = texture_factory->Find("fenceTex")->rs;
+		hDescriptor.Offset(1, mCbvSrvDescriptorSize *2);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = fenceTex->GetDesc().Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = -1;
+		srvDesc.Format = fenceTex->GetDesc().Format;
+		d3dDevice->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
+	}
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		auto texture_factory = FactoryTexture::instance();
+		auto treeArrayTex = texture_factory->Find( "treeArrayTex")->rs;
+		hDescriptor.Offset(1, mCbvSrvDescriptorSize *3);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = treeArrayTex->GetDesc().Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = -1;
+
+		auto desc = treeArrayTex->GetDesc();
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Format = treeArrayTex->GetDesc().Format;
+		srvDesc.Texture2DArray.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.MipLevels = -1;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+		srvDesc.Texture2DArray.ArraySize = treeArrayTex->GetDesc().DepthOrArraySize;
+		d3dDevice->CreateShaderResourceView(treeArrayTex.Get(), &srvDesc, hDescriptor);
+	}
+	
+	
+
+	
 
 	// next descriptor
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
-
-	srvDesc.Format = waterTex->GetDesc().Format;
-	d3dDevice->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
+	
 
 	// next descriptor
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
-
-	srvDesc.Format = fenceTex->GetDesc().Format;
-	d3dDevice->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
+	
 
 	// next descriptor
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
-
-	auto desc = treeArrayTex->GetDesc();
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-	srvDesc.Format = treeArrayTex->GetDesc().Format;
-	srvDesc.Texture2DArray.MostDetailedMip = 0;
-	srvDesc.Texture2DArray.MipLevels = -1;
-	srvDesc.Texture2DArray.FirstArraySlice = 0;
-	srvDesc.Texture2DArray.ArraySize = treeArrayTex->GetDesc().DepthOrArraySize;
-	d3dDevice->CreateShaderResourceView(treeArrayTex.Get(), &srvDesc, hDescriptor);
+	
 }
 
 void MainApp::BuildShadersAndInputLayouts()

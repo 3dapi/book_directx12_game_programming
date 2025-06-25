@@ -1,4 +1,6 @@
-﻿#include "G2ConstantsWin.h"
+﻿#include "G2.ConstantsWin.h"
+
+namespace G2 {
 
 IG2AppFrameWin* IG2AppFrameWin::instance()
 {
@@ -10,3 +12,4 @@ PENGINE_D3D IG2GraphicsD3D::instance()
 	return dynamic_cast<PENGINE_D3D>(IG2Graphics::instance());
 }
 
+} // namespace G2

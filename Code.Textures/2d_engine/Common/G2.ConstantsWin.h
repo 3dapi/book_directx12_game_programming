@@ -1,9 +1,11 @@
 ﻿#pragma once
-#ifndef _G2ConstantsWin_H_
-#define _G2ConstantsWin_H_
+#ifndef _G2_CONSTANTSWIN_H_
+#define _G2_CONSTANTSWIN_H_
 
-#include "G2Constants.h"
+#include "G2.Constants.h"
 #include <Windows.h>
+
+namespace G2 {
 
 enum EG2GRAPHICS_D3D
 {
@@ -62,4 +64,7 @@ struct IG2GraphicsD3D : public IG2Graphics
 	virtual int      getCurrentBackbufferdex() const	= 0;
 	virtual std::any getCurrentBackBuffer()				= 0;
 };
+
+} // namespace G2 {
+
 #endif // _G2ConstantsWin_H_

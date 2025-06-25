@@ -51,10 +51,13 @@
     <ClCompile Include="Common\GraphicsEngineD3D.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Common\G2ConstantsWin.cpp">
+    <ClCompile Include="Common\G2.ConstantsWin.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Common\FactoryTexture.cpp">
+    <ClCompile Include="Common\G2.FactoryTexture.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\G2.FactoryShader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -83,7 +86,7 @@
     <ClInclude Include="FrameResource.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Common\G2Constants.h">
+    <ClInclude Include="Common\G2.Constants.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\GameTimer.h">
@@ -95,20 +98,34 @@
     <ClInclude Include="Common\GraphicsEngineD3D.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Common\G2ConstantsWin.h">
+    <ClInclude Include="Common\G2.ConstantsWin.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\d3dx12.h">
       <Filter>h</Filter>
     </ClInclude>
-    <ClInclude Include="Common\FactoryTexture.h">
+    <ClInclude Include="Common\G2.FactoryTexture.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\G2.FactoryShader.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\G2.Factory.h">
       <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Common\FactoryTexture.inl">
-      <Filter>Common</Filter>
-    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\Default.hlsl">
+      <Filter>r</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\LightingUtil.hlsl">
+      <Filter>r</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\TreeSprite.hlsl">
+      <Filter>r</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -1,9 +1,11 @@
 ﻿#pragma once
-#ifndef _G2Constants_H_
-#define _G2Constants_H_
+#ifndef _G2_CONSTANTS_H_
+#define _G2_CONSTANTS_H_
 
 #include <any>
 #include <string>
+
+namespace G2 {
 
 enum
 {
@@ -41,6 +43,8 @@ struct IG2Graphics
 	virtual int      setAttrib(int nAttrib, const std::any& v = {}) = 0;
 	virtual int      command(int nCmd, const std::any& v = {}) = 0;
 };
+
+} // namespace G2 {
 
 #endif // _G2Constants_H_
 

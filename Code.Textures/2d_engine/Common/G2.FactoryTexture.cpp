@@ -1,6 +1,11 @@
-﻿#include "G2ConstantsWin.h"
+﻿#include <tuple>
 #include "d3dUtil.h"
-#include "FactoryTexture.h"
+#include "G2.ConstantsWin.h"
+#include "G2.FactoryTexture.h"
+#include "DDSTextureLoader.h"
+
+namespace G2 {
+
 
 FactoryTexture* FactoryTexture::instance()
 {
@@ -8,7 +13,7 @@ FactoryTexture* FactoryTexture::instance()
 	return &inst;
 }
 
-Texture* FactoryTexture::ResourceLoad(const std::any& optional)
+TD3D_TEXTURE* FactoryTexture::ResourceLoad(const std::any& optional)
 {
 	auto d3d            = IG2GraphicsD3D::instance();
 	auto d3dDevice      = std::any_cast<ID3D12Device*>(d3d->getDevice());
@@ -22,9 +27,9 @@ Texture* FactoryTexture::ResourceLoad(const std::any& optional)
 	}
 
 	// load
-	auto texture = std::make_unique<Texture>();
-	texture->name = name;
-	texture->file = file;
+	auto pItem = std::make_unique<TD3D_TEXTURE>();
+	pItem->name = name;
+	pItem->file = file;
 
 	ComPtr<ID3D12Resource> rs_tx{};
 	ComPtr<ID3D12Resource> rs_up{};
@@ -32,26 +37,26 @@ Texture* FactoryTexture::ResourceLoad(const std::any& optional)
 	HRESULT hr = DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, wFile.c_str(), rs_tx, rs_up);
 	ThrowIfFailed(hr);
 
-	texture->rs = std::move(rs_tx);
-	texture->uh = std::move(rs_up);
+	pItem->rs = std::move(rs_tx);
+	pItem->uh = std::move(rs_up);
 	//c++17
-	auto [it, success] = m_db.insert({ name, std::move(texture) });
+	auto [it, success] = m_db.insert({ name, std::move(pItem) });
 	auto ret = it->second.get();
 	return ret;
 	//c++14
-	//auto it = m_db.insert({ name, std::move(texture) });
+	//auto it = m_db.insert({ name, std::move(pItem) });
 	//auto ret = it.first;
 	//bool success = it.second;
-	//return ret->second.get(); // Texture*
+	//return ret->second.get(); // TD3D_TEXTURE*
 }
-Texture* FactoryTexture::ResourceFind(const std::string& name)
+TD3D_TEXTURE* FactoryTexture::ResourceFind(const std::string& name)
 {
 	auto itr = this->m_db.find(name);
 	if (itr != this->m_db.end())
 	{
 		return itr->second.get();
 	}
-	static Texture dummy{ "<none>", "<none>" };
+	static TD3D_TEXTURE dummy{ "<none>", "<none>" };
 	return &dummy;
 }
 int FactoryTexture::ResourceUnLoad(const std::string& name)
@@ -70,4 +75,4 @@ int FactoryTexture::ResourceUnLoadAll()
 	return S_OK;
 }
 
-
+} // namespace G2

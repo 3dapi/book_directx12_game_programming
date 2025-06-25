@@ -15,10 +15,12 @@
 #include <DirectXColors.h>
 #include <wrl.h>
 #include "include/d3dx12/d3dx12.h"
-#include "G2ConstantsWin.h"
+#include "G2.ConstantsWin.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
+
+namespace G2 {
 
 class EngineD3D : public IG2GraphicsD3D
 {
@@ -98,5 +100,6 @@ protected:
 	UINT                                mCbvSrvUavDescriptorSize{};
 };
 
+}// namespace G2
 
 #endif // _GraphicsEngineD3D_H_

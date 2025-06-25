@@ -8,10 +8,11 @@
 using Microsoft::WRL::ComPtr;
 using namespace std;
 using namespace DirectX;
+using namespace G2;
 
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    return IG2AppFrameWin::instance()->MsgProc(hwnd, msg, wParam, lParam);
+    return G2::IG2AppFrameWin::instance()->MsgProc(hwnd, msg, wParam, lParam);
 }
 
 D3DWinApp::~D3DWinApp()
@@ -35,7 +36,7 @@ float D3DWinApp::AspectRatio()const
 
 void D3DWinApp::Set4xMsaaState(bool value)
 {
-	int hr = IG2Graphics::instance()->command(EG2GRAPHICS_D3D::CMD_MSAASTATE4X, value);
+	int hr = G2::IG2Graphics::instance()->command(G2::EG2GRAPHICS_D3D::CMD_MSAASTATE4X, value);
 	if(SUCCEEDED(hr))
 	{
 		Resize(false);
@@ -63,7 +64,7 @@ int D3DWinApp::Run()
         }
     }
 
-	IG2Graphics::instance()->destroy();
+	G2::IG2Graphics::instance()->destroy();
 
 	return (int)msg.wParam;
 }

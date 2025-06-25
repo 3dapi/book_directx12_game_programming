@@ -13,6 +13,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <unordered_map>
 #include <cstdint>

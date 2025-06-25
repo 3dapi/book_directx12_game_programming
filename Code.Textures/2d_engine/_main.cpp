@@ -27,7 +27,7 @@ int main(int, char**)
 
     try
     {
-        auto appMain = IG2AppFrameWin::instance();
+        auto appMain = G2::IG2AppFrameWin::instance();
         auto hr = appMain->init(hInstance);
         if(FAILED(hr))
             return 0;

@@ -9,6 +9,8 @@
 #include "d3dUtil.h"
 using std::unique_ptr;
 
+namespace G2 {
+
 static unique_ptr<EngineD3D> g_engineD3D;
 
 IG2Graphics* IG2Graphics::instance()
@@ -640,3 +642,5 @@ IDXGIAdapter* EngineD3D::GetHardwareAdapter(IDXGIFactory1* pFactory, bool reques
 	IDXGIAdapter1* pAdapter = adapter.Detach();
 	return pAdapter;
 }
+
+} // namespace G2
