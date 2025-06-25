@@ -2,14 +2,14 @@
 #pragma once
 
 #include <Windows.h>
-#include "G2ConstantsWin.h"
+#include "G2.ConstantsWin.h"
 #include "d3dUtil.h"
 #include "GameTimer.h"
 
 using namespace std;
 
 
-class D3DWinApp : public IG2AppFrameWin
+class D3DWinApp : public G2::IG2AppFrameWin
 {
 protected:
     virtual ~D3DWinApp();

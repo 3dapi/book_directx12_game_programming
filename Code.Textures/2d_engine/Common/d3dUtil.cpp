@@ -132,15 +132,3 @@ std::wstring DxException::ToString()const
 
     return FunctionName + L" failed in " + Filename + L"; line " + std::to_wstring(LineNumber) + L"; error: " + msg;
 }
-
-
-std::wstring string2Wstring(const std::string& str)
-{
-	int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, {}, 0);
-	std::wstring wstr(len, 0);
-	MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &wstr[0], len);
-	return wstr;
-}
-
-
-

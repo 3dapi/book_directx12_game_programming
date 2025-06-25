@@ -10,7 +10,7 @@
 #include "FrameResource.h"
 #include "Waves.h"
 #include "Common/D3DWinApp.h"
-#include "FactoryTexture.h"
+#include "Common/G2.FactoryTexture.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -105,8 +105,6 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry> > mGeometries;
 	std::unordered_map<std::string, std::unique_ptr<Material> > mMaterials;
-	std::unordered_map<std::string, std::unique_ptr<Texture> > mTextures;
-	std::unordered_map<std::string, ComPtr<ID3DBlob> > mShaders;
 	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> mStdInputLayout;
