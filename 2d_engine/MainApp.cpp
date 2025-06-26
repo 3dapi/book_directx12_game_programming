@@ -9,6 +9,7 @@
 #include "Common/G2.FactoryShader.h"
 #include "Common/G2.FactorySIgnature.h"
 #include "Common/G2.FactoryPipelineState.h"
+#include "Common/G2.Geometry.h"
 
 using namespace G2;
 
@@ -53,9 +54,39 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 	mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
-	LoadTextures();
+
+	// 1. load texutre
+	auto tex_manager = FactoryTexture::instance();
+	tex_manager->Load("grassTex", "Textures/grass.dds");
+	tex_manager->Load("waterTex", "Textures/water1.dds");
+	tex_manager->Load("fenceTex", "Textures/WireFence.dds");
+	tex_manager->Load("treeArrayTex", "Textures/treeArray2.dds");
+
+	//2 
 	BuildDescriptorHeaps();
-	BuildShadersAndInputLayouts();
+
+	// 3. Build Shaders And Input Layouts
+	const D3D_SHADER_MACRO defines[] =
+	{
+		"FOG", "1",
+		NULL, NULL
+	};
+	const D3D_SHADER_MACRO alphaTestDefines[] =
+	{
+		"FOG", "1",
+		"ALPHA_TEST", "1",
+		NULL, NULL
+	};
+
+	auto shader_manager = FactoryShader::instance();
+	shader_manager->Load("standardVS"   , "Shaders/Default.hlsl"   , "vs_5_0", "VS"                  );
+	shader_manager->Load("opaquePS"     , "Shaders/Default.hlsl"   , "ps_5_0", "PS", defines         );
+	shader_manager->Load("alphaTestedPS", "Shaders/Default.hlsl"   , "ps_5_0", "PS", alphaTestDefines);
+	shader_manager->Load("treeSpriteVS" , "Shaders/TreeSprite.hlsl", "vs_5_0", "VS"                  );
+	shader_manager->Load("treeSpriteGS" , "Shaders/TreeSprite.hlsl", "gs_5_0", "GS"                  );
+	shader_manager->Load("treeSpritePS" , "Shaders/TreeSprite.hlsl", "ps_5_0", "PS", alphaTestDefines);
+
+	
 	BuildLandGeometry();
 	BuildWavesGeometry();
 	BuildBoxGeometry();
@@ -145,32 +176,38 @@ int MainApp::Render()
 	d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Clear the back buffer and depth buffer.
-	d3dCommandList->ClearRenderTargetView(d3dBackBufferV, (float*)&mMainPassCB.FogColor, 0, nullptr);
+	d3dCommandList->ClearRenderTargetView(d3dBackBufferV, (float*)&m_cnstbPass.FogColor, 0, nullptr);
 	d3dCommandList->ClearDepthStencilView(d3dDepthV, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
 	// Specify the buffers we are going to render to.
 	d3dCommandList->OMSetRenderTargets(1, &d3dBackBufferV, true, &d3dDepthV);
 
-	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
-	d3dCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
+	// root signature
 	auto signature = FactorySignature::instance()->FindRes("TEX_1");
-
 	d3dCommandList->SetGraphicsRootSignature(signature);
 
-	auto passCB = m_frameRscCur->PassCB->Resource();
-	d3dCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
-	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Opaque]);
+	// shader reource view desciptor 설정: texture 정보
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvDescriptorHeap.Get() };
+	d3dCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
-	d3dCommandList->SetPipelineState(mPSOs["alphaTested"].Get());
-	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTested]);
+	
+	// 지형 그리기
+	//DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Opaque]);
 
+	// 알파 테스용 가운데 블록
+	//d3dCommandList->SetPipelineState(mPSOs["alphaTested"].Get());
+	//DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTested]);
+
+	// 빌보드 그리기
 	d3dCommandList->SetPipelineState(mPSOs["treeSprites"].Get());
 	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites]);
 
-	d3dCommandList->SetPipelineState(mPSOs["transparent"].Get());
-	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Transparent]);
+
+
+	// 물그리기
+	//d3dCommandList->SetPipelineState(mPSOs["transparent"].Get());
+	//DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Transparent]);
 
 	// Indicate a state transition on the resource usage.
 	d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
@@ -281,7 +318,7 @@ void MainApp::AnimateMaterials(const GameTimer& gt)
 
 void MainApp::UpdateObjectCBs(const GameTimer& gt)
 {
-	auto currObjectCB = m_frameRscCur->ObjectCB.get();
+	auto currObjectCB = m_frameRscCur->cnsgbMObject.get();
 	for (auto& e : mAllRitems)
 	{
 		// Only update the cbuffer data if the constants have changed.  
@@ -305,7 +342,7 @@ void MainApp::UpdateObjectCBs(const GameTimer& gt)
 
 void MainApp::UpdateMaterialCBs(const GameTimer& gt)
 {
-	auto currMaterialCB = m_frameRscCur->MaterialCB.get();
+	auto currMaterialCB = m_frameRscCur->cnsgbMaterial.get();
 	for (auto& e : mMaterials)
 	{
 		// Only update the cbuffer data if the constants have changed.  If the cbuffer
@@ -339,29 +376,29 @@ void MainApp::UpdateMainPassCB(const GameTimer& gt)
 	XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
 	XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
 
-	XMStoreFloat4x4(&mMainPassCB.View, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&mMainPassCB.InvView, XMMatrixTranspose(invView));
-	XMStoreFloat4x4(&mMainPassCB.Proj, XMMatrixTranspose(proj));
-	XMStoreFloat4x4(&mMainPassCB.InvProj, XMMatrixTranspose(invProj));
-	XMStoreFloat4x4(&mMainPassCB.ViewProj, XMMatrixTranspose(viewProj));
-	XMStoreFloat4x4(&mMainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
-	mMainPassCB.EyePosW = mEyePos;
-	mMainPassCB.RenderTargetSize = XMFLOAT2((float)m_screenSize.cx, (float)m_screenSize.cy);
-	mMainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_screenSize.cx, 1.0f / m_screenSize.cy);
-	mMainPassCB.NearZ = 1.0f;
-	mMainPassCB.FarZ = 1000.0f;
-	mMainPassCB.TotalTime = gt.TotalTime();
-	mMainPassCB.DeltaTime = gt.DeltaTime();
-	mMainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-	mMainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
-	mMainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
-	mMainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
-	mMainPassCB.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
-	mMainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
-	mMainPassCB.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
+	XMStoreFloat4x4(&m_cnstbPass.View, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&m_cnstbPass.InvView, XMMatrixTranspose(invView));
+	XMStoreFloat4x4(&m_cnstbPass.Proj, XMMatrixTranspose(proj));
+	XMStoreFloat4x4(&m_cnstbPass.InvProj, XMMatrixTranspose(invProj));
+	XMStoreFloat4x4(&m_cnstbPass.ViewProj, XMMatrixTranspose(viewProj));
+	XMStoreFloat4x4(&m_cnstbPass.InvViewProj, XMMatrixTranspose(invViewProj));
+	m_cnstbPass.EyePosW = mEyePos;
+	m_cnstbPass.RenderTargetSize = XMFLOAT2((float)m_screenSize.cx, (float)m_screenSize.cy);
+	m_cnstbPass.InvRenderTargetSize = XMFLOAT2(1.0f / m_screenSize.cx, 1.0f / m_screenSize.cy);
+	m_cnstbPass.NearZ = 1.0f;
+	m_cnstbPass.FarZ = 1000.0f;
+	m_cnstbPass.TotalTime = gt.TotalTime();
+	m_cnstbPass.DeltaTime = gt.DeltaTime();
+	m_cnstbPass.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+	m_cnstbPass.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
+	m_cnstbPass.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
+	m_cnstbPass.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+	m_cnstbPass.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
+	m_cnstbPass.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+	m_cnstbPass.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 
-	auto currPassCB = m_frameRscCur->PassCB.get();
-	currPassCB->CopyData(0, mMainPassCB);
+	auto currPassCB = m_frameRscCur->cnstbPass.get();
+	currPassCB->CopyData(0, m_cnstbPass);
 }
 
 void MainApp::UpdateWaves(const GameTimer& gt)
@@ -429,15 +466,6 @@ int MainApp::UpdateFrameResource()
 	return S_OK;
 }
 
-void MainApp::LoadTextures()
-{
-	auto tex_manager = FactoryTexture::instance();
-	tex_manager->Load("grassTex"	, "Textures/grass.dds"		);
-	tex_manager->Load("waterTex"	, "Textures/water1.dds"		);
-	tex_manager->Load("fenceTex"	, "Textures/WireFence.dds"  );
-	tex_manager->Load("treeArrayTex", "Textures/treeArray2.dds" );
-}
-
 void MainApp::BuildDescriptorHeaps()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
@@ -448,12 +476,12 @@ void MainApp::BuildDescriptorHeaps()
 	srvHeapDesc.NumDescriptors = 4;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
+	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
 
 	//
 	// Fill out the heap with actual descriptors.
 	//
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	auto texture_factory = FactoryTexture::instance();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -487,44 +515,6 @@ void MainApp::BuildDescriptorHeaps()
 	srvDesc.Texture2DArray.FirstArraySlice = 0;
 	srvDesc.Texture2DArray.ArraySize = treeArrayTex->GetDesc().DepthOrArraySize;
 	d3dDevice->CreateShaderResourceView(treeArrayTex, &srvDesc, hDescriptor);	
-}
-
-void MainApp::BuildShadersAndInputLayouts()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	const D3D_SHADER_MACRO defines[] =
-	{
-		"FOG", "1",
-		NULL, NULL
-	};
-
-	const D3D_SHADER_MACRO alphaTestDefines[] =
-	{
-		"FOG", "1",
-		"ALPHA_TEST", "1",
-		NULL, NULL
-	};
-
-	auto shader_manager = FactoryShader::instance();
-	shader_manager->Load("standardVS"   , "Shaders/Default.hlsl"   , "vs_5_0", "VS"                  );
-	shader_manager->Load("opaquePS"     , "Shaders/Default.hlsl"   , "ps_5_0", "PS", defines         );
-	shader_manager->Load("alphaTestedPS", "Shaders/Default.hlsl"   , "ps_5_0", "PS", alphaTestDefines);
-	shader_manager->Load("treeSpriteVS" , "Shaders/TreeSprite.hlsl", "vs_5_0", "VS"                  );
-	shader_manager->Load("treeSpriteGS" , "Shaders/TreeSprite.hlsl", "gs_5_0", "GS"                  );
-	shader_manager->Load("treeSpritePS" , "Shaders/TreeSprite.hlsl", "ps_5_0", "PS", alphaTestDefines);
-
-	mStdInputLayout =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	};
-
-	mTreeSpriteInputLayout =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "SIZE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	};
 }
 
 void MainApp::BuildLandGeometry()
@@ -774,16 +764,16 @@ int MainApp::BuildPSOs()
 	auto d3dMsaa4State   = *std::any_cast<bool*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_STATE));
 	auto d3dMsaa4Quality = *std::any_cast<UINT*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_QUALITY));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc{};
-	//
-	// PSO for opaque objects.
-	//
 	auto shader_manager = FactoryShader::instance();
 	auto pshader_vs = shader_manager->FindRes("standardVS");
 	auto pshader_ps = shader_manager->FindRes("opaquePS");
 	auto signature  = FactorySignature::instance()->FindRes("TEX_1");
 
-		opaquePsoDesc.InputLayout = { mStdInputLayout.data(), (UINT)mStdInputLayout.size() };
+	//
+	// PSO for opaque objects.
+	//
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc{};
+		opaquePsoDesc.InputLayout = { VTX_NT::INPUT_LAYOUT.data(), (UINT)VTX_NT::INPUT_LAYOUT.size() };
 		opaquePsoDesc.pRootSignature = signature;
 		opaquePsoDesc.VS = { pshader_vs->GetBufferPointer(), pshader_vs->GetBufferSize() };
 		opaquePsoDesc.PS = { pshader_ps->GetBufferPointer(), pshader_ps->GetBufferSize() };
@@ -806,7 +796,6 @@ int MainApp::BuildPSOs()
 	//
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentPsoDesc = opaquePsoDesc;
-
 	D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
 		transparencyBlendDesc.BlendEnable = true;
 		transparencyBlendDesc.LogicOpEnable = false;
@@ -848,7 +837,7 @@ int MainApp::BuildPSOs()
 		treeSpritePsoDesc.GS = { pshader_tree_gs->GetBufferPointer(), pshader_tree_gs->GetBufferSize() };
 		treeSpritePsoDesc.PS = { pshader_tree_ps->GetBufferPointer(), pshader_tree_ps->GetBufferSize() };
 		treeSpritePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-		treeSpritePsoDesc.InputLayout = { mTreeSpriteInputLayout.data(), (UINT)mTreeSpriteInputLayout.size() };
+		treeSpritePsoDesc.InputLayout = { VTX_POINT::INPUT_LAYOUT.data(), (UINT)VTX_POINT::INPUT_LAYOUT.size() };
 		treeSpritePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 	hr = d3dDevice->CreateGraphicsPipelineState(&treeSpritePsoDesc, IID_PPV_ARGS(&mPSOs["treeSprites"]));
 	if (FAILED(hr))
@@ -982,9 +971,9 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vec
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
 
-	auto objectCB = m_frameRscCur->ObjectCB->Resource();
-	auto matCB = m_frameRscCur->MaterialCB->Resource();
-
+	auto objectCB = m_frameRscCur->cnsgbMObject->Resource();
+	auto passCB = m_frameRscCur->cnstbPass->Resource();
+	auto matCB = m_frameRscCur->cnsgbMaterial->Resource();
 	// For each render item...
 	for (size_t i = 0; i < ritems.size(); ++i)
 	{
@@ -994,14 +983,16 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vec
 		cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
 		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE tex(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		tex.Offset(ri->Mat->DiffuseSrvHeapIndex, mCbvSrvDescriptorSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		gpu_tex_hp.Offset(ri->Mat->DiffuseSrvHeapIndex, mCbvSrvDescriptorSize);
 
 		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
 		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
 
-		cmdList->SetGraphicsRootDescriptorTable(0, tex);
+		cmdList->SetGraphicsRootDescriptorTable(0, gpu_tex_hp);
+		// t0가 사용중이라 상수 버퍼 b0는 1에서부터 시작
 		cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
+		cmdList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 		cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
 
 		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);

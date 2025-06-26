@@ -61,14 +61,14 @@ public:
 
     // We cannot reset the allocator until the GPU is done processing the commands.
     // So each frame needs their own allocator.
-    ComPtr<ID3D12CommandAllocator> CmdListAlloc;
+    ComPtr<ID3D12CommandAllocator> commandListAlloc;
 
     // We cannot update a cbuffer until the GPU is done processing the commands
     // that reference it.  So each frame needs their own cbuffers.
    // std::unique_ptr<UploadBuffer<FrameConstants>> FrameCB = nullptr;
-    std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
-    std::unique_ptr<UploadBuffer<MaterialConstants>> MaterialCB = nullptr;
-    std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
+    std::unique_ptr<UploadBuffer<PassConstants>    > cnstbPass     = nullptr;
+    std::unique_ptr<UploadBuffer<MaterialConstants>> cnsgbMaterial = nullptr;
+    std::unique_ptr<UploadBuffer<ObjectConstants>>   cnsgbMObject  = nullptr;
 
     // We cannot update a dynamic vertex buffer until the GPU is done processing
     // the commands that reference it.  So each frame needs their own.

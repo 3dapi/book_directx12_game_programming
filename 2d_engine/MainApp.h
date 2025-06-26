@@ -76,9 +76,7 @@ private:
 	void UpdateWaves(const GameTimer& gt);
 	int	 UpdateFrameResource();
 
-	void LoadTextures();
 	void BuildDescriptorHeaps();
-    void BuildShadersAndInputLayouts();
     void BuildLandGeometry();
     void BuildWavesGeometry();
 	void BuildBoxGeometry();
@@ -102,14 +100,11 @@ private:
 
     UINT mCbvSrvDescriptorSize = 0;
 
-	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
+	ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry> > mGeometries;
 	std::unordered_map<std::string, std::unique_ptr<Material> > mMaterials;
 	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
-
-    std::vector<D3D12_INPUT_ELEMENT_DESC> mStdInputLayout;
-	std::vector<D3D12_INPUT_ELEMENT_DESC> mTreeSpriteInputLayout;
 
     RenderItem* mWavesRitem = nullptr;
 
@@ -121,7 +116,7 @@ private:
 
 	std::unique_ptr<Waves> mWaves;
 
-    PassConstants mMainPassCB;
+    PassConstants m_cnstbPass;
 
 	XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
 	XMFLOAT4X4 mView = MathHelper::Identity4x4();
