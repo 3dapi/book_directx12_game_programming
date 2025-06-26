@@ -29,6 +29,8 @@ public:
 	TD3D_TEXTURE* ResourceFind(const std::string& name) override;
 	int ResourceUnLoad(const std::string& name)         override;
 	int ResourceUnLoadAll()                             override;
+	// find ID3D12Resource*
+	ID3D12Resource* FindRes(const std::string& name);
 };
 
 } // namespace G2

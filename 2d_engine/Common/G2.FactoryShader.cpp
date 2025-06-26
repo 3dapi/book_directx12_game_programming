@@ -66,4 +66,12 @@ int FactoryShader::ResourceUnLoad(const string& name)
 	return E_FAIL;
 }
 
+ID3DBlob* FactoryShader::FindRes(const std::string& name)
+{
+	auto item = this->Find(name)->rs.Get();
+	if (item)
+		return item;
+	return {};
+}
+
 } // namespace G2

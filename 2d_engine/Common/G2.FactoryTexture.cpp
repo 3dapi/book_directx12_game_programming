@@ -77,4 +77,12 @@ int FactoryTexture::ResourceUnLoadAll()
 	return S_OK;
 }
 
+ID3D12Resource* FactoryTexture::FindRes(const std::string& name)
+{
+	auto item = this->Find(name)->rs.Get();
+	if (item)
+		return item;
+	return {};
+}
+
 } // namespace G2

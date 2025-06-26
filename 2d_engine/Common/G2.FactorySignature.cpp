@@ -107,6 +107,17 @@ TD3D_ROOTSIGNATURE* FactorySignature::ResourceFind(const string& name)
 	return nullptr;
 }
 
+int FactorySignature::ResourceUnLoad(const std::string& name)
+{
+	auto itr = this->m_db.find(name);
+	if (itr != this->m_db.end())
+	{
+		m_db.erase(itr);
+		return S_OK;
+	}
+	return E_FAIL;
+}
+
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> FactorySignature::staticSamplers()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
