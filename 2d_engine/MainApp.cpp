@@ -165,9 +165,7 @@ int MainApp::Render()
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 	// Reusing the command list reuses memory.
-
-	auto pls = pls_manager->FindRes("PLS_OPAQUE");
-	hr = d3dCommandList->Reset(d3dCommandAlloc, pls);
+	hr = d3dCommandList->Reset(d3dCommandAlloc, nullptr);
 	if (FAILED(hr))
 		return hr;
 
@@ -195,21 +193,24 @@ int MainApp::Render()
 
 	
 	// 지형 그리기
-	//DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Opaque]);
+	auto pls = pls_manager->FindRes("PLS_OPAQUE");
+	d3dCommandList->SetPipelineState(pls);
+	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Opaque]);
 
 	// 알파 테스용 가운데 블록
-	//d3dCommandList->SetPipelineState(mPSOs["alphaTested"].Get());
-	//DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTested]);
+	pls = pls_manager->FindRes("PLS_ALPHATEST");
+	d3dCommandList->SetPipelineState(pls);
+	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTested]);
 
 	// 빌보드 그리기
-	pls = pls_manager->FindRes("treeSprites");
+	pls = pls_manager->FindRes("PLS_TREES");
+	d3dCommandList->SetPipelineState(pls);
 	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites]);
 
-
-
 	// 물그리기
-	//d3dCommandList->SetPipelineState(mPSOs["transparent"].Get());
-	//DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Transparent]);
+	pls = pls_manager->FindRes("PLS_TRANSPARENT");
+	d3dCommandList->SetPipelineState(pls);
+	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::Transparent]);
 
 	// Indicate a state transition on the resource usage.
 	d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
@@ -796,7 +797,7 @@ void MainApp::BuildMaterials()
 	wirefence->Roughness = 0.25f;
 
 	auto treeSprites = std::make_unique<Material>();
-	treeSprites->Name = "treeSprites";
+	treeSprites->Name = "PLS_TREES";
 	treeSprites->MatCBIndex = 3;
 	treeSprites->DiffuseSrvHeapIndex = 3;
 	treeSprites->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -806,7 +807,7 @@ void MainApp::BuildMaterials()
 	mMaterials["grass"] = std::move(grass);
 	mMaterials["water"] = std::move(water);
 	mMaterials["wirefence"] = std::move(wirefence);
-	mMaterials["treeSprites"] = std::move(treeSprites);
+	mMaterials["PLS_TREES"] = std::move(treeSprites);
 }
 
 void MainApp::BuildRenderItems()
@@ -856,7 +857,7 @@ void MainApp::BuildRenderItems()
 	auto treeSpritesRitem = std::make_unique<RenderItem>();
 	treeSpritesRitem->World = MathHelper::Identity4x4();
 	treeSpritesRitem->ObjCBIndex = 3;
-	treeSpritesRitem->Mat = mMaterials["treeSprites"].get();
+	treeSpritesRitem->Mat = mMaterials["PLS_TREES"].get();
 	treeSpritesRitem->Geo = mGeometries["treeSpritesGeo"].get();
 	treeSpritesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
 	treeSpritesRitem->IndexCount = treeSpritesRitem->Geo->DrawArgs["points"].IndexCount;
@@ -904,65 +905,6 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vec
 
 		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
 	}
-}
-
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> MainApp::GetStaticSamplers()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-
-	// Applications usually only need a handful of samplers.  So just define them all up front
-	// and keep them available as part of the root signature.  
-
-	const CD3DX12_STATIC_SAMPLER_DESC pointWrap(
-		0, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
-		1, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
-		2, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
-		3, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
-		4, // shaderRegister
-		D3D12_FILTER_ANISOTROPIC, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
-		0.0f,                             // mipLODBias
-		8);                               // maxAnisotropy
-
-	const CD3DX12_STATIC_SAMPLER_DESC anisotropicClamp(
-		5, // shaderRegister
-		D3D12_FILTER_ANISOTROPIC, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressW
-		0.0f,                              // mipLODBias
-		8);                                // maxAnisotropy
-
-	return {
-		pointWrap, pointClamp,
-		linearWrap, linearClamp,
-		anisotropicWrap, anisotropicClamp };
 }
 
 float MainApp::GetHillsHeight(float x, float z)const

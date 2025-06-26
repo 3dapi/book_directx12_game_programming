@@ -46,7 +46,7 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 		ID3D12PipelineState* pls{};
 		auto shader_vs = shader_manager->FindRes("standardVS");
 		auto shader_ps = shader_manager->FindRes("opaquePS");
-		auto signature = FactorySignature::instance()->FindRes("TEX_1");
+		auto signature = FactorySignature::instance()->FindRes(KEY_TEX_01);
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC plsDesc{};
 			plsDesc.InputLayout = { VTX_NT::INPUT_LAYOUT.data(), (UINT)VTX_NT::INPUT_LAYOUT.size() };
 			plsDesc.pRootSignature = signature;
@@ -63,21 +63,21 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			plsDesc.SampleDesc.Quality = d3dMsaa4State ? (d3dMsaa4Quality - 1) : 0;
 			plsDesc.DSVFormat = d3dFmtDepth;
 		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
-		if (FAILED(hr))
-			return nullptr;
-
-		// 저장
-		std::string name = "PLS_OPAQUE";
-		m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
-		m_db[name]->n = name;
-		m_db[name]->r = std::move(pls);
+		if (SUCCEEDED(hr))
+		{
+			// 저장
+			string name = "PLS_OPAQUE";
+			m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
+			m_db[name]->n = name;
+			m_db[name]->r = pls;
+		}
 	}
 	// for transparent objects
 	{
 		ID3D12PipelineState* pls{};
 		auto shader_vs = shader_manager->FindRes("standardVS");
 		auto shader_ps = shader_manager->FindRes("opaquePS");
-		auto signature = FactorySignature::instance()->FindRes("TEX_1");
+		auto signature = FactorySignature::instance()->FindRes(KEY_TEX_01);
 		D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc{};
 			transparencyBlendDesc.BlendEnable = true;
 			transparencyBlendDesc.LogicOpEnable = false;
@@ -106,22 +106,21 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			plsDesc.DSVFormat = d3dFmtDepth;
 			plsDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
 		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
-		if (FAILED(hr))
-			return nullptr;
-
-		// 저장
-		std::string name = "PLS_TRANSPARENT";
-		m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
-		m_db[name]->n = name;
-		m_db[name]->r = std::move(pls);
+		if (SUCCEEDED(hr))
+		{
+			// 저장
+			string name = "PLS_TRANSPARENT";
+			m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
+			m_db[name]->n = name;
+			m_db[name]->r = pls;
+		}
 	}
-
 	// for alpha tested objects
 	{
 		ID3D12PipelineState* pls{};
 		auto shader_vs = shader_manager->FindRes("standardVS");
 		auto shader_ps = shader_manager->FindRes("alphaTestedPS");
-		auto signature = FactorySignature::instance()->FindRes("TEX_1");
+		auto signature = FactorySignature::instance()->FindRes(KEY_TEX_01);
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC plsDesc {};
 			plsDesc.InputLayout = { VTX_NT::INPUT_LAYOUT.data(), (UINT)VTX_NT::INPUT_LAYOUT.size() };
 			plsDesc.pRootSignature = signature;
@@ -139,24 +138,22 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			plsDesc.DSVFormat = d3dFmtDepth;
 			plsDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
-		if (FAILED(hr))
-			return nullptr;
-
-		// 저장
-		std::string name = "PLS_ALPHATEST";
-		m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
-		m_db[name]->n = name;
-		m_db[name]->r = std::move(pls);
+		if (SUCCEEDED(hr))
+		{
+			// 저장
+			string name = "PLS_ALPHATEST";
+			m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
+			m_db[name]->n = name;
+			m_db[name]->r = pls;
+		}
 	}
-
 	// for tree sprites
 	{
 		ID3D12PipelineState* pls{};
 		auto shader_vs = shader_manager->FindRes("treeSpriteVS");
 		auto shader_ps = shader_manager->FindRes("treeSpritePS");
 		auto shader_gs = shader_manager->FindRes("treeSpriteGS");
-		auto signature = FactorySignature::instance()->FindRes("TEX_1");
-		
+		auto signature = FactorySignature::instance()->FindRes(KEY_TEX_01);
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC plsDesc{};
 			plsDesc.InputLayout = { VTX_POINT::INPUT_LAYOUT.data(), (UINT)VTX_POINT::INPUT_LAYOUT.size() };
 			plsDesc.pRootSignature = signature;
@@ -176,14 +173,14 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			plsDesc.DSVFormat = d3dFmtDepth;
 			plsDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
-		if (FAILED(hr))
-			return nullptr;
-
-		// 저장
-		std::string name = "treeSprites";
-		m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
-		m_db[name]->n = name;
-		m_db[name]->r = std::move(pls);
+		if (SUCCEEDED(hr))
+		{
+			// 저장
+			string name = "PLS_TREES";
+			m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
+			m_db[name]->n = name;
+			m_db[name]->r = pls;
+		}
 	}
 	auto ret = m_db["OPAQUE"].get();
 	m_isLoaded = true;
