@@ -16,8 +16,8 @@ struct TD3D_TEXTURE
 {
 	std::string				name;	// texture name
 	std::string				file;	// texture file
-	ComPtr<ID3D12Resource>	rs{};	// resource
-	ComPtr<ID3D12Resource>	uh{};	// upload heap
+	ComPtr<ID3D12Resource>	r{};	// resource
+	ComPtr<ID3D12Resource>	u{};	// upload heap
 };
 
 class FactoryTexture : public IG2Factory<FactoryTexture, TD3D_TEXTURE>

@@ -39,8 +39,8 @@ TD3D_TEXTURE* FactoryTexture::ResourceLoad(const std::string& name, const std::s
 	HRESULT hr = DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, wFile.c_str(), rs_tx, rs_up);
 	ThrowIfFailed(hr);
 
-	pItem->rs = std::move(rs_tx);
-	pItem->uh = std::move(rs_up);
+	pItem->r = std::move(rs_tx);
+	pItem->u = std::move(rs_up);
 	//c++17
 	auto [it, success] = m_db.insert({ name, std::move(pItem) });
 	auto ret = it->second.get();
@@ -79,9 +79,11 @@ int FactoryTexture::ResourceUnLoadAll()
 
 ID3D12Resource* FactoryTexture::FindRes(const std::string& name)
 {
-	auto item = this->Find(name)->rs.Get();
-	if (item)
-		return item;
+	auto itr = this->m_db.find(name);
+	if (itr != this->m_db.end())
+	{
+		return itr->second.get()->r.Get();
+	}
 	return {};
 }
 

@@ -27,6 +27,24 @@ enum ED3D_ROOTSIGNATURE
 	ED3D_TEX8_CONST08	= 0X0808,
 };
 
+#define KEY_TEX_00	"TEX_0"
+#define KEY_TEX_01	"TEX_1"
+#define KEY_TEX_02	"TEX_2"
+#define KEY_TEX_03	"TEX_3"
+#define KEY_TEX_04	"TEX_4"
+#define KEY_TEX_05	"TEX_5"
+#define KEY_TEX_06	"TEX_6"
+#define KEY_TEX_07	"TEX_7"
+#define KEY_TEX_08	"TEX_8"
+#define KEY_TEX_09	"TEX_9"
+#define KEY_TEX_0A	"TEX_A"
+#define KEY_TEX_0B	"TEX_B"
+
+struct TD3D_TEST1
+{
+	std::string				n;		// name
+	ID3D12RootSignature* r{};	// root signature
+};
 struct TD3D_ROOTSIGNATURE
 {
 	std::string				n;		// name
@@ -37,21 +55,25 @@ struct TD3D_ROOTSIGNATURE
 			r = {};
 		}
 	}
+	inline static const char* keys[]
+	{
+		"TEX_0", "TEX_1", "TEX_2", "TEX_3", "TEX_4", "TEX_5", "TEX_6", "TEX_7", "TEX_8", "TEX_9", "TEX_A", "TEX_B",
+	};
 };
 
 class FactorySignature : public IG2Factory<FactorySignature, TD3D_ROOTSIGNATURE >
 {
 public:
 	static FactorySignature* instance();
-
 	TD3D_ROOTSIGNATURE* ResourceLoad();
-
 public:
 	TD3D_ROOTSIGNATURE* ResourceFind(const std::string& name) override;
-	int ResourceUnLoad(const std::string& name) override;
-
+	// find ID3D12Resource*
+	ID3D12RootSignature* FindRes(const std::string& name);
 protected:
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> staticSamplers();
+protected:
+	bool	m_isLoaded{};
 };
 
 } // namespace G2

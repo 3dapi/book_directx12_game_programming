@@ -13,6 +13,10 @@ namespace G2 {
 FactorySignature* FactorySignature::instance()
 {
 	static FactorySignature inst;
+	if (!inst.m_isLoaded)
+	{
+		inst.Load();
+	}
 	return &inst;
 }
 
@@ -85,7 +89,7 @@ TD3D_ROOTSIGNATURE* FactorySignature::ResourceLoad()
 
 		// 이름 : "TEX0n"
 		char name[32];
-		sprintf_s(name, "TEX_%02X", texrSize);
+		sprintf_s(name, "TEX_%X", texrSize);
 
 		// 저장
 		m_db[name] = std::make_unique<TD3D_ROOTSIGNATURE>();
@@ -94,6 +98,7 @@ TD3D_ROOTSIGNATURE* FactorySignature::ResourceLoad()
 		continue;
 	}
 	auto ret = m_db["TEX_0"].get();
+	m_isLoaded = true;
 	return ret;
 }
 
@@ -107,15 +112,14 @@ TD3D_ROOTSIGNATURE* FactorySignature::ResourceFind(const string& name)
 	return nullptr;
 }
 
-int FactorySignature::ResourceUnLoad(const std::string& name)
+ID3D12RootSignature* FactorySignature::FindRes(const std::string& name)
 {
 	auto itr = this->m_db.find(name);
 	if (itr != this->m_db.end())
 	{
-		m_db.erase(itr);
-		return S_OK;
+		return itr->second.get()->r;
 	}
-	return E_FAIL;
+	return {};
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> FactorySignature::staticSamplers()
