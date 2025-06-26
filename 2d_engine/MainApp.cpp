@@ -109,6 +109,10 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 int MainApp::destroy()
 {
+	FactoryPipelineState::instance()->UnLoadAll();
+	FactorySignature::instance()->UnLoadAll();
+	FactoryShader::instance()->UnLoadAll();
+	FactoryTexture::instance()->UnLoadAll();
 	return S_OK;
 }
 

@@ -11,6 +11,12 @@ namespace G2 {
 template <typename TCLASS_FACTORY, typename TDB_RESOURCE>
 class IG2Factory
 {
+public:
+	virtual ~IG2Factory()
+	{
+		UnLoadAll();
+	}
+
 protected:
 	std::unordered_map<std::string, std::unique_ptr<TDB_RESOURCE>> m_db;
 
