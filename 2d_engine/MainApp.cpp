@@ -54,7 +54,6 @@ int MainApp::init(const std::any& initialValue /* = */)
 	mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
 	LoadTextures();
-	BuildRootSignature();
 	BuildDescriptorHeaps();
 	BuildShadersAndInputLayouts();
 	BuildLandGeometry();
@@ -437,58 +436,6 @@ void MainApp::LoadTextures()
 	tex_manager->Load("waterTex"	, "Textures/water1.dds"		);
 	tex_manager->Load("fenceTex"	, "Textures/WireFence.dds"  );
 	tex_manager->Load("treeArrayTex", "Textures/treeArray2.dds" );
-}
-
-void MainApp::BuildRootSignature()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	auto signature_factory = FactorySignature::instance();
-
-	auto cc0 = sizeof(std::string);
-	auto cc1 = sizeof(TD3D_TEST1);
-	auto cc2 = sizeof(TD3D_ROOTSIGNATURE);
-
-	auto cc = FactorySignature::instance()->FindRes("TEX_0");
-
-
-
-
-	//CD3DX12_DESCRIPTOR_RANGE texTable;
-	//texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-	//// Root parameter can be a table, root descriptor or root constants.
-	//CD3DX12_ROOT_PARAMETER slotRootParameter[4];
-
-	//// Perfomance TIP: Order from most frequent to least frequent.
-	//slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
-	//slotRootParameter[1].InitAsConstantBufferView(0);
-	//slotRootParameter[2].InitAsConstantBufferView(1);
-	//slotRootParameter[3].InitAsConstantBufferView(2);
-
-	//auto staticSamplers = GetStaticSamplers();
-
-	//// A root signature is an array of root parameters.
-	//CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter,
-	//	(UINT)staticSamplers.size(), staticSamplers.data(),
-	//	D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	//// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
-	//ComPtr<ID3DBlob> serializedRootSig = nullptr;
-	//ComPtr<ID3DBlob> errorBlob = nullptr;
-	//HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
-	//	serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
-
-	//if (errorBlob != nullptr)
-	//{
-	//	::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-	//}
-	//ThrowIfFailed(hr);
-
-	//ThrowIfFailed(d3dDevice->CreateRootSignature(
-	//	0,
-	//	serializedRootSig->GetBufferPointer(),
-	//	serializedRootSig->GetBufferSize(),
-	//	IID_PPV_ARGS(m_rootSignature.GetAddressOf())));
 }
 
 void MainApp::BuildDescriptorHeaps()

@@ -77,7 +77,6 @@ private:
 	int	 UpdateFrameResource();
 
 	void LoadTextures();
-    void BuildRootSignature();
 	void BuildDescriptorHeaps();
     void BuildShadersAndInputLayouts();
     void BuildLandGeometry();
