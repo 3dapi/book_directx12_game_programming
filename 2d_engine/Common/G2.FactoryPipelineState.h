@@ -13,14 +13,15 @@ using namespace Microsoft::WRL;
 namespace G2 {
 
 inline static const char* D3D_PIPELINESTATE[] = {
-	// for 2d
-	"PLS2D_OPAQUE",
-	"PLS2D_TRANSPARENT",
-	"PLS2D_ALPHATEST",
 	// for 3d
 	"PLS_OPAQUE",
 	"PLS_TRANSPARENT",
 	"PLS_ALPHATEST",
+	"PLS_TREES",
+	// for 2d
+	"PLS2D_OPAQUE",
+	"PLS2D_TRANSPARENT",
+	"PLS2D_ALPHATEST",
 	// ...
 };
 
