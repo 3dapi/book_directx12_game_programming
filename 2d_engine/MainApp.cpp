@@ -94,7 +94,7 @@ int MainApp::init(const std::any& initialValue /* = */)
 	BuildMaterials();
 	BuildRenderItems();
 	BuildFrameResources();
-	BuildPSOs();
+	auto pls_manager = FactoryPipelineState::instance();
 
 	// Execute the initialization commands.
 	ThrowIfFailed(d3dCommandList->Close());
@@ -165,7 +165,9 @@ int MainApp::Render()
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 	// Reusing the command list reuses memory.
-	hr = d3dCommandList->Reset(d3dCommandAlloc, mPSOs["opaque"].Get());
+
+	auto pls = pls_manager->FindRes("PLS_OPAQUE");
+	hr = d3dCommandList->Reset(d3dCommandAlloc, pls);
 	if (FAILED(hr))
 		return hr;
 
@@ -200,7 +202,7 @@ int MainApp::Render()
 	//DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTested]);
 
 	// 빌보드 그리기
-	d3dCommandList->SetPipelineState(mPSOs["treeSprites"].Get());
+	pls = pls_manager->FindRes("treeSprites");
 	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites]);
 
 
@@ -749,101 +751,6 @@ void MainApp::BuildTreeSpritesGeometry()
 	geo->DrawArgs["points"] = submesh;
 
 	mGeometries["treeSpritesGeo"] = std::move(geo);
-}
-
-int MainApp::BuildPSOs()
-{
-	int hr = S_OK;
-	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
-	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
-	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
-	auto d3dFmtBack      = *std::any_cast<DXGI_FORMAT*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_BACKBUFFER_FORAT));
-	auto d3dFmtDepth     = *std::any_cast<DXGI_FORMAT*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_DEPTH_STENCIL_FORAT));
-	auto d3dMsaa4State   = *std::any_cast<bool*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_STATE));
-	auto d3dMsaa4Quality = *std::any_cast<UINT*>(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_QUALITY));
-
-	auto shader_manager = FactoryShader::instance();
-	auto pshader_vs = shader_manager->FindRes("standardVS");
-	auto pshader_ps = shader_manager->FindRes("opaquePS");
-	auto signature  = FactorySignature::instance()->FindRes("TEX_1");
-
-	//
-	// PSO for opaque objects.
-	//
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc{};
-		opaquePsoDesc.InputLayout = { VTX_NT::INPUT_LAYOUT.data(), (UINT)VTX_NT::INPUT_LAYOUT.size() };
-		opaquePsoDesc.pRootSignature = signature;
-		opaquePsoDesc.VS = { pshader_vs->GetBufferPointer(), pshader_vs->GetBufferSize() };
-		opaquePsoDesc.PS = { pshader_ps->GetBufferPointer(), pshader_ps->GetBufferSize() };
-		opaquePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		opaquePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		opaquePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-		opaquePsoDesc.SampleMask = UINT_MAX;
-		opaquePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		opaquePsoDesc.NumRenderTargets = 1;
-		opaquePsoDesc.RTVFormats[0] = d3dFmtBack;
-		opaquePsoDesc.SampleDesc.Count = d3dMsaa4State ? 4 : 1;
-		opaquePsoDesc.SampleDesc.Quality = d3dMsaa4State ? (d3dMsaa4Quality - 1) : 0;
-		opaquePsoDesc.DSVFormat = d3dFmtDepth;
-	hr = d3dDevice->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&mPSOs["opaque"]));
-	if (FAILED(hr))
-		return hr;
-
-	//
-	// PSO for transparent objects
-	//
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentPsoDesc = opaquePsoDesc;
-	D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
-		transparencyBlendDesc.BlendEnable = true;
-		transparencyBlendDesc.LogicOpEnable = false;
-		transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-		transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-		transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
-		transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
-		transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
-		transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-		transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
-		transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-		transparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
-	hr= d3dDevice->CreateGraphicsPipelineState(&transparentPsoDesc, IID_PPV_ARGS(&mPSOs["transparent"]));
-	if (FAILED(hr))
-		return hr;
-
-	//
-	// PSO for alpha tested objects
-	//
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestedPsoDesc = opaquePsoDesc;
-	auto pshader_a = shader_manager->FindRes("alphaTestedPS");
-
-		alphaTestedPsoDesc.PS = { pshader_a->GetBufferPointer(), pshader_a->GetBufferSize() };
-		alphaTestedPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	hr = d3dDevice->CreateGraphicsPipelineState(&alphaTestedPsoDesc, IID_PPV_ARGS(&mPSOs["alphaTested"]));
-	if (FAILED(hr))
-		return hr;
-
-	//
-	// PSO for tree sprites
-	//
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC treeSpritePsoDesc = opaquePsoDesc;
-	auto pshader_tree_vs = shader_manager->FindRes("treeSpriteVS");
-	auto pshader_tree_gs = shader_manager->FindRes("treeSpriteGS");
-	auto pshader_tree_ps = shader_manager->FindRes("treeSpritePS");
-
-		treeSpritePsoDesc.VS = { pshader_tree_vs->GetBufferPointer(), pshader_tree_vs->GetBufferSize() };
-		treeSpritePsoDesc.GS = { pshader_tree_gs->GetBufferPointer(), pshader_tree_gs->GetBufferSize() };
-		treeSpritePsoDesc.PS = { pshader_tree_ps->GetBufferPointer(), pshader_tree_ps->GetBufferSize() };
-		treeSpritePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-		treeSpritePsoDesc.InputLayout = { VTX_POINT::INPUT_LAYOUT.data(), (UINT)VTX_POINT::INPUT_LAYOUT.size() };
-		treeSpritePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	hr = d3dDevice->CreateGraphicsPipelineState(&treeSpritePsoDesc, IID_PPV_ARGS(&mPSOs["treeSprites"]));
-	if (FAILED(hr))
-		return hr;
-
-	return S_OK;
 }
 
 void MainApp::BuildFrameResources()
