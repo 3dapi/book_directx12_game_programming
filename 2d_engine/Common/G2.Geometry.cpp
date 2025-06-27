@@ -14,7 +14,13 @@ namespace G2 {
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-int StaticResBuf::CreateDefaultBufferWithUploader(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+	UINT StaticResBuf::Count()
+	{
+		UINT ret = size / stride;
+		return ret;
+	}
+
+	int StaticResBuf::CreateDefaultBufferWithUploader(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
 	int hr = S_OK;
 	if (!device || cmdList == 0)
@@ -96,7 +102,7 @@ D3D12_INDEX_BUFFER_VIEW StaticResBufIdx::IndexBufferView() const
 	return ret;
 }
 
-int StaticResBufIdx::Init(const void* buf_ptr, size_t buf_size,	DXGI_FORMAT format, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+int StaticResBufIdx::Init(const void* buf_ptr, size_t buf_size, size_t idx_stride,	DXGI_FORMAT format, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
 	int hr = S_OK;
 	if (!buf_ptr || buf_size == 0)
@@ -105,6 +111,7 @@ int StaticResBufIdx::Init(const void* buf_ptr, size_t buf_size,	DXGI_FORMAT form
 	}
 	idxFormat = format;
 	size      = (UINT)buf_size;
+	stride    = (UINT)idx_stride;
 	if (!cpuData.empty())
 	{
 		cpuData.clear();

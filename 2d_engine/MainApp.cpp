@@ -192,7 +192,7 @@ int MainApp::Render()
 	// 알파 테스용 가운데 블록
 	auto pls = pls_manager->FindRes("PLS_ALPHATEST");
 	d3dCommandList->SetPipelineState(pls);
-	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTested]);
+	DrawRenderItems(d3dCommandList);
 
 
 	// Indicate a state transition on the resource usage.
@@ -279,50 +279,45 @@ void MainApp::UpdateCamera(const GameTimer& gt)
 void MainApp::UpdateObjectCBs(const GameTimer& gt)
 {
 	auto currObjectCB = m_frameRscCur->m_cnsgbMObject.get();
-	for (auto& e : mAllRitems)
+
+	// Only update the cbuffer data if the constants have changed.  
+	// This needs to be tracked per frame resource.
+	if (m_wireBox->NumFramesDirty > 0)
 	{
-		// Only update the cbuffer data if the constants have changed.  
-		// This needs to be tracked per frame resource.
-		if (e->NumFramesDirty > 0)
-		{
-			XMMATRIX world = XMLoadFloat4x4(&e->World);
-			XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
+		XMMATRIX world = XMLoadFloat4x4(&m_wireBox->World);
+		XMMATRIX texTransform = XMLoadFloat4x4(&m_wireBox->TexTransform);
 
-			ShaderConstTransform objConstants;
-			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
-			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
+		ShaderConstTransform objConstants;
+		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 
-			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+		currObjectCB->CopyData(m_wireBox->ObjCBIndex, objConstants);
 
-			// Next FrameResource need to be updated too.
-			e->NumFramesDirty--;
-		}
+		// Next FrameResource need to be updated too.
+		m_wireBox->NumFramesDirty--;
 	}
 }
 
 void MainApp::UpdateMaterialCBs(const GameTimer& gt)
 {
 	auto currMaterialCB = m_frameRscCur->m_cnsgbMaterial.get();
-	for (auto& e : mMaterials)
+	// Only update the cbuffer data if the constants have changed.  If the cbuffer
+	// data changes, it needs to be updated for each FrameResource.
+
+	if (m_wireMaterial->NumFramesDirty > 0)
 	{
-		// Only update the cbuffer data if the constants have changed.  If the cbuffer
-		// data changes, it needs to be updated for each FrameResource.
-		Material* mat = e.second.get();
-		if (mat->NumFramesDirty > 0)
-		{
-			XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
+		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireMaterial->MatTransform);
 
-			MaterialConstants matConstants;
-			matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
-			matConstants.FresnelR0 = mat->FresnelR0;
-			matConstants.Roughness = mat->Roughness;
-			XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
+		MaterialConstants matConstants;
+		matConstants.DiffuseAlbedo = m_wireMaterial->DiffuseAlbedo;
+		matConstants.FresnelR0 = m_wireMaterial->FresnelR0;
+		matConstants.Roughness = m_wireMaterial->Roughness;
+		XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
 
-			currMaterialCB->CopyData(mat->MatCBIndex, matConstants);
+		currMaterialCB->CopyData(m_wireMaterial->MatCBIndex, matConstants);
 
-			// Next FrameResource need to be updated too.
-			mat->NumFramesDirty--;
-		}
+		// Next FrameResource need to be updated too.
+		m_wireMaterial->NumFramesDirty--;
 	}
 }
 
@@ -409,40 +404,6 @@ void MainApp::BuildDescriptorHeaps()
 
 void MainApp::BuildLandGeometry()
 {
-	auto d3dDevice      = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(IG2GraphicsD3D::instance()->getCommandList());
-	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
-
-	std::vector<G2::VTX_NT> vertices(grid.Vertices.size());
-	for (size_t i = 0; i < grid.Vertices.size(); ++i)
-	{
-		auto& p = grid.Vertices[i].p;
-		vertices[i].p = p;
-		vertices[i].p.y = GetHillsHeight(p.x, p.z);
-		vertices[i].n = GetHillsNormal(p.x, p.z);
-		vertices[i].t = grid.Vertices[i].t;
-	}
-
-	const UINT vbByteSize = (UINT)vertices.size() * sizeof(G2::VTX_NT);
-
-	std::vector<std::uint16_t> indices = grid.GetIndices16();
-	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = "landGeo";
-
-	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
-	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
-
-	geo->DrawArgs["grid"] = submesh;
-
-	mGeometries["landGeo"] = std::move(geo);
 }
 
 void MainApp::BuildBoxGeometry()
@@ -467,20 +428,10 @@ void MainApp::BuildBoxGeometry()
 	std::vector<std::uint16_t> indices = box.GetIndices16();
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = "boxGeo";
+	m_wireGeo = new MeshGeometry;
 
-	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
-	geo->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
-
-	geo->DrawArgs["box"] = submesh;
-
-	mGeometries["boxGeo"] = std::move(geo);
+	m_wireGeo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
+	m_wireGeo->idx.Init(indices.data(),  ibByteSize, sizeof(std::uint16_t), DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 }
 
 
@@ -491,7 +442,7 @@ void MainApp::BuildFrameResources()
 	int frameReouseNum = d3dUtil::getFrameRscCount();
 	for (int i = 0; i < frameReouseNum; ++i)
 	{
-		m_frameRscLst.push_back(std::make_unique<FrameResource>(d3dDevice, 1, (UINT)mAllRitems.size(), (UINT)mMaterials.size()));
+		m_frameRscLst.push_back(std::make_unique<FrameResource>(d3dDevice, 1, 1, 1));
 	}
 }
 
@@ -499,58 +450,27 @@ void MainApp::BuildMaterials()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
-	auto grass = std::make_unique<Material>();
-	grass->Name = "grass";
-	grass->MatCBIndex = 0;
-	grass->DiffuseSrvHeapIndex = 0;
-	grass->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
-	grass->Roughness = 0.125f;
-
-	auto wirefence = std::make_unique<Material>();
-	wirefence->Name = "wirefence";
-	wirefence->MatCBIndex = 1;
-	wirefence->DiffuseSrvHeapIndex = 1;
-	wirefence->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	wirefence->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	wirefence->Roughness = 0.25f;
-
-	mMaterials["grass"] = std::move(grass);
-	mMaterials["wirefence"] = std::move(wirefence);
+	m_wireMaterial = new Material;
+		m_wireMaterial->MatCBIndex = 0;
+	m_wireMaterial->DiffuseSrvHeapIndex = 1;
+	m_wireMaterial->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_wireMaterial->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	m_wireMaterial->Roughness = 0.25f;
 }
 
 void MainApp::BuildRenderItems()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
-	//auto gridRitem = std::make_unique<RenderItem>();
-	//gridRitem->World = MathHelper::Identity4x4();
-	//XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
-	//gridRitem->ObjCBIndex = 0;
-	//gridRitem->Mat = mMaterials["grass"].get();
-	//gridRitem->Geo = mGeometries["landGeo"].get();
-	//gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
-	//gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-	//gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-	//mRitemLayer[(int)RenderLayer::Opaque].push_back(gridRitem.get());
-	//mAllRitems.push_back(std::move(gridRitem));
-
-
-	auto boxRitem = std::make_unique<RenderItem>();
-	XMStoreFloat4x4(&boxRitem->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-	boxRitem->ObjCBIndex = 0;
-	boxRitem->Mat = mMaterials["wirefence"].get();
-	boxRitem->Geo = mGeometries["boxGeo"].get();
-	boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
-	boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
-	boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
-	mRitemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
-	mAllRitems.push_back(std::move(boxRitem));
+	m_wireBox = new RenderItem;
+	XMStoreFloat4x4(&m_wireBox->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
+	m_wireBox->ObjCBIndex = 0;
+	m_wireBox->Mat = m_wireMaterial;
+	m_wireBox->Geo = m_wireGeo;
+	m_wireBox->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
-void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems)
+void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList)
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
@@ -560,29 +480,25 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vec
 	auto objectCB = m_frameRscCur->m_cnsgbMObject->Resource();
 	auto passCB = m_frameRscCur->m_cnstbPass->Resource();
 	auto matCB = m_frameRscCur->m_cnsgbMaterial->Resource();
-	// For each render item...
-	for (size_t i = 0; i < ritems.size(); ++i)
-	{
-		auto ri = ritems[i];
 
-		cmdList->IASetVertexBuffers(0, 1, &ri->Geo->vtx.VertexBufferView());
-		cmdList->IASetIndexBuffer(&ri->Geo->idx.IndexBufferView());
-		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		gpu_tex_hp.Offset(ri->Mat->DiffuseSrvHeapIndex, mCbvSrvDescriptorSize);
+	cmdList->IASetVertexBuffers(0, 1, &m_wireBox->Geo->vtx.VertexBufferView());
+	cmdList->IASetIndexBuffer(&m_wireBox->Geo->idx.IndexBufferView());
+	cmdList->IASetPrimitiveTopology(m_wireBox->PrimitiveType);
 
-		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
-		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+	gpu_tex_hp.Offset(m_wireBox->Mat->DiffuseSrvHeapIndex, mCbvSrvDescriptorSize);
 
-		cmdList->SetGraphicsRootDescriptorTable(0, gpu_tex_hp);
-		// t0가 사용중이라 상수 버퍼 b0는 1에서부터 시작
-		cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
-		cmdList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
-		cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
+	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress();
+	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
 
-		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
-	}
+	cmdList->SetGraphicsRootDescriptorTable(0, gpu_tex_hp);
+	// t0가 사용중이라 상수 버퍼 b0는 1에서부터 시작
+	cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
+	cmdList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
+
+	cmdList->DrawIndexedInstanced(m_wireBox->Geo->idx.Count(), 1, 0, 0, 0);
 }
 
 float MainApp::GetHillsHeight(float x, float z)const

@@ -141,39 +141,10 @@ public:
     int LineNumber = -1;
 };
 
-// Defines a subrange of geometry in a MeshGeometry.  This is for when multiple
-// geometries are stored in one vertex and index buffer.  It provides the offsets
-// and data needed to draw a subset of geometry stores in the vertex and index 
-// buffers so that we can implement the technique described by Figure 6.3.
-struct SubmeshGeometry
-{
-	UINT IndexCount = 0;
-	UINT StartIndexLocation = 0;
-	INT BaseVertexLocation = 0;
-
-    // Bounding box of the geometry defined by this submesh. 
-    // This is used in later chapters of the book.
-	DirectX::BoundingBox Bounds;
-};
-
 struct MeshGeometry
 {
-	// Give it a name so we can look it up by name.
-	std::string Name;
-
 	G2::StaticResBufVtx	vtx{};
 	G2::StaticResBufIdx	idx{};
-
-	// A MeshGeometry may store multiple geometries in one vertex/index buffer.
-	// Use this container to define the Submesh geometries so we can draw
-	// the Submeshes individually.
-	std::unordered_map<std::string, SubmeshGeometry> DrawArgs;
-
-
-	// We can free this memory after we finish upload to the GPU.
-	void DisposeUploaders()
-	{
-	}
 };
 
 struct Light
@@ -202,9 +173,6 @@ struct MaterialConstants
 // would likely create a class hierarchy of Materials.
 struct Material
 {
-	// Unique material name for lookup.
-	std::string Name;
-
 	// Index into constant buffer corresponding to this material.
 	int MatCBIndex = -1;
 
