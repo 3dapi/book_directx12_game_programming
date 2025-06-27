@@ -24,9 +24,6 @@
     <ClCompile Include="MainApp.cpp">
       <Filter>s</Filter>
     </ClCompile>
-    <ClCompile Include="Waves.cpp">
-      <Filter>s</Filter>
-    </ClCompile>
     <ClCompile Include="_main.cpp">
       <Filter>s</Filter>
     </ClCompile>
@@ -78,9 +75,6 @@
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="Common\UploadBuffer.h">
-      <Filter>h</Filter>
-    </ClInclude>
-    <ClInclude Include="Waves.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="MainApp.h">

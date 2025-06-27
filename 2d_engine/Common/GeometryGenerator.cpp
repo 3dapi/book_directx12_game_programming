@@ -15,47 +15,47 @@ GeometryGenerator::MeshData GeometryGenerator::CreateBox(float width, float heig
 	// Create the vertices.
 	//
 
-	Vertex v[24];
+	G2::VTX_NGT v[24];
 
 	float w2 = 0.5f*width;
 	float h2 = 0.5f*height;
 	float d2 = 0.5f*depth;
     
 	// Fill in the front face vertex data.
-	v[0] = Vertex(-w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[1] = Vertex(-w2, +h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[2] = Vertex(+w2, +h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-	v[3] = Vertex(+w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
+	v[0] = G2::VTX_NGT{ {-w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 1.0f} };
+	v[1] = G2::VTX_NGT{ {-w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f} };
+	v[2] = G2::VTX_NGT{ {+w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f}, { 1.0f, 0.0f} };
+	v[3] = G2::VTX_NGT{ {+w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f}, { 1.0f, 1.0f} };
 
 	// Fill in the back face vertex data.
-	v[4] = Vertex(-w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
-	v[5] = Vertex(+w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[6] = Vertex(+w2, +h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[7] = Vertex(-w2, +h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	v[4] = G2::VTX_NGT{ {-w2, -h2, +d2}, {0.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f}, { 1.0f, 1.0f} };
+	v[5] = G2::VTX_NGT{ {+w2, -h2, +d2}, {0.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f}, { 0.0f, 1.0f} };
+	v[6] = G2::VTX_NGT{ {+w2, +h2, +d2}, {0.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f} };
+	v[7] = G2::VTX_NGT{ {-w2, +h2, +d2}, {0.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f}, { 1.0f, 0.0f} };
 
 	// Fill in the top face vertex data.
-	v[8]  = Vertex(-w2, +h2, -d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[9]  = Vertex(-w2, +h2, +d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[10] = Vertex(+w2, +h2, +d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-	v[11] = Vertex(+w2, +h2, -d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
+	v[8]  = G2::VTX_NGT{ {-w2, +h2, -d2}, {0.0f, 1.0f, 0.0f}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 1.0f} };
+	v[9]  = G2::VTX_NGT{ {-w2, +h2, +d2}, {0.0f, 1.0f, 0.0f}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f} };
+	v[10] = G2::VTX_NGT{ {+w2, +h2, +d2}, {0.0f, 1.0f, 0.0f}, { 1.0f, 0.0f, 0.0f}, { 1.0f, 0.0f} };
+	v[11] = G2::VTX_NGT{ {+w2, +h2, -d2}, {0.0f, 1.0f, 0.0f}, { 1.0f, 0.0f, 0.0f}, { 1.0f, 1.0f} };
 
 	// Fill in the bottom face vertex data.
-	v[12] = Vertex(-w2, -h2, -d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
-	v[13] = Vertex(+w2, -h2, -d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[14] = Vertex(+w2, -h2, +d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[15] = Vertex(-w2, -h2, +d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	v[12] = G2::VTX_NGT{ {-w2, -h2, -d2}, {0.0f, -1.0f, 0.0f}, { -1.0f, 0.0f, 0.0f}, { 1.0f, 1.0f} };
+	v[13] = G2::VTX_NGT{ {+w2, -h2, -d2}, {0.0f, -1.0f, 0.0f}, { -1.0f, 0.0f, 0.0f}, { 0.0f, 1.0f} };
+	v[14] = G2::VTX_NGT{ {+w2, -h2, +d2}, {0.0f, -1.0f, 0.0f}, { -1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f} };
+	v[15] = G2::VTX_NGT{ {-w2, -h2, +d2}, {0.0f, -1.0f, 0.0f}, { -1.0f, 0.0f, 0.0f}, { 1.0f, 0.0f} };
 
 	// Fill in the left face vertex data.
-	v[16] = Vertex(-w2, -h2, +d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f);
-	v[17] = Vertex(-w2, +h2, +d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f);
-	v[18] = Vertex(-w2, +h2, -d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f);
-	v[19] = Vertex(-w2, -h2, -d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f);
+	v[16] = G2::VTX_NGT{ {-w2, -h2, +d2}, {-1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, -1.0f}, { 0.0f, 1.0f} };
+	v[17] = G2::VTX_NGT{ {-w2, +h2, +d2}, {-1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, -1.0f}, { 0.0f, 0.0f} };
+	v[18] = G2::VTX_NGT{ {-w2, +h2, -d2}, {-1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f} };
+	v[19] = G2::VTX_NGT{ {-w2, -h2, -d2}, {-1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, -1.0f}, { 1.0f, 1.0f} };
 
 	// Fill in the right face vertex data.
-	v[20] = Vertex(+w2, -h2, -d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-	v[21] = Vertex(+w2, +h2, -d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
-	v[22] = Vertex(+w2, +h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
-	v[23] = Vertex(+w2, -h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+	v[20] = G2::VTX_NGT{ {+w2, -h2, -d2}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, 1.0f}, { 0.0f, 1.0f} };
+	v[21] = G2::VTX_NGT{ {+w2, +h2, -d2}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, 1.0f}, { 0.0f, 0.0f} };
+	v[22] = G2::VTX_NGT{ {+w2, +h2, +d2}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, 1.0f}, { 1.0f, 0.0f} };
+	v[23] = G2::VTX_NGT{ {+w2, -h2, +d2}, { 1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, 1.0f}, { 1.0f, 1.0f} };
 
 	meshData.Vertices.assign(&v[0], &v[24]);
  
@@ -111,8 +111,8 @@ GeometryGenerator::MeshData GeometryGenerator::CreateSphere(float radius, uint32
 	// Poles: note that there will be texture coordinate distortion as there is
 	// not a unique point on the texture map to assign to the pole when mapping
 	// a rectangular texture onto a sphere.
-	Vertex topVertex(0.0f, +radius, 0.0f, 0.0f, +1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	Vertex bottomVertex(0.0f, -radius, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	G2::VTX_NGT topVertex   ({ 0.0f, +radius, 0.0f}, { 0.0f, +1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f });
+	G2::VTX_NGT bottomVertex({ 0.0f, -radius, 0.0f}, { 0.0f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f });
 
 	meshData.Vertices.push_back( topVertex );
 
@@ -129,26 +129,26 @@ GeometryGenerator::MeshData GeometryGenerator::CreateSphere(float radius, uint32
 		{
 			float theta = j*thetaStep;
 
-			Vertex v;
+			G2::VTX_NGT v;
 
 			// spherical to cartesian
-			v.Position.x = radius*sinf(phi)*cosf(theta);
-			v.Position.y = radius*cosf(phi);
-			v.Position.z = radius*sinf(phi)*sinf(theta);
+			v.p.x = radius*sinf(phi)*cosf(theta);
+			v.p.y = radius*cosf(phi);
+			v.p.z = radius*sinf(phi)*sinf(theta);
 
 			// Partial derivative of P with respect to theta
-			v.TangentU.x = -radius*sinf(phi)*sinf(theta);
-			v.TangentU.y = 0.0f;
-			v.TangentU.z = +radius*sinf(phi)*cosf(theta);
+			v.g.x = -radius*sinf(phi)*sinf(theta);
+			v.g.y = 0.0f;
+			v.g.z = +radius*sinf(phi)*cosf(theta);
 
-			XMVECTOR T = XMLoadFloat3(&v.TangentU);
-			XMStoreFloat3(&v.TangentU, XMVector3Normalize(T));
+			XMVECTOR T = XMLoadFloat3(&v.g);
+			XMStoreFloat3(&v.g, XMVector3Normalize(T));
 
-			XMVECTOR p = XMLoadFloat3(&v.Position);
-			XMStoreFloat3(&v.Normal, XMVector3Normalize(p));
+			XMVECTOR p = XMLoadFloat3(&v.p);
+			XMStoreFloat3(&v.n, XMVector3Normalize(p));
 
-			v.TexC.x = theta / XM_2PI;
-			v.TexC.y = phi / XM_PI;
+			v.t.x = theta / XM_2PI;
+			v.t.y = phi / XM_PI;
 
 			meshData.Vertices.push_back( v );
 		}
@@ -233,17 +233,17 @@ void GeometryGenerator::Subdivide(MeshData& meshData)
 	uint32 numTris = (uint32)inputCopy.Indices32.size()/3;
 	for(uint32 i = 0; i < numTris; ++i)
 	{
-		Vertex v0 = inputCopy.Vertices[ inputCopy.Indices32[i*3+0] ];
-		Vertex v1 = inputCopy.Vertices[ inputCopy.Indices32[i*3+1] ];
-		Vertex v2 = inputCopy.Vertices[ inputCopy.Indices32[i*3+2] ];
+		G2::VTX_NGT v0 = inputCopy.Vertices[ inputCopy.Indices32[i*3+0] ];
+		G2::VTX_NGT v1 = inputCopy.Vertices[ inputCopy.Indices32[i*3+1] ];
+		G2::VTX_NGT v2 = inputCopy.Vertices[ inputCopy.Indices32[i*3+2] ];
 
 		//
 		// Generate the midpoints.
 		//
 
-        Vertex m0 = MidPoint(v0, v1);
-        Vertex m1 = MidPoint(v1, v2);
-        Vertex m2 = MidPoint(v0, v2);
+        G2::VTX_NGT m0 = MidPoint(v0, v1);
+        G2::VTX_NGT m1 = MidPoint(v1, v2);
+        G2::VTX_NGT m2 = MidPoint(v0, v2);
 
 		//
 		// Add new geometry.
@@ -274,19 +274,19 @@ void GeometryGenerator::Subdivide(MeshData& meshData)
 	}
 }
 
-GeometryGenerator::Vertex GeometryGenerator::MidPoint(const Vertex& v0, const Vertex& v1)
+G2::VTX_NGT GeometryGenerator::MidPoint(const G2::VTX_NGT& v0, const G2::VTX_NGT& v1)
 {
-    XMVECTOR p0 = XMLoadFloat3(&v0.Position);
-    XMVECTOR p1 = XMLoadFloat3(&v1.Position);
+    XMVECTOR p0 = XMLoadFloat3(&v0.p);
+    XMVECTOR p1 = XMLoadFloat3(&v1.p);
 
-    XMVECTOR n0 = XMLoadFloat3(&v0.Normal);
-    XMVECTOR n1 = XMLoadFloat3(&v1.Normal);
+    XMVECTOR n0 = XMLoadFloat3(&v0.n);
+    XMVECTOR n1 = XMLoadFloat3(&v1.n);
 
-    XMVECTOR tan0 = XMLoadFloat3(&v0.TangentU);
-    XMVECTOR tan1 = XMLoadFloat3(&v1.TangentU);
+    XMVECTOR tan0 = XMLoadFloat3(&v0.g);
+    XMVECTOR tan1 = XMLoadFloat3(&v1.g);
 
-    XMVECTOR tex0 = XMLoadFloat2(&v0.TexC);
-    XMVECTOR tex1 = XMLoadFloat2(&v1.TexC);
+    XMVECTOR tex0 = XMLoadFloat2(&v0.t);
+    XMVECTOR tex1 = XMLoadFloat2(&v1.t);
 
     // Compute the midpoints of all the attributes.  Vectors need to be normalized
     // since linear interpolating can make them not unit length.  
@@ -295,11 +295,11 @@ GeometryGenerator::Vertex GeometryGenerator::MidPoint(const Vertex& v0, const Ve
     XMVECTOR tangent = XMVector3Normalize(0.5f*(tan0+tan1));
     XMVECTOR tex = 0.5f*(tex0 + tex1);
 
-    Vertex v;
-    XMStoreFloat3(&v.Position, pos);
-    XMStoreFloat3(&v.Normal, normal);
-    XMStoreFloat3(&v.TangentU, tangent);
-    XMStoreFloat2(&v.TexC, tex);
+    G2::VTX_NGT v;
+    XMStoreFloat3(&v.p, pos);
+    XMStoreFloat3(&v.n, normal);
+    XMStoreFloat3(&v.g, tangent);
+    XMStoreFloat2(&v.t, tex);
 
     return v;
 }
@@ -338,7 +338,7 @@ GeometryGenerator::MeshData GeometryGenerator::CreateGeosphere(float radius, uin
     meshData.Indices32.assign(&k[0], &k[60]);
 
 	for(uint32 i = 0; i < 12; ++i)
-		meshData.Vertices[i].Position = pos[i];
+		meshData.Vertices[i].p = pos[i];
 
 	for(uint32 i = 0; i < numSubdivisions; ++i)
 		Subdivide(meshData);
@@ -347,33 +347,33 @@ GeometryGenerator::MeshData GeometryGenerator::CreateGeosphere(float radius, uin
 	for(uint32 i = 0; i < meshData.Vertices.size(); ++i)
 	{
 		// Project onto unit sphere.
-		XMVECTOR n = XMVector3Normalize(XMLoadFloat3(&meshData.Vertices[i].Position));
+		XMVECTOR n = XMVector3Normalize(XMLoadFloat3(&meshData.Vertices[i].p));
 
 		// Project onto sphere.
 		XMVECTOR p = radius*n;
 
-		XMStoreFloat3(&meshData.Vertices[i].Position, p);
-		XMStoreFloat3(&meshData.Vertices[i].Normal, n);
+		XMStoreFloat3(&meshData.Vertices[i].p, p);
+		XMStoreFloat3(&meshData.Vertices[i].n, n);
 
 		// Derive texture coordinates from spherical coordinates.
-        float theta = atan2f(meshData.Vertices[i].Position.z, meshData.Vertices[i].Position.x);
+        float theta = atan2f(meshData.Vertices[i].p.z, meshData.Vertices[i].p.x);
 
         // Put in [0, 2pi].
         if(theta < 0.0f)
             theta += XM_2PI;
 
-		float phi = acosf(meshData.Vertices[i].Position.y / radius);
+		float phi = acosf(meshData.Vertices[i].p.y / radius);
 
-		meshData.Vertices[i].TexC.x = theta/XM_2PI;
-		meshData.Vertices[i].TexC.y = phi/XM_PI;
+		meshData.Vertices[i].t.x = theta/XM_2PI;
+		meshData.Vertices[i].t.y = phi/XM_PI;
 
 		// Partial derivative of P with respect to theta
-		meshData.Vertices[i].TangentU.x = -radius*sinf(phi)*sinf(theta);
-		meshData.Vertices[i].TangentU.y = 0.0f;
-		meshData.Vertices[i].TangentU.z = +radius*sinf(phi)*cosf(theta);
+		meshData.Vertices[i].g.x = -radius*sinf(phi)*sinf(theta);
+		meshData.Vertices[i].g.y = 0.0f;
+		meshData.Vertices[i].g.z = +radius*sinf(phi)*cosf(theta);
 
-		XMVECTOR T = XMLoadFloat3(&meshData.Vertices[i].TangentU);
-		XMStoreFloat3(&meshData.Vertices[i].TangentU, XMVector3Normalize(T));
+		XMVECTOR T = XMLoadFloat3(&meshData.Vertices[i].g);
+		XMStoreFloat3(&meshData.Vertices[i].g, XMVector3Normalize(T));
 	}
 
     return meshData;
@@ -404,15 +404,15 @@ GeometryGenerator::MeshData GeometryGenerator::CreateCylinder(float bottomRadius
 		float dTheta = 2.0f*XM_PI/sliceCount;
 		for(uint32 j = 0; j <= sliceCount; ++j)
 		{
-			Vertex vertex;
+			G2::VTX_NGT vertex;
 
 			float c = cosf(j*dTheta);
 			float s = sinf(j*dTheta);
 
-			vertex.Position = XMFLOAT3(r*c, y, r*s);
+			vertex.p = XMFLOAT3(r*c, y, r*s);
 
-			vertex.TexC.x = (float)j/sliceCount;
-			vertex.TexC.y = 1.0f - (float)i/stackCount;
+			vertex.t.x = (float)j/sliceCount;
+			vertex.t.y = 1.0f - (float)i/stackCount;
 
 			// Cylinder can be parameterized as follows, where we introduce v
 			// parameter that goes in the same direction as the v tex-coord
@@ -434,15 +434,15 @@ GeometryGenerator::MeshData GeometryGenerator::CreateCylinder(float bottomRadius
 			//  dz/dv = (r0-r1)*sin(t)
 
 			// This is unit length.
-			vertex.TangentU = XMFLOAT3(-s, 0.0f, c);
+			vertex.g = XMFLOAT3(-s, 0.0f, c);
 
 			float dr = bottomRadius-topRadius;
 			XMFLOAT3 bitangent(dr*c, -height, dr*s);
 
-			XMVECTOR T = XMLoadFloat3(&vertex.TangentU);
+			XMVECTOR T = XMLoadFloat3(&vertex.g);
 			XMVECTOR B = XMLoadFloat3(&bitangent);
 			XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
-			XMStoreFloat3(&vertex.Normal, N);
+			XMStoreFloat3(&vertex.n, N);
 
 			meshData.Vertices.push_back(vertex);
 		}
@@ -492,11 +492,11 @@ void GeometryGenerator::BuildCylinderTopCap(float bottomRadius, float topRadius,
 		float u = x/height + 0.5f;
 		float v = z/height + 0.5f;
 
-		meshData.Vertices.push_back( Vertex(x, y, z, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, u, v) );
+		meshData.Vertices.push_back( G2::VTX_NGT({x, y, z}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {u, v}) );
 	}
 
 	// Cap center vertex.
-	meshData.Vertices.push_back( Vertex(0.0f, y, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f) );
+	meshData.Vertices.push_back( G2::VTX_NGT({0.0f, y, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.5f, 0.5f}) );
 
 	// Index of center vertex.
 	uint32 centerIndex = (uint32)meshData.Vertices.size()-1;
@@ -531,11 +531,11 @@ void GeometryGenerator::BuildCylinderBottomCap(float bottomRadius, float topRadi
 		float u = x/height + 0.5f;
 		float v = z/height + 0.5f;
 
-		meshData.Vertices.push_back( Vertex(x, y, z, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, u, v) );
+		meshData.Vertices.push_back( G2::VTX_NGT({x, y, z}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {u, v}) );
 	}
 
 	// Cap center vertex.
-	meshData.Vertices.push_back( Vertex(0.0f, y, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f) );
+	meshData.Vertices.push_back(G2::VTX_NGT({ 0.0f, y, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.5f, 0.5f }));
 
 	// Cache the index of center vertex.
 	uint32 centerIndex = (uint32)meshData.Vertices.size()-1;
@@ -576,13 +576,13 @@ GeometryGenerator::MeshData GeometryGenerator::CreateGrid(float width, float dep
 		{
 			float x = -halfWidth + j*dx;
 
-			meshData.Vertices[i*n+j].Position = XMFLOAT3(x, 0.0f, z);
-			meshData.Vertices[i*n+j].Normal   = XMFLOAT3(0.0f, 1.0f, 0.0f);
-			meshData.Vertices[i*n+j].TangentU = XMFLOAT3(1.0f, 0.0f, 0.0f);
+			meshData.Vertices[i*n+j].p = XMFLOAT3(x, 0.0f, z);
+			meshData.Vertices[i*n+j].n   = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			meshData.Vertices[i*n+j].g = XMFLOAT3(1.0f, 0.0f, 0.0f);
 
 			// Stretch texture over grid.
-			meshData.Vertices[i*n+j].TexC.x = j*du;
-			meshData.Vertices[i*n+j].TexC.y = i*dv;
+			meshData.Vertices[i*n+j].t.x = j*du;
+			meshData.Vertices[i*n+j].t.y = i*dv;
 		}
 	}
  
@@ -621,29 +621,29 @@ GeometryGenerator::MeshData GeometryGenerator::CreateQuad(float x, float y, floa
 	meshData.Indices32.resize(6);
 
 	// Position coordinates specified in NDC space.
-	meshData.Vertices[0] = Vertex(
-        x, y - h, depth,
-		0.0f, 0.0f, -1.0f,
-		1.0f, 0.0f, 0.0f,
-		0.0f, 1.0f);
+	meshData.Vertices[0] = G2::VTX_NGT{
+		{ x, y - h, depth },
+		{ 0.0f, 0.0f, -1.0f },
+		{ 1.0f, 0.0f, 0.0f },
+		{ 0.0f, 1.0f } };
 
-	meshData.Vertices[1] = Vertex(
-		x, y, depth,
-		0.0f, 0.0f, -1.0f,
-		1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f);
+	meshData.Vertices[1] = G2::VTX_NGT{
+		{ x, y, depth },
+		{ 0.0f, 0.0f, -1.0f },
+		{ 1.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f } };
 
-	meshData.Vertices[2] = Vertex(
-		x+w, y, depth,
-		0.0f, 0.0f, -1.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 0.0f);
+	meshData.Vertices[2] = G2::VTX_NGT{
+		{ x + w, y, depth },
+		{ 0.0f, 0.0f, -1.0f },
+		{ 1.0f, 0.0f, 0.0f },
+		{ 1.0f, 0.0f } };
 
-	meshData.Vertices[3] = Vertex(
-		x+w, y-h, depth,
-		0.0f, 0.0f, -1.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 1.0f);
+	meshData.Vertices[3] = G2::VTX_NGT{
+		{ x + w, y - h, depth },
+		{ 0.0f, 0.0f, -1.0f },
+		{ 1.0f, 0.0f, 0.0 },
+		{ 1.0f, 1.0f } };
 
 	meshData.Indices32[0] = 0;
 	meshData.Indices32[1] = 1;

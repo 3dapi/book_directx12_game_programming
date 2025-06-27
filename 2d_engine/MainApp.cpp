@@ -53,13 +53,9 @@ int MainApp::init(const std::any& initialValue /* = */)
 	// so we have to query this information.
 	mCbvSrvDescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
-
-
-	// 1. load texutre
+		// 1. load texutre
 	auto tex_manager = FactoryTexture::instance();
 	tex_manager->Load("grassTex", "Textures/grass.dds");
-	tex_manager->Load("waterTex", "Textures/water1.dds");
 	tex_manager->Load("fenceTex", "Textures/WireFence.dds");
 	tex_manager->Load("treeArrayTex", "Textures/treeArray2.dds");
 
@@ -89,7 +85,6 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 	
 	BuildLandGeometry();
-	BuildWavesGeometry();
 	BuildBoxGeometry();
 	BuildTreeSpritesGeometry();
 	BuildMaterials();
@@ -137,11 +132,9 @@ int MainApp::Update(const std::any& t)
 	// Cycle through the circular frame resource array.
 	UpdateFrameResource();
 
-	AnimateMaterials(gt);
 	UpdateObjectCBs(gt);
 	UpdateMaterialCBs(gt);
 	UpdateMainPassCB(gt);
-	UpdateWaves(gt);
 
 	return S_OK;
 }
@@ -292,36 +285,12 @@ void MainApp::UpdateCamera(const GameTimer& gt)
 	mEyePos.y = mRadius * cosf(mPhi);
 
 	// Build the view matrix.
-	XMVECTOR pos = XMVectorSet(mEyePos.x, mEyePos.y, mEyePos.z, 1.0f);
+	XMVECTOR pos = XMVectorSet(mEyePos.x, 150, -100, 1.0f);
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
 	XMStoreFloat4x4(&mView, view);
-}
-
-void MainApp::AnimateMaterials(const GameTimer& gt)
-{
-	// Scroll the water material texture coordinates.
-	auto waterMat = mMaterials["water"].get();
-
-	float& tu = waterMat->MatTransform(3, 0);
-	float& tv = waterMat->MatTransform(3, 1);
-
-	tu += 0.1f * gt.DeltaTime();
-	tv += 0.02f * gt.DeltaTime();
-
-	if (tu >= 1.0f)
-		tu -= 1.0f;
-
-	if (tv >= 1.0f)
-		tv -= 1.0f;
-
-	waterMat->MatTransform(3, 0) = tu;
-	waterMat->MatTransform(3, 1) = tv;
-
-	// Material has changed, so need to update cbuffer.
-	waterMat->NumFramesDirty = d3dUtil::getFrameRscCount();
 }
 
 void MainApp::UpdateObjectCBs(const GameTimer& gt)
@@ -409,46 +378,6 @@ void MainApp::UpdateMainPassCB(const GameTimer& gt)
 	currPassCB->CopyData(0, m_cnstbPass);
 }
 
-void MainApp::UpdateWaves(const GameTimer& gt)
-{
-	// Every quarter second, generate a random wave.
-	static float t_base = 0.0f;
-	if ((mTimer.TotalTime() - t_base) >= 0.25f)
-	{
-		t_base += 0.25f;
-
-		int i = MathHelper::Rand(4, mWaves->RowCount() - 5);
-		int j = MathHelper::Rand(4, mWaves->ColumnCount() - 5);
-
-		float r = MathHelper::RandF(0.2f, 0.5f);
-
-		mWaves->Disturb(i, j, r);
-	}
-
-	// Update the wave simulation.
-	mWaves->Update(gt.DeltaTime());
-
-	// Update the wave vertex buffer with the new solution.
-	auto currWavesVB = m_frameRscCur->m_vtxWaves.get();
-	for (int i = 0; i < mWaves->VertexCount(); ++i)
-	{
-		G2::VTX_NT v;
-
-		v.p = mWaves->Position(i);
-		v.n = mWaves->Normal(i);
-
-		// Derive tex-coords from position by 
-		// mapping [-w/2,w/2] --> [0,1]
-		v.t.x = 0.5f + v.p.x / mWaves->Width();
-		v.t.y = 0.5f - v.p.z / mWaves->Depth();
-
-		currWavesVB->CopyData(i, v);
-	}
-
-	// Set the dynamic VB of the wave renderitem to the current frame VB.
-	mWavesRitem->Geo->vtx.gpu = currWavesVB->Resource();
-}
-
 int MainApp::UpdateFrameResource()
 {
 	auto d3d = IG2GraphicsD3D::instance();
@@ -468,7 +397,7 @@ void MainApp::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 4;
+	srvHeapDesc.NumDescriptors = 3;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
@@ -488,11 +417,6 @@ void MainApp::BuildDescriptorHeaps()
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = -1;
 	d3dDevice->CreateShaderResourceView(grassTex, &srvDesc, hDescriptor);
-
-	auto waterTex = texture_factory->FindRes("waterTex");
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);							// next descriptor
-	srvDesc.Format = waterTex->GetDesc().Format;
-	d3dDevice->CreateShaderResourceView(waterTex, &srvDesc, hDescriptor);
 
 	auto fenceTex = texture_factory->FindRes("fenceTex");
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);							// next descriptor
@@ -519,20 +443,14 @@ void MainApp::BuildLandGeometry()
 	GeometryGenerator geoGen;
 	GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
 
-	//
-	// Extract the vertex elements we are interested and apply the height function to
-	// each vertex.  In addition, color the vertices based on their height so we have
-	// sandy looking beaches, grassy low hills, and snow mountain peaks.
-	//
-
 	std::vector<G2::VTX_NT> vertices(grid.Vertices.size());
 	for (size_t i = 0; i < grid.Vertices.size(); ++i)
 	{
-		auto& p = grid.Vertices[i].Position;
+		auto& p = grid.Vertices[i].p;
 		vertices[i].p = p;
 		vertices[i].p.y = GetHillsHeight(p.x, p.z);
 		vertices[i].n = GetHillsNormal(p.x, p.z);
-		vertices[i].t = grid.Vertices[i].TexC;
+		vertices[i].t = grid.Vertices[i].t;
 	}
 
 	const UINT vbByteSize = (UINT)vertices.size() * sizeof(G2::VTX_NT);
@@ -556,56 +474,6 @@ void MainApp::BuildLandGeometry()
 	mGeometries["landGeo"] = std::move(geo);
 }
 
-void MainApp::BuildWavesGeometry()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(IG2GraphicsD3D::instance()->getCommandList());
-
-	std::vector<std::uint16_t> indices(3 * mWaves->TriangleCount()); // 3 indices per face
-	assert(mWaves->VertexCount() < 0x0000ffff);
-
-	// Iterate over each quad.
-	int m = mWaves->RowCount();
-	int n = mWaves->ColumnCount();
-	int k = 0;
-	for (int i = 0; i < m - 1; ++i)
-	{
-		for (int j = 0; j < n - 1; ++j)
-		{
-			indices[k] = i * n + j;
-			indices[k + 1] = i * n + j + 1;
-			indices[k + 2] = (i + 1) * n + j;
-
-			indices[k + 3] = (i + 1) * n + j;
-			indices[k + 4] = i * n + j + 1;
-			indices[k + 5] = (i + 1) * n + j + 1;
-
-			k += 6; // next quad
-		}
-	}
-
-	UINT vbByteSize = mWaves->VertexCount() * sizeof(G2::VTX_NT);
-	UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = "waterGeo";
-
-	// Set dynamically.
-	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
-
-	geo->vtx.stride = sizeof(G2::VTX_NT);
-	geo->vtx.size = vbByteSize;
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
-
-	geo->DrawArgs["grid"] = submesh;
-
-	mGeometries["waterGeo"] = std::move(geo);
-}
-
 void MainApp::BuildBoxGeometry()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
@@ -617,10 +485,10 @@ void MainApp::BuildBoxGeometry()
 	std::vector<G2::VTX_NT> vertices(box.Vertices.size());
 	for (size_t i = 0; i < box.Vertices.size(); ++i)
 	{
-		auto& p = box.Vertices[i].Position;
+		auto& p = box.Vertices[i].p;
 		vertices[i].p = p;
-		vertices[i].n = box.Vertices[i].Normal;
-		vertices[i].t = box.Vertices[i].TexC;
+		vertices[i].n = box.Vertices[i].n;
+		vertices[i].t = box.Vertices[i].t;
 	}
 
 	const UINT vbByteSize = (UINT)vertices.size() * sizeof(G2::VTX_NT);
@@ -702,7 +570,7 @@ void MainApp::BuildFrameResources()
 	int frameReouseNum = d3dUtil::getFrameRscCount();
 	for (int i = 0; i < frameReouseNum; ++i)
 	{
-		m_frameRscLst.push_back(std::make_unique<FrameResource>(d3dDevice, 1, (UINT)mAllRitems.size(), (UINT)mMaterials.size(), mWaves->VertexCount()));
+		m_frameRscLst.push_back(std::make_unique<FrameResource>(d3dDevice, 1, (UINT)mAllRitems.size(), (UINT)mMaterials.size()));
 	}
 }
 
@@ -718,34 +586,23 @@ void MainApp::BuildMaterials()
 	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	grass->Roughness = 0.125f;
 
-	// This is not a good water material definition, but we do not have all the rendering
-	// tools we need (transparency, environment reflection), so we fake it for now.
-	auto water = std::make_unique<Material>();
-	water->Name = "water";
-	water->MatCBIndex = 1;
-	water->DiffuseSrvHeapIndex = 1;
-	water->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
-	water->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
-	water->Roughness = 0.0f;
-
 	auto wirefence = std::make_unique<Material>();
 	wirefence->Name = "wirefence";
-	wirefence->MatCBIndex = 2;
-	wirefence->DiffuseSrvHeapIndex = 2;
+	wirefence->MatCBIndex = 1;
+	wirefence->DiffuseSrvHeapIndex = 1;
 	wirefence->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	wirefence->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	wirefence->Roughness = 0.25f;
 
 	auto treeSprites = std::make_unique<Material>();
 	treeSprites->Name = "PLS_TREES";
-	treeSprites->MatCBIndex = 3;
-	treeSprites->DiffuseSrvHeapIndex = 3;
+	treeSprites->MatCBIndex = 2;
+	treeSprites->DiffuseSrvHeapIndex = 2;
 	treeSprites->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	treeSprites->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	treeSprites->Roughness = 0.125f;
 
 	mMaterials["grass"] = std::move(grass);
-	mMaterials["water"] = std::move(water);
 	mMaterials["wirefence"] = std::move(wirefence);
 	mMaterials["PLS_TREES"] = std::move(treeSprites);
 }
@@ -754,26 +611,10 @@ void MainApp::BuildRenderItems()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
-	auto wavesRitem = std::make_unique<RenderItem>();
-	wavesRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
-	wavesRitem->ObjCBIndex = 0;
-	wavesRitem->Mat = mMaterials["water"].get();
-	wavesRitem->Geo = mGeometries["waterGeo"].get();
-	wavesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	wavesRitem->IndexCount = wavesRitem->Geo->DrawArgs["grid"].IndexCount;
-	wavesRitem->StartIndexLocation = wavesRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-	wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-	mWavesRitem = wavesRitem.get();
-	mRitemLayer[(int)RenderLayer::Transparent].push_back(wavesRitem.get());
-	mAllRitems.push_back(std::move(wavesRitem));
-
-
-
 	auto gridRitem = std::make_unique<RenderItem>();
 	gridRitem->World = MathHelper::Identity4x4();
 	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
-	gridRitem->ObjCBIndex = 1;
+	gridRitem->ObjCBIndex = 0;
 	gridRitem->Mat = mMaterials["grass"].get();
 	gridRitem->Geo = mGeometries["landGeo"].get();
 	gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -786,7 +627,7 @@ void MainApp::BuildRenderItems()
 
 	auto boxRitem = std::make_unique<RenderItem>();
 	XMStoreFloat4x4(&boxRitem->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-	boxRitem->ObjCBIndex = 2;
+	boxRitem->ObjCBIndex = 1;
 	boxRitem->Mat = mMaterials["wirefence"].get();
 	boxRitem->Geo = mGeometries["boxGeo"].get();
 	boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -798,7 +639,7 @@ void MainApp::BuildRenderItems()
 
 	auto treeSpritesRitem = std::make_unique<RenderItem>();
 	treeSpritesRitem->World = MathHelper::Identity4x4();
-	treeSpritesRitem->ObjCBIndex = 3;
+	treeSpritesRitem->ObjCBIndex = 2;
 	treeSpritesRitem->Mat = mMaterials["PLS_TREES"].get();
 	treeSpritesRitem->Geo = mGeometries["treeSpritesGeo"].get();
 	treeSpritesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;

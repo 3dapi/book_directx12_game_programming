@@ -13,7 +13,6 @@
 #include "Common/UploadBuffer.h"
 #include "Common/GeometryGenerator.h"
 #include "FrameResource.h"
-#include "Waves.h"
 #include "Common/D3DWinApp.h"
 
 using Microsoft::WRL::ComPtr;
@@ -69,16 +68,13 @@ public:
 private:
     void OnKeyboardInput(const GameTimer& gt);
 	void UpdateCamera(const GameTimer& gt);
-	void AnimateMaterials(const GameTimer& gt);
 	void UpdateObjectCBs(const GameTimer& gt);
 	void UpdateMaterialCBs(const GameTimer& gt);
 	void UpdateMainPassCB(const GameTimer& gt);
-	void UpdateWaves(const GameTimer& gt);
 	int	 UpdateFrameResource();
 
 	void BuildDescriptorHeaps();
     void BuildLandGeometry();
-    void BuildWavesGeometry();
 	void BuildBoxGeometry();
 	void BuildTreeSpritesGeometry();
     void BuildFrameResources();
@@ -102,15 +98,11 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry> > mGeometries;
 	std::unordered_map<std::string, std::unique_ptr<Material> > mMaterials;
 
-    RenderItem* mWavesRitem = nullptr;
-
 	// List of all the render items.
 	std::vector<std::unique_ptr<RenderItem>> mAllRitems;
 
 	// Render items divided by PSO.
 	std::vector<RenderItem*> mRitemLayer[(int)RenderLayer::Count];
-
-	std::unique_ptr<Waves> mWaves;
 
     ShaderConstPass m_cnstbPass;
 
