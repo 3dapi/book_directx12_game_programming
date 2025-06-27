@@ -112,7 +112,7 @@ private:
 
 	std::unique_ptr<Waves> mWaves;
 
-    PassConstants m_cnstbPass;
+    ShaderConstPass m_cnstbPass;
 
 	XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
 	XMFLOAT4X4 mView = MathHelper::Identity4x4();

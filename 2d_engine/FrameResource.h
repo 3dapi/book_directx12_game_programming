@@ -3,14 +3,15 @@
 #include "Common/d3dUtil.h"
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
+#include "Common/G2.Geometry.h"
 
-struct ObjectConstants
+struct ShaderConstTransform
 {
     DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
 };
 
-struct PassConstants
+struct ShaderConstPass
 {
     DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 InvView = MathHelper::Identity4x4();
@@ -41,12 +42,6 @@ struct PassConstants
     Light Lights[MaxLights];
 };
 
-struct Vertex
-{
-    DirectX::XMFLOAT3 Pos;
-    DirectX::XMFLOAT3 Normal;
-	DirectX::XMFLOAT2 TexC;
-};
 
 // Stores the resources needed for the CPU to build the command lists
 // for a frame.  
@@ -57,16 +52,15 @@ public:
     FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount, UINT waveVertCount);
     FrameResource(const FrameResource& rhs) = delete;
     FrameResource& operator=(const FrameResource& rhs) = delete;
-    ~FrameResource();
 
     // We cannot update a cbuffer until the GPU is done processing the commands
     // that reference it.  So each frame needs their own cbuffers.
    // std::unique_ptr<UploadBuffer<FrameConstants>> FrameCB = nullptr;
-    std::unique_ptr<UploadBuffer<PassConstants>    > m_cnstbPass     = nullptr;
+    std::unique_ptr<UploadBuffer<ShaderConstPass>    > m_cnstbPass     = nullptr;
     std::unique_ptr<UploadBuffer<MaterialConstants>> m_cnsgbMaterial = nullptr;
-    std::unique_ptr<UploadBuffer<ObjectConstants>>   m_cnsgbMObject  = nullptr;
+    std::unique_ptr<UploadBuffer<ShaderConstTransform>>   m_cnsgbMObject  = nullptr;
 
     // We cannot update a dynamic vertex buffer until the GPU is done processing
     // the commands that reference it.  So each frame needs their own.
-    std::unique_ptr<UploadBuffer<Vertex>> m_vtxWaves = nullptr;
+    std::unique_ptr<UploadBuffer<G2::VTX_NT> > m_vtxWaves = nullptr;
 };

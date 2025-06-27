@@ -27,7 +27,7 @@ G2::IG2AppFrame* G2::IG2AppFrame::instance()
 
 MainApp::MainApp()
 {
-	d3dUtil::setFrameReourceNumer(3);
+	d3dUtil::setFrameReourceNumer(2);
 }
 
 MainApp::~MainApp()
@@ -336,7 +336,7 @@ void MainApp::UpdateObjectCBs(const GameTimer& gt)
 			XMMATRIX world = XMLoadFloat4x4(&e->World);
 			XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
 
-			ObjectConstants objConstants;
+			ShaderConstTransform objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 
@@ -432,15 +432,15 @@ void MainApp::UpdateWaves(const GameTimer& gt)
 	auto currWavesVB = m_frameRscCur->m_vtxWaves.get();
 	for (int i = 0; i < mWaves->VertexCount(); ++i)
 	{
-		Vertex v;
+		G2::VTX_NT v;
 
-		v.Pos = mWaves->Position(i);
-		v.Normal = mWaves->Normal(i);
+		v.p = mWaves->Position(i);
+		v.n = mWaves->Normal(i);
 
 		// Derive tex-coords from position by 
 		// mapping [-w/2,w/2] --> [0,1]
-		v.TexC.x = 0.5f + v.Pos.x / mWaves->Width();
-		v.TexC.y = 0.5f - v.Pos.z / mWaves->Depth();
+		v.t.x = 0.5f + v.p.x / mWaves->Width();
+		v.t.y = 0.5f - v.p.z / mWaves->Depth();
 
 		currWavesVB->CopyData(i, v);
 	}
@@ -525,17 +525,17 @@ void MainApp::BuildLandGeometry()
 	// sandy looking beaches, grassy low hills, and snow mountain peaks.
 	//
 
-	std::vector<Vertex> vertices(grid.Vertices.size());
+	std::vector<G2::VTX_NT> vertices(grid.Vertices.size());
 	for (size_t i = 0; i < grid.Vertices.size(); ++i)
 	{
 		auto& p = grid.Vertices[i].Position;
-		vertices[i].Pos = p;
-		vertices[i].Pos.y = GetHillsHeight(p.x, p.z);
-		vertices[i].Normal = GetHillsNormal(p.x, p.z);
-		vertices[i].TexC = grid.Vertices[i].TexC;
+		vertices[i].p = p;
+		vertices[i].p.y = GetHillsHeight(p.x, p.z);
+		vertices[i].n = GetHillsNormal(p.x, p.z);
+		vertices[i].t = grid.Vertices[i].TexC;
 	}
 
-	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(G2::VTX_NT);
 
 	std::vector<std::uint16_t> indices = grid.GetIndices16();
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
@@ -543,7 +543,7 @@ void MainApp::BuildLandGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "landGeo";
 
-	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(Vertex), d3dDevice, d3dCommandList);
+	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
 	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 	SubmeshGeometry submesh;
@@ -584,7 +584,7 @@ void MainApp::BuildWavesGeometry()
 		}
 	}
 
-	UINT vbByteSize = mWaves->VertexCount() * sizeof(Vertex);
+	UINT vbByteSize = mWaves->VertexCount() * sizeof(G2::VTX_NT);
 	UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
 	auto geo = std::make_unique<MeshGeometry>();
@@ -593,7 +593,7 @@ void MainApp::BuildWavesGeometry()
 	// Set dynamically.
 	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
-	geo->vtx.stride = sizeof(Vertex);
+	geo->vtx.stride = sizeof(G2::VTX_NT);
 	geo->vtx.size = vbByteSize;
 
 	SubmeshGeometry submesh;
@@ -614,16 +614,16 @@ void MainApp::BuildBoxGeometry()
 	GeometryGenerator geoGen;
 	GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
 
-	std::vector<Vertex> vertices(box.Vertices.size());
+	std::vector<G2::VTX_NT> vertices(box.Vertices.size());
 	for (size_t i = 0; i < box.Vertices.size(); ++i)
 	{
 		auto& p = box.Vertices[i].Position;
-		vertices[i].Pos = p;
-		vertices[i].Normal = box.Vertices[i].Normal;
-		vertices[i].TexC = box.Vertices[i].TexC;
+		vertices[i].p = p;
+		vertices[i].n = box.Vertices[i].Normal;
+		vertices[i].t = box.Vertices[i].TexC;
 	}
 
-	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(G2::VTX_NT);
 
 	std::vector<std::uint16_t> indices = box.GetIndices16();
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
@@ -631,7 +631,7 @@ void MainApp::BuildBoxGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "boxGeo";
 
-	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(Vertex), d3dDevice, d3dCommandList);
+	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
 	geo->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 	SubmeshGeometry submesh;
@@ -814,7 +814,7 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vec
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
-	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstTransform));
 	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
 
 	auto objectCB = m_frameRscCur->m_cnsgbMObject->Resource();
