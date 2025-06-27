@@ -73,6 +73,7 @@ int StaticResBufVtx::Init(const void* buf_ptr, size_t buf_size, size_t vtx_strid
 	}
 	stride = (UINT)vtx_stride;
 	size   = (UINT)buf_size;
+	entryCount =  size / stride;
 	if (!cpuData.empty())
 	{
 		cpuData.clear();
@@ -105,6 +106,8 @@ int StaticResBufIdx::Init(const void* buf_ptr, size_t buf_size,	DXGI_FORMAT form
 	}
 	idxFormat = format;
 	size      = (UINT)buf_size;
+	entryCount =  (DXGI_FORMAT_R32_UINT == format) ? size / sizeof(uint32_t) : size / sizeof(uint16_t);
+
 	if (!cpuData.empty())
 	{
 		cpuData.clear();
