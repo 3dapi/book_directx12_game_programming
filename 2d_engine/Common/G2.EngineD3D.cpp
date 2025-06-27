@@ -37,7 +37,7 @@ std::any EngineD3D::getAttrib(int nAttrib)
 		case EG2GRAPHICS_D3D::ATT_DEVICE_BACKBUFFER_FORAT:		return &m_d3dFormatBackbuffer;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_DEPTH_STENCIL_FORAT:	return &m_d3dFormatDepthStencil;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FRAME_INDEX:	return &m_d3dIndexBackBuffer;
-		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FENCE_INDEX:	return &m_d3dIndexFence;
+		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FENCE_INDEX:	return &m_d3dFenceIndex;
 
 		case EG2GRAPHICS_D3D::ATT_DEVICE_VIEWPORT:				return &m_d3dViewport;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_SCISSOR_RECT:			return &m_d3dScissor;
@@ -74,6 +74,10 @@ int EngineD3D::command(int nCmd, const std::any& v)
 		case EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE:
 		{
 			return this->FlushCommandQueue();
+		}
+		case EG2GRAPHICS_D3D::CMD_FENCE_WAIT:
+		{
+			return this->FenceWait();
 		}
 		case EG2GRAPHICS_D3D::CMD_PRESENT:
 		{
@@ -449,20 +453,25 @@ int EngineD3D::FlushCommandQueue()
 	HRESULT hr = S_OK;
 
 	// Advance the fence value to mark commands up to this fence point.
-	m_d3dIndexFence++;
+	++m_d3dFenceIndex;
 
 	// Add an instruction to the command queue to set a new fence point.  Because we 
 	// are on the GPU timeline, the new fence point won't be set until the GPU finishes
 	// processing all the commands prior to this Signal().
-	ThrowIfFailed(m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence));
+	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dFenceIndex);
+	if(FAILED(hr))
+	{
+		DebugToOutputWindow("FAILED: EngineD3D::FlushCommandQueue:: Signal");
+	}
+	ThrowIfFailed(hr);
 
 	// Wait until the GPU has completed commands up to this fence point.
-	if (m_d3dFence->GetCompletedValue() < m_d3dIndexFence)
+	if (m_d3dFence->GetCompletedValue() < m_d3dFenceIndex)
 	{
 		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
 
 		// Fire event when GPU hits current fence.  
-		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dIndexFence, eventHandle));
+		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dFenceIndex, eventHandle));
 
 		// Wait until the GPU hits current fence event is fired.
 		WaitForSingleObject(eventHandle, INFINITE);
@@ -470,6 +479,24 @@ int EngineD3D::FlushCommandQueue()
 	}
 
 	return S_OK;
+}
+
+int EngineD3D::FenceWait()
+{
+	auto d3d = IG2GraphicsD3D::instance();
+	// Has the GPU finished processing the commands of the current frame resource?
+	// If not, wait until the GPU has completed commands up to this fence point.
+	auto fence = std::any_cast<ID3D12Fence*>(d3d->getFence());
+	if (m_d3dFenceCurrent != 0 && fence->GetCompletedValue() < m_d3dFenceCurrent)
+	{
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+		int hr = fence->SetEventOnCompletion(m_d3dFenceCurrent, eventHandle);
+		if (FAILED(hr))
+			return hr;
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+	return 0;
 }
 
 int EngineD3D::Present()
@@ -480,8 +507,10 @@ int EngineD3D::Present()
 		return hr;
 
 	m_d3dIndexBackBuffer = (m_d3dIndexBackBuffer + 1) % FRAME_BUFFER_COUNT;
-	++m_d3dIndexFence;
-	m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dIndexFence);
+	++m_d3dFenceIndex;
+	m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dFenceIndex);
+
+	m_d3dFenceCurrent = m_d3dFenceIndex;
 	return S_OK;
 }
 

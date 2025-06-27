@@ -10,6 +10,7 @@
 #include "Common/G2.FactorySIgnature.h"
 #include "Common/G2.FactoryPipelineState.h"
 #include "Common/G2.Geometry.h"
+#include "Common/G2.Util.h"
 
 using namespace G2;
 
@@ -158,8 +159,10 @@ int MainApp::Render()
 	auto d3dBackBuffer   = std::any_cast<ID3D12Resource*            >(d3d->getCurrentBackBuffer());
 	auto d3dBackBufferV  = std::any_cast<CD3DX12_CPU_DESCRIPTOR_HANDLE>(d3d->getBackBufferView());
 	auto d3dDepthV       = std::any_cast<D3D12_CPU_DESCRIPTOR_HANDLE>(d3d->getDepthStencilView());
+	auto pls_manager     = FactoryPipelineState::instance();
 
-	auto pls_manager = FactoryPipelineState::instance();
+	// 0. d3d 작업 완료 대기.
+	hr = d3d->command(EG2GRAPHICS_D3D::CMD_FENCE_WAIT);
 
 	// Reuse the memory associated with command recording.
 	// We can only reset when the associated command lists have finished execution on the GPU.
@@ -232,9 +235,7 @@ int MainApp::Render()
 	hr = d3d->command(EG2GRAPHICS_D3D::CMD_PRESENT);
 	// 2. GPU가 해당 작업을 완료할 때까지 대기.
 	hr = d3d->command(EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE);
-	// 3. 현재 Fence 값을 저장.
-	auto fence = *std::any_cast<UINT64*>(d3d->getAttrib(ATT_DEVICE_CURRENT_FENCE_INDEX));
-	m_frameRscCur->Fence = fence;
+
 	return S_OK;
 }
 
@@ -428,7 +429,7 @@ void MainApp::UpdateWaves(const GameTimer& gt)
 	mWaves->Update(gt.DeltaTime());
 
 	// Update the wave vertex buffer with the new solution.
-	auto currWavesVB = m_frameRscCur->WavesVB.get();
+	auto currWavesVB = m_frameRscCur->vtxWaves.get();
 	for (int i = 0; i < mWaves->VertexCount(); ++i)
 	{
 		Vertex v;
@@ -456,19 +457,6 @@ int MainApp::UpdateFrameResource()
 	auto rscCount = d3dUtil::getFrameRscCount();
 	m_frameRscIdx = (m_frameRscIdx + 1) % rscCount;
 	m_frameRscCur = m_frameRscLst[m_frameRscIdx].get();
-
-	// Has the GPU finished processing the commands of the current frame resource?
-	// If not, wait until the GPU has completed commands up to this fence point.
-	auto fence = std::any_cast<ID3D12Fence*>(d3d->getFence());
-	if (m_frameRscCur->Fence != 0 && fence->GetCompletedValue() < m_frameRscCur->Fence)
-	{
-		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-		hr = fence->SetEventOnCompletion(m_frameRscCur->Fence, eventHandle);
-		if (FAILED(hr))
-			return hr;
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
-	}
 
 	return S_OK;
 }

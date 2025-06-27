@@ -72,9 +72,5 @@ public:
 
     // We cannot update a dynamic vertex buffer until the GPU is done processing
     // the commands that reference it.  So each frame needs their own.
-    std::unique_ptr<UploadBuffer<Vertex>> WavesVB = nullptr;
-
-    // Fence value to mark commands up to this fence point.  This lets us
-    // check if these frame resources are still in use by the GPU.
-    UINT64 Fence = 0;
+    std::unique_ptr<UploadBuffer<Vertex>> vtxWaves = nullptr;
 };

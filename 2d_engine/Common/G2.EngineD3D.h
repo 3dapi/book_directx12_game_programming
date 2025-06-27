@@ -51,6 +51,7 @@ public:
 	void	CreateRtvAndDsvDescriptorHeaps();
 	int		Resize();
 	int		FlushCommandQueue();
+	int		FenceWait();
 	int		Present();
 
 	ID3D12Resource* CurrentBackBuffer()const;
@@ -80,7 +81,8 @@ protected:
 	ComPtr<ID3D12Device>                m_d3dDevice             {};
 	ComPtr<IDXGISwapChain>              m_d3dSwapChain          {};
 	ComPtr<ID3D12Fence>                 m_d3dFence              {};
-	UINT64                              m_d3dIndexFence         {};
+	UINT64                              m_d3dFenceIndex         {};
+	UINT64                              m_d3dFenceCurrent       {};
 
 	ComPtr<ID3D12CommandQueue>          m_d3dCommandQueue       {};
 	ComPtr<ID3D12CommandAllocator>      m_d3dCommandAlloc       {};

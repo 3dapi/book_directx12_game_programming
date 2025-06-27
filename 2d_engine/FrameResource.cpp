@@ -9,7 +9,7 @@ FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCo
     cnsgbMaterial = std::make_unique<UploadBuffer<MaterialConstants>>(device, materialCount, true);
     cnsgbMObject  = std::make_unique<UploadBuffer<ObjectConstants>>(device, objectCount, true);
 
-    WavesVB = std::make_unique<UploadBuffer<Vertex>>(device, waveVertCount, false);
+    vtxWaves = std::make_unique<UploadBuffer<Vertex>>(device, waveVertCount, false);
 }
 
 FrameResource::~FrameResource()

@@ -3,6 +3,8 @@
 #ifndef _G2_Util_H_
 #define _G2_Util_H_
 
+#include <cstdarg>
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <Windows.h>
@@ -88,6 +90,26 @@ inline std::wstring mbToWstr(const std::string& str)
 	std::wstring wstr(len - 1, 0);
 	MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, &wstr[0], len);
 	return wstr;
+}
+
+inline void DebugToOutputWindow(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	va_list args_copy;
+	va_copy(args_copy, args);
+	int length = std::vsnprintf(nullptr, 0, format, args_copy);
+	va_end(args_copy);
+
+	if (length > 0) {
+		++length;		// for null char
+		std::string buffer(length, 0);
+		std::vsnprintf(&buffer[0], length, format, args);
+		OutputDebugStringA(buffer.c_str());
+	}
+
+	va_end(args);
 }
 
 ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string& shaderModel, const std::string& entryPoint, const void* macros = {});
