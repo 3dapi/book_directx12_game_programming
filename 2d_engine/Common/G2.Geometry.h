@@ -159,14 +159,14 @@ public:
 	ComPtr<ID3D12Resource> gpu			{};	// default gpu memory
 	ComPtr<ID3D12Resource> upLoader		{};	// upLoader
 	UINT                   size			{};	// buffer size: 이전 버퍼를 사용할 경우 VertexBufferView, 또는 IndexBufferView 만 설정하는 경우에 필요한 size.
+	UINT                   stride		{};	// vertex byte stride
+	UINT                   entryCount	{};	// vertex or index numbers
 	int CreateDefaultBufferWithUploader(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
 
 class StaticResBufVtx : public StaticResBuf
 {
 public:
-	UINT            stride	{};	// vertex byte stride
-
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView() const;
 	int Init(const void* buf_ptr, size_t buf_size, size_t stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
