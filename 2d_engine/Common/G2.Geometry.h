@@ -160,7 +160,7 @@ public:
 	ComPtr<ID3D12Resource> upLoader		{};	// upLoader
 	UINT                   size			{};	// buffer size: 이전 버퍼를 사용할 경우 VertexBufferView, 또는 IndexBufferView 만 설정하는 경우에 필요한 size.
 	UINT                   stride		{};	// vertex byte stride
-	UINT Count();
+	UINT                   entryCount	{};	// vertex or index numbers
 	int CreateDefaultBufferWithUploader(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
 
@@ -178,7 +178,7 @@ public:
 	DXGI_FORMAT     idxFormat		{DXGI_FORMAT_R16_UINT};
 
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView() const;
-	int Init(const void* buf_ptr, size_t buf_size, size_t idx_stride, DXGI_FORMAT format, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	int Init(const void* buf_ptr, size_t buf_size, DXGI_FORMAT format, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
 
 } // namespace G2

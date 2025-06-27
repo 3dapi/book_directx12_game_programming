@@ -431,7 +431,7 @@ void MainApp::BuildBoxGeometry()
 	m_wireGeo = new MeshGeometry;
 
 	m_wireGeo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
-	m_wireGeo->idx.Init(indices.data(),  ibByteSize, sizeof(std::uint16_t), DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
+	m_wireGeo->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 }
 
 
@@ -498,7 +498,7 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList)
 	cmdList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 	cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
 
-	cmdList->DrawIndexedInstanced(m_wireBox->Geo->idx.Count(), 1, 0, 0, 0);
+	cmdList->DrawIndexedInstanced(m_wireBox->Geo->idx.entryCount, 1, 0, 0, 0);
 }
 
 float MainApp::GetHillsHeight(float x, float z)const
