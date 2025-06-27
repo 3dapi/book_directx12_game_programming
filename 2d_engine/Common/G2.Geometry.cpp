@@ -72,7 +72,7 @@ int StaticResBufVtx::Init(const void* buf_ptr, size_t buf_size, size_t vtx_strid
 		return E_INVALIDARG;
 	}
 	stride = (UINT)vtx_stride;
-	size   = buf_size;
+	size   = (UINT)buf_size;
 	if (!cpuData.empty())
 	{
 		cpuData.clear();
@@ -104,7 +104,7 @@ int StaticResBufIdx::Init(const void* buf_ptr, size_t buf_size,	DXGI_FORMAT form
 		return E_INVALIDARG;
 	}
 	idxFormat = format;
-	size      = buf_size;
+	size      = (UINT)buf_size;
 	if (!cpuData.empty())
 	{
 		cpuData.clear();

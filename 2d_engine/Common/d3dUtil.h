@@ -125,20 +125,6 @@ public:
     }
 
     static ComPtr<ID3DBlob> LoadBinary(const std::wstring& filename);
-
-    // return default, upLoader
-    static std::pair< ID3D12Resource*, ID3D12Resource* >
-        CreateDefaultBuffer(
-        ID3D12Device* device,
-        ID3D12GraphicsCommandList* cmdList,
-        const void* initData,
-        UINT64 byteSize);
-
-	static ComPtr<ID3DBlob> CompileShader(
-		const std::wstring& filename,
-		const D3D_SHADER_MACRO* defines,
-		const std::string& entrypoint,
-		const std::string& target);
 };
 
 class DxException
