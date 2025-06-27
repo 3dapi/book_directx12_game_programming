@@ -543,24 +543,8 @@ void MainApp::BuildLandGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "landGeo";
 
-	if(false)
-	{
-		ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->vtx.cpb));
-		CopyMemory(geo->vtx.cpb->GetBufferPointer(), vertices.data(), vbByteSize);
-		std::tie(geo->vtx.gpu, geo->vtx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, vertices.data(), ibByteSize);
-		geo->vtx.stride = sizeof(Vertex);
-		geo->vtx.size = vbByteSize;
-	}
-	{
-		geo->vtx.UpdateVtx2(vertices.data(), vbByteSize, sizeof(Vertex), d3dDevice, d3dCommandList);
-	}
-	
-
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
-	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
-	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
-	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
-	geo->idx.size = ibByteSize;
+	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(Vertex), d3dDevice, d3dCommandList);
+	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
@@ -607,18 +591,10 @@ void MainApp::BuildWavesGeometry()
 	geo->Name = "waterGeo";
 
 	// Set dynamically.
-	geo->vtx.cpb = nullptr;
-	geo->vtx.gpu = nullptr;
-
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
-	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
-
-	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
+	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 	geo->vtx.stride = sizeof(Vertex);
 	geo->vtx.size = vbByteSize;
-	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
-	geo->idx.size = ibByteSize;
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
@@ -655,19 +631,8 @@ void MainApp::BuildBoxGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "boxGeo";
 
-	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->vtx.cpb));
-	CopyMemory(geo->vtx.cpb->GetBufferPointer(), vertices.data(), vbByteSize);
-
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
-	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
-
-	std::tie(geo->vtx.gpu, geo->vtx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, vertices.data(), vbByteSize);
-	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
-
-	geo->vtx.stride = sizeof(Vertex);
-	geo->vtx.size = vbByteSize;
-	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
-	geo->idx.size = ibByteSize;
+	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(Vertex), d3dDevice, d3dCommandList);
+	geo->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
@@ -717,19 +682,8 @@ void MainApp::BuildTreeSpritesGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "treeSpritesGeo";
 
-	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->vtx.cpb));
-	CopyMemory(geo->vtx.cpb->GetBufferPointer(), vertices.data(), vbByteSize);
-
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
-	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
-
-	std::tie(geo->vtx.gpu, geo->vtx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, vertices.data(), vbByteSize);
-	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
-
-	geo->vtx.stride = sizeof(TreeSpriteVertex);
-	geo->vtx.size = vbByteSize;
-	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
-	geo->idx.size = ibByteSize;
+	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(TreeSpriteVertex), d3dDevice, d3dCommandList);
+	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();

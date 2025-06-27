@@ -84,7 +84,7 @@ d3dUtil::CreateDefaultBuffer(
     ThrowIfFailed(hr);
 
     // Describe the data we want to copy into the default buffer.
-    D3D12_SUBRESOURCE_DATA subResourceData = {initData, byteSize, byteSize};
+    D3D12_SUBRESOURCE_DATA subResourceData = {initData, (LONG_PTR)byteSize, (LONG_PTR)byteSize};
 	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(gpu,  D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
     UpdateSubresources<1>(cmdList, gpu, upLoader, 0, 0, 1, &subResourceData);
 	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(gpu, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));

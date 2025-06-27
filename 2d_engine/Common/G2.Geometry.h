@@ -152,61 +152,34 @@ struct VTX_POINT		// point sprite: position + size
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // resource vertex buffer
-class ResBufVtx
+class StaticResBuf
 {
 public:
-	ComPtr<ID3DBlob>       cpb			{};	// cpu memory
+	std::vector<uint8_t>   cpuData		;	// cpu memory
 	ComPtr<ID3D12Resource> gpu			{};	// default gpu memory
 	ComPtr<ID3D12Resource> upLoader		{};	// upLoader
-	UINT                   stride		{};	// vertex byte stride
-	UINT                   size			{};	// vertex count
+	UINT                   size			{};	// buffer size: 이전 버퍼를 사용할 경우 VertexBufferView, 또는 IndexBufferView 만 설정하는 경우에 필요한 size.
+	int CreateDefaultBufferWithUploader(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+};
+
+class StaticResBufVtx : public StaticResBuf
+{
+public:
+	UINT            stride	{};	// vertex byte stride
 
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView() const;
-	int UpdateVtx(const void* buf_ptr, size_t buf_size, size_t vtx_stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	int UpdateVtx1(const void* buf_ptr, size_t buf_size, size_t vtx_stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	int UpdateVtx2(const void* buf_ptr, size_t buf_size, size_t vtx_stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	int Init(const void* buf_ptr, size_t buf_size, size_t stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
 
 // resource index buffer
-class ResBufIdx
+class StaticResBufIdx : public StaticResBuf
 {
 public:
-	ComPtr<ID3DBlob>       cpb			{};	// cpu memory
-	ComPtr<ID3D12Resource> gpu			{};	// gpu memory
-	ComPtr<ID3D12Resource> upLoader		{};	// upLoader
-	DXGI_FORMAT            fmt			{DXGI_FORMAT_R16_UINT};
-	UINT                   size			{};	// vertex count
+	DXGI_FORMAT     idxFormat		{DXGI_FORMAT_R16_UINT};
 
-	D3D12_INDEX_BUFFER_VIEW IndexBufferView() const
-	{
-		D3D12_INDEX_BUFFER_VIEW ret;
-		ret.BufferLocation  = gpu->GetGPUVirtualAddress();
-		ret.Format          = fmt;
-		ret.SizeInBytes     = size;
-		return ret;
-	}
-	int CopyBuf(const void* buf_ptr, UINT buf_size)
-	{
-		if (!buf_ptr || buf_size == 0)
-			return E_INVALIDARG;
-		if (cpb)
-		{
-			cpb.Reset();
-		}
-		int hr = D3DCreateBlob(buf_size, &cpb);
-		if (FAILED(hr))
-			return hr;
-		memcpy(cpb->GetBufferPointer(), buf_ptr, buf_size);
-		size = buf_size;
-		return S_OK;
-	}
+	D3D12_INDEX_BUFFER_VIEW IndexBufferView() const;
+	int Init(const void* buf_ptr, size_t buf_size, DXGI_FORMAT format, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
-
-
-
-
-
-
 
 } // namespace G2
 

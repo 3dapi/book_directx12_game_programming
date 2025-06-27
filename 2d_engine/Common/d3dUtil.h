@@ -175,8 +175,8 @@ struct MeshGeometry
 	// Give it a name so we can look it up by name.
 	std::string Name;
 
-	G2::ResBufVtx	vtx{};
-	G2::ResBufIdx	idx{};
+	G2::StaticResBufVtx	vtx{};
+	G2::StaticResBufIdx	idx{};
 
 	// A MeshGeometry may store multiple geometries in one vertex/index buffer.
 	// Use this container to define the Submesh geometries so we can draw
