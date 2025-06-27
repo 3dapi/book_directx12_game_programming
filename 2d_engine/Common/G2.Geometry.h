@@ -8,6 +8,7 @@
 #include <wrl.h>
 #include <d3d12.h>
 #include <DirectXMath.h>
+#include <d3dx12/d3dx12.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -19,7 +20,10 @@ namespace G2 {
 // 	VTX: 3d vertex
 // 	VTX2D: 2d vertex
 //  P:position (생략), N: normal, D: diffuse T: texture I:seperate texture index
-//
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------
+// vertex format
+
 struct VTX2D_DTI		// P:position, D: diffuse T: texture I:seperate texture index
 {
 	XMFLOAT2 p;
@@ -35,7 +39,7 @@ struct VTX2D_DTI		// P:position, D: diffuse T: texture I:seperate texture index
 		{ "POSITION" , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0                                                     , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR"    , 0, DXGI_FORMAT_R8G8B8A8_UNORM , 0, 0+sizeof(XMFLOAT2)                                    , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD" , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0+sizeof(XMFLOAT2)+sizeof(uint32_t)                   , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD" , 0, DXGI_FORMAT_R32_UINT       , 0, 0+sizeof(XMFLOAT2)+sizeof(uint32_t)+sizeof(XMFLOAT2)	, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD" , 0, DXGI_FORMAT_R32_UINT       , 0, 0+sizeof(XMFLOAT2)+sizeof(uint32_t)+sizeof(XMFLOAT2)  , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	}};
 };
 
@@ -105,7 +109,25 @@ struct VTX_NDT		// position + normal + diffuse + texture
 		{ "POSITION" , 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0                                                     , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "NORMAL"   , 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0+sizeof(XMFLOAT3)                                    , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR"    , 0, DXGI_FORMAT_R8G8B8A8_UNORM , 0, 0+sizeof(XMFLOAT3)+sizeof(XMFLOAT3)                   , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD" , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0+sizeof(XMFLOAT3)+sizeof(XMFLOAT3)+sizeof(uint32_t)	, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD" , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0+sizeof(XMFLOAT3)+sizeof(XMFLOAT3)+sizeof(uint32_t)  , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	}};
+};
+
+struct VTX_NGT		// position + normal + tangent + texture
+{
+	XMFLOAT3 p;
+	XMFLOAT3 n;
+	XMFLOAT3 g;	// tangent
+	XMFLOAT2 t;
+
+	VTX_NGT() = default;
+	VTX_NGT(const XMFLOAT3& _p, const XMFLOAT3& _n, const XMFLOAT3& _g, const XMFLOAT2& _t) : p{ _p }, n{ _n }, g{ _g }, t{ _t } {}
+	inline static const std::array<const D3D12_INPUT_ELEMENT_DESC, 4> INPUT_LAYOUT
+	{{
+		{ "POSITION" , 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0                                                     , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL"   , 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0+sizeof(XMFLOAT3)                                    , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT"  , 0, DXGI_FORMAT_R8G8B8A8_UNORM , 0, 0+sizeof(XMFLOAT3)+sizeof(XMFLOAT3)                   , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD" , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0+sizeof(XMFLOAT3)+sizeof(XMFLOAT3)+sizeof(XMFLOAT3)  , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	}};
 };
 
@@ -123,6 +145,68 @@ struct VTX_POINT		// point sprite: position + size
 		{ "SIZE"     , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0+sizeof(XMFLOAT3)                                    , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	}};
 };
+
+
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// resource vertex buffer
+class ResBufVtx
+{
+public:
+	ComPtr<ID3DBlob>       cpb			{};	// cpu memory
+	ComPtr<ID3D12Resource> gpu			{};	// default gpu memory
+	ComPtr<ID3D12Resource> upLoader		{};	// upLoader
+	UINT                   stride		{};	// vertex byte stride
+	UINT                   size			{};	// vertex count
+
+	D3D12_VERTEX_BUFFER_VIEW VertexBufferView() const;
+	int UpdateVtx(const void* buf_ptr, size_t buf_size, size_t vtx_stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	int UpdateVtx1(const void* buf_ptr, size_t buf_size, size_t vtx_stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	int UpdateVtx2(const void* buf_ptr, size_t buf_size, size_t vtx_stride, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+};
+
+// resource index buffer
+class ResBufIdx
+{
+public:
+	ComPtr<ID3DBlob>       cpb			{};	// cpu memory
+	ComPtr<ID3D12Resource> gpu			{};	// gpu memory
+	ComPtr<ID3D12Resource> upLoader		{};	// upLoader
+	DXGI_FORMAT            fmt			{DXGI_FORMAT_R16_UINT};
+	UINT                   size			{};	// vertex count
+
+	D3D12_INDEX_BUFFER_VIEW IndexBufferView() const
+	{
+		D3D12_INDEX_BUFFER_VIEW ret;
+		ret.BufferLocation  = gpu->GetGPUVirtualAddress();
+		ret.Format          = fmt;
+		ret.SizeInBytes     = size;
+		return ret;
+	}
+	int CopyBuf(const void* buf_ptr, UINT buf_size)
+	{
+		if (!buf_ptr || buf_size == 0)
+			return E_INVALIDARG;
+		if (cpb)
+		{
+			cpb.Reset();
+		}
+		int hr = D3DCreateBlob(buf_size, &cpb);
+		if (FAILED(hr))
+			return hr;
+		memcpy(cpb->GetBufferPointer(), buf_ptr, buf_size);
+		size = buf_size;
+		return S_OK;
+	}
+};
+
+
+
+
+
+
 
 } // namespace G2
 

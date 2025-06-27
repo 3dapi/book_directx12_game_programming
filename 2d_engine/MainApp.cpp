@@ -326,7 +326,7 @@ void MainApp::AnimateMaterials(const GameTimer& gt)
 
 void MainApp::UpdateObjectCBs(const GameTimer& gt)
 {
-	auto currObjectCB = m_frameRscCur->cnsgbMObject.get();
+	auto currObjectCB = m_frameRscCur->m_cnsgbMObject.get();
 	for (auto& e : mAllRitems)
 	{
 		// Only update the cbuffer data if the constants have changed.  
@@ -350,7 +350,7 @@ void MainApp::UpdateObjectCBs(const GameTimer& gt)
 
 void MainApp::UpdateMaterialCBs(const GameTimer& gt)
 {
-	auto currMaterialCB = m_frameRscCur->cnsgbMaterial.get();
+	auto currMaterialCB = m_frameRscCur->m_cnsgbMaterial.get();
 	for (auto& e : mMaterials)
 	{
 		// Only update the cbuffer data if the constants have changed.  If the cbuffer
@@ -405,7 +405,7 @@ void MainApp::UpdateMainPassCB(const GameTimer& gt)
 	m_cnstbPass.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
 	m_cnstbPass.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 
-	auto currPassCB = m_frameRscCur->cnstbPass.get();
+	auto currPassCB = m_frameRscCur->m_cnstbPass.get();
 	currPassCB->CopyData(0, m_cnstbPass);
 }
 
@@ -429,7 +429,7 @@ void MainApp::UpdateWaves(const GameTimer& gt)
 	mWaves->Update(gt.DeltaTime());
 
 	// Update the wave vertex buffer with the new solution.
-	auto currWavesVB = m_frameRscCur->vtxWaves.get();
+	auto currWavesVB = m_frameRscCur->m_vtxWaves.get();
 	for (int i = 0; i < mWaves->VertexCount(); ++i)
 	{
 		Vertex v;
@@ -446,7 +446,7 @@ void MainApp::UpdateWaves(const GameTimer& gt)
 	}
 
 	// Set the dynamic VB of the wave renderitem to the current frame VB.
-	mWavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
+	mWavesRitem->Geo->vtx.gpu = currWavesVB->Resource();
 }
 
 int MainApp::UpdateFrameResource()
@@ -543,22 +543,24 @@ void MainApp::BuildLandGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "landGeo";
 
-	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+	if(false)
+	{
+		ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->vtx.cpb));
+		CopyMemory(geo->vtx.cpb->GetBufferPointer(), vertices.data(), vbByteSize);
+		std::tie(geo->vtx.gpu, geo->vtx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, vertices.data(), ibByteSize);
+		geo->vtx.stride = sizeof(Vertex);
+		geo->vtx.size = vbByteSize;
+	}
+	{
+		geo->vtx.UpdateVtx2(vertices.data(), vbByteSize, sizeof(Vertex), d3dDevice, d3dCommandList);
+	}
+	
 
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(d3dDevice,
-		d3dCommandList, vertices.data(), vbByteSize, geo->VertexBufferUploader);
-
-	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(d3dDevice,
-		d3dCommandList, indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-	geo->VertexByteStride = sizeof(Vertex);
-	geo->VertexBufferByteSize = vbByteSize;
-	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-	geo->IndexBufferByteSize = ibByteSize;
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
+	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
+	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
+	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
+	geo->idx.size = ibByteSize;
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
@@ -605,19 +607,18 @@ void MainApp::BuildWavesGeometry()
 	geo->Name = "waterGeo";
 
 	// Set dynamically.
-	geo->VertexBufferCPU = nullptr;
-	geo->VertexBufferGPU = nullptr;
+	geo->vtx.cpb = nullptr;
+	geo->vtx.gpu = nullptr;
 
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
+	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
 
-	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(d3dDevice,
-		d3dCommandList, indices.data(), ibByteSize, geo->IndexBufferUploader);
+	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
 
-	geo->VertexByteStride = sizeof(Vertex);
-	geo->VertexBufferByteSize = vbByteSize;
-	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-	geo->IndexBufferByteSize = ibByteSize;
+	geo->vtx.stride = sizeof(Vertex);
+	geo->vtx.size = vbByteSize;
+	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
+	geo->idx.size = ibByteSize;
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
@@ -654,22 +655,19 @@ void MainApp::BuildBoxGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "boxGeo";
 
-	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->vtx.cpb));
+	CopyMemory(geo->vtx.cpb->GetBufferPointer(), vertices.data(), vbByteSize);
 
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
+	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
 
-	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(d3dDevice,
-		d3dCommandList, vertices.data(), vbByteSize, geo->VertexBufferUploader);
+	std::tie(geo->vtx.gpu, geo->vtx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, vertices.data(), vbByteSize);
+	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
 
-	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(d3dDevice,
-		d3dCommandList, indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-	geo->VertexByteStride = sizeof(Vertex);
-	geo->VertexBufferByteSize = vbByteSize;
-	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-	geo->IndexBufferByteSize = ibByteSize;
+	geo->vtx.stride = sizeof(Vertex);
+	geo->vtx.size = vbByteSize;
+	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
+	geo->idx.size = ibByteSize;
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
@@ -719,22 +717,19 @@ void MainApp::BuildTreeSpritesGeometry()
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "treeSpritesGeo";
 
-	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->vtx.cpb));
+	CopyMemory(geo->vtx.cpb->GetBufferPointer(), vertices.data(), vbByteSize);
 
-	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->idx.cpb));
+	CopyMemory(geo->idx.cpb->GetBufferPointer(), indices.data(), ibByteSize);
 
-	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(d3dDevice,
-		d3dCommandList, vertices.data(), vbByteSize, geo->VertexBufferUploader);
+	std::tie(geo->vtx.gpu, geo->vtx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, vertices.data(), vbByteSize);
+	std::tie(geo->idx.gpu, geo->idx.upLoader) = d3dUtil::CreateDefaultBuffer(d3dDevice, d3dCommandList, indices.data(), ibByteSize);
 
-	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(d3dDevice,
-		d3dCommandList, indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-	geo->VertexByteStride = sizeof(TreeSpriteVertex);
-	geo->VertexBufferByteSize = vbByteSize;
-	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-	geo->IndexBufferByteSize = ibByteSize;
+	geo->vtx.stride = sizeof(TreeSpriteVertex);
+	geo->vtx.size = vbByteSize;
+	geo->idx.fmt = DXGI_FORMAT_R16_UINT;
+	geo->idx.size = ibByteSize;
 
 	SubmeshGeometry submesh;
 	submesh.IndexCount = (UINT)indices.size();
@@ -753,8 +748,7 @@ void MainApp::BuildFrameResources()
 	int frameReouseNum = d3dUtil::getFrameRscCount();
 	for (int i = 0; i < frameReouseNum; ++i)
 	{
-		m_frameRscLst.push_back(std::make_unique<FrameResource>(d3dDevice,
-			1, (UINT)mAllRitems.size(), (UINT)mMaterials.size(), mWaves->VertexCount()));
+		m_frameRscLst.push_back(std::make_unique<FrameResource>(d3dDevice, 1, (UINT)mAllRitems.size(), (UINT)mMaterials.size(), mWaves->VertexCount()));
 	}
 }
 
@@ -816,10 +810,11 @@ void MainApp::BuildRenderItems()
 	wavesRitem->IndexCount = wavesRitem->Geo->DrawArgs["grid"].IndexCount;
 	wavesRitem->StartIndexLocation = wavesRitem->Geo->DrawArgs["grid"].StartIndexLocation;
 	wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-
 	mWavesRitem = wavesRitem.get();
-
 	mRitemLayer[(int)RenderLayer::Transparent].push_back(wavesRitem.get());
+	mAllRitems.push_back(std::move(wavesRitem));
+
+
 
 	auto gridRitem = std::make_unique<RenderItem>();
 	gridRitem->World = MathHelper::Identity4x4();
@@ -831,8 +826,9 @@ void MainApp::BuildRenderItems()
 	gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
 	gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
 	gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-
 	mRitemLayer[(int)RenderLayer::Opaque].push_back(gridRitem.get());
+	mAllRitems.push_back(std::move(gridRitem));
+
 
 	auto boxRitem = std::make_unique<RenderItem>();
 	XMStoreFloat4x4(&boxRitem->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
@@ -843,8 +839,8 @@ void MainApp::BuildRenderItems()
 	boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
 	boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
 	boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
-
 	mRitemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
+	mAllRitems.push_back(std::move(boxRitem));
 
 	auto treeSpritesRitem = std::make_unique<RenderItem>();
 	treeSpritesRitem->World = MathHelper::Identity4x4();
@@ -857,10 +853,6 @@ void MainApp::BuildRenderItems()
 	treeSpritesRitem->BaseVertexLocation = treeSpritesRitem->Geo->DrawArgs["points"].BaseVertexLocation;
 
 	mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites].push_back(treeSpritesRitem.get());
-
-	mAllRitems.push_back(std::move(wavesRitem));
-	mAllRitems.push_back(std::move(gridRitem));
-	mAllRitems.push_back(std::move(boxRitem));
 	mAllRitems.push_back(std::move(treeSpritesRitem));
 }
 
@@ -871,16 +863,16 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vec
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
 
-	auto objectCB = m_frameRscCur->cnsgbMObject->Resource();
-	auto passCB = m_frameRscCur->cnstbPass->Resource();
-	auto matCB = m_frameRscCur->cnsgbMaterial->Resource();
+	auto objectCB = m_frameRscCur->m_cnsgbMObject->Resource();
+	auto passCB = m_frameRscCur->m_cnstbPass->Resource();
+	auto matCB = m_frameRscCur->m_cnsgbMaterial->Resource();
 	// For each render item...
 	for (size_t i = 0; i < ritems.size(); ++i)
 	{
 		auto ri = ritems[i];
 
-		cmdList->IASetVertexBuffers(0, 1, &ri->Geo->VertexBufferView());
-		cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
+		cmdList->IASetVertexBuffers(0, 1, &ri->Geo->vtx.VertexBufferView());
+		cmdList->IASetIndexBuffer(&ri->Geo->idx.IndexBufferView());
 		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
 
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());

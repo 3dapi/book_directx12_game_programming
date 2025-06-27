@@ -59,18 +59,14 @@ public:
     FrameResource& operator=(const FrameResource& rhs) = delete;
     ~FrameResource();
 
-    // We cannot reset the allocator until the GPU is done processing the commands.
-    // So each frame needs their own allocator.
-    ComPtr<ID3D12CommandAllocator> commandListAlloc;
-
     // We cannot update a cbuffer until the GPU is done processing the commands
     // that reference it.  So each frame needs their own cbuffers.
    // std::unique_ptr<UploadBuffer<FrameConstants>> FrameCB = nullptr;
-    std::unique_ptr<UploadBuffer<PassConstants>    > cnstbPass     = nullptr;
-    std::unique_ptr<UploadBuffer<MaterialConstants>> cnsgbMaterial = nullptr;
-    std::unique_ptr<UploadBuffer<ObjectConstants>>   cnsgbMObject  = nullptr;
+    std::unique_ptr<UploadBuffer<PassConstants>    > m_cnstbPass     = nullptr;
+    std::unique_ptr<UploadBuffer<MaterialConstants>> m_cnsgbMaterial = nullptr;
+    std::unique_ptr<UploadBuffer<ObjectConstants>>   m_cnsgbMObject  = nullptr;
 
     // We cannot update a dynamic vertex buffer until the GPU is done processing
     // the commands that reference it.  So each frame needs their own.
-    std::unique_ptr<UploadBuffer<Vertex>> vtxWaves = nullptr;
+    std::unique_ptr<UploadBuffer<Vertex>> m_vtxWaves = nullptr;
 };

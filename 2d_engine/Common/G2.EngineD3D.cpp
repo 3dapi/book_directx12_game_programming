@@ -483,10 +483,9 @@ int EngineD3D::FlushCommandQueue()
 
 int EngineD3D::FenceWait()
 {
-	auto d3d = IG2GraphicsD3D::instance();
 	// Has the GPU finished processing the commands of the current frame resource?
 	// If not, wait until the GPU has completed commands up to this fence point.
-	auto fence = std::any_cast<ID3D12Fence*>(d3d->getFence());
+	auto fence = m_d3dFence.Get();
 	if (m_d3dFenceCurrent != 0 && fence->GetCompletedValue() < m_d3dFenceCurrent)
 	{
 		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
