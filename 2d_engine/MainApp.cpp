@@ -57,7 +57,6 @@ int MainApp::init(const std::any& initialValue /* = */)
 	auto tex_manager = FactoryTexture::instance();
 	tex_manager->Load("grassTex", "Textures/grass.dds");
 	tex_manager->Load("fenceTex", "Textures/WireFence.dds");
-	tex_manager->Load("treeArrayTex", "Textures/treeArray2.dds");
 
 	//2 
 	BuildDescriptorHeaps();
@@ -79,14 +78,10 @@ int MainApp::init(const std::any& initialValue /* = */)
 	shader_manager->Load("standardVS"   , "Shaders/Default.hlsl"   , "vs_5_0", "VS"                  );
 	shader_manager->Load("opaquePS"     , "Shaders/Default.hlsl"   , "ps_5_0", "PS", defines         );
 	shader_manager->Load("alphaTestedPS", "Shaders/Default.hlsl"   , "ps_5_0", "PS", alphaTestDefines);
-	shader_manager->Load("treeSpriteVS" , "Shaders/TreeSprite.hlsl", "vs_5_0", "VS"                  );
-	shader_manager->Load("treeSpriteGS" , "Shaders/TreeSprite.hlsl", "gs_5_0", "GS"                  );
-	shader_manager->Load("treeSpritePS" , "Shaders/TreeSprite.hlsl", "ps_5_0", "PS", alphaTestDefines);
 
 	
 	BuildLandGeometry();
 	BuildBoxGeometry();
-	BuildTreeSpritesGeometry();
 	BuildMaterials();
 	BuildRenderItems();
 	BuildFrameResources();
@@ -201,11 +196,6 @@ int MainApp::Render()
 	pls = pls_manager->FindRes("PLS_ALPHATEST");
 	d3dCommandList->SetPipelineState(pls);
 	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTested]);
-
-	// 빌보드 그리기
-	pls = pls_manager->FindRes("PLS_TREES");
-	d3dCommandList->SetPipelineState(pls);
-	DrawRenderItems(d3dCommandList, mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites]);
 
 	// 물그리기
 	pls = pls_manager->FindRes("PLS_TRANSPARENT");
@@ -397,7 +387,7 @@ void MainApp::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 3;
+	srvHeapDesc.NumDescriptors = 2;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
@@ -422,18 +412,6 @@ void MainApp::BuildDescriptorHeaps()
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);							// next descriptor
 	srvDesc.Format = fenceTex->GetDesc().Format;
 	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
-
-	auto treeArrayTex = texture_factory->FindRes("treeArrayTex");
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);							// next descriptor
-
-	auto desc = treeArrayTex->GetDesc();
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-	srvDesc.Format = treeArrayTex->GetDesc().Format;
-	srvDesc.Texture2DArray.MostDetailedMip = 0;
-	srvDesc.Texture2DArray.MipLevels = -1;
-	srvDesc.Texture2DArray.FirstArraySlice = 0;
-	srvDesc.Texture2DArray.ArraySize = treeArrayTex->GetDesc().DepthOrArraySize;
-	d3dDevice->CreateShaderResourceView(treeArrayTex, &srvDesc, hDescriptor);	
 }
 
 void MainApp::BuildLandGeometry()
@@ -512,56 +490,6 @@ void MainApp::BuildBoxGeometry()
 	mGeometries["boxGeo"] = std::move(geo);
 }
 
-void MainApp::BuildTreeSpritesGeometry()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(IG2GraphicsD3D::instance()->getCommandList());
-
-	struct TreeSpriteVertex
-	{
-		XMFLOAT3 Pos;
-		XMFLOAT2 Size;
-	};
-
-	static const int treeCount = 16;
-	std::array<TreeSpriteVertex, 16> vertices;
-	for (UINT i = 0; i < treeCount; ++i)
-	{
-		float x = MathHelper::RandF(-45.0f, 45.0f);
-		float z = MathHelper::RandF(-45.0f, 45.0f);
-		float y = GetHillsHeight(x, z);
-
-		// Move tree slightly above land height.
-		y += 8.0f;
-
-		vertices[i].Pos = XMFLOAT3(x, y, z);
-		vertices[i].Size = XMFLOAT2(20.0f, 20.0f);
-	}
-
-	std::array<std::uint16_t, 16> indices =
-	{
-		0, 1, 2, 3, 4, 5, 6, 7,
-		8, 9, 10, 11, 12, 13, 14, 15
-	};
-
-	const UINT vbByteSize = (UINT)vertices.size() * sizeof(TreeSpriteVertex);
-	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-
-	auto geo = std::make_unique<MeshGeometry>();
-	geo->Name = "treeSpritesGeo";
-
-	geo->vtx.Init(vertices.data(), vbByteSize, sizeof(TreeSpriteVertex), d3dDevice, d3dCommandList);
-	geo->idx.Init(indices.data(), ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
-
-	geo->DrawArgs["points"] = submesh;
-
-	mGeometries["treeSpritesGeo"] = std::move(geo);
-}
 
 void MainApp::BuildFrameResources()
 {
@@ -594,17 +522,8 @@ void MainApp::BuildMaterials()
 	wirefence->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	wirefence->Roughness = 0.25f;
 
-	auto treeSprites = std::make_unique<Material>();
-	treeSprites->Name = "PLS_TREES";
-	treeSprites->MatCBIndex = 2;
-	treeSprites->DiffuseSrvHeapIndex = 2;
-	treeSprites->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	treeSprites->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
-	treeSprites->Roughness = 0.125f;
-
 	mMaterials["grass"] = std::move(grass);
 	mMaterials["wirefence"] = std::move(wirefence);
-	mMaterials["PLS_TREES"] = std::move(treeSprites);
 }
 
 void MainApp::BuildRenderItems()
@@ -636,19 +555,6 @@ void MainApp::BuildRenderItems()
 	boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
 	mRitemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
 	mAllRitems.push_back(std::move(boxRitem));
-
-	auto treeSpritesRitem = std::make_unique<RenderItem>();
-	treeSpritesRitem->World = MathHelper::Identity4x4();
-	treeSpritesRitem->ObjCBIndex = 2;
-	treeSpritesRitem->Mat = mMaterials["PLS_TREES"].get();
-	treeSpritesRitem->Geo = mGeometries["treeSpritesGeo"].get();
-	treeSpritesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-	treeSpritesRitem->IndexCount = treeSpritesRitem->Geo->DrawArgs["points"].IndexCount;
-	treeSpritesRitem->StartIndexLocation = treeSpritesRitem->Geo->DrawArgs["points"].StartIndexLocation;
-	treeSpritesRitem->BaseVertexLocation = treeSpritesRitem->Geo->DrawArgs["points"].BaseVertexLocation;
-
-	mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites].push_back(treeSpritesRitem.get());
-	mAllRitems.push_back(std::move(treeSpritesRitem));
 }
 
 void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems)

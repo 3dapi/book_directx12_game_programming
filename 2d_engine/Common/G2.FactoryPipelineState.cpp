@@ -147,41 +147,7 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			m_db[name]->r = pls;
 		}
 	}
-	// for tree sprites
-	{
-		ID3D12PipelineState* pls{};
-		auto shader_vs = shader_manager->FindRes("treeSpriteVS");
-		auto shader_ps = shader_manager->FindRes("treeSpritePS");
-		auto shader_gs = shader_manager->FindRes("treeSpriteGS");
-		auto signature = FactorySignature::instance()->FindRes(KEY_TEX_01);
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC plsDesc{};
-			plsDesc.InputLayout = { VTX_POINT::INPUT_LAYOUT.data(), (UINT)VTX_POINT::INPUT_LAYOUT.size() };
-			plsDesc.pRootSignature = signature;
-			plsDesc.VS = { shader_vs->GetBufferPointer(), shader_vs->GetBufferSize() };
-			plsDesc.PS = { shader_ps->GetBufferPointer(), shader_ps->GetBufferSize() };
-			plsDesc.GS = { shader_gs->GetBufferPointer(), shader_gs->GetBufferSize() };
-
-			plsDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-			plsDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-			plsDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-			plsDesc.SampleMask = UINT_MAX;
-			plsDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-			plsDesc.NumRenderTargets = 1;
-			plsDesc.RTVFormats[0] = d3dFmtBack;
-			plsDesc.SampleDesc.Count = d3dMsaa4State ? 4 : 1;
-			plsDesc.SampleDesc.Quality = d3dMsaa4State ? (d3dMsaa4Quality - 1) : 0;
-			plsDesc.DSVFormat = d3dFmtDepth;
-			plsDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
-		if (SUCCEEDED(hr))
-		{
-			// 저장
-			string name = "PLS_TREES";
-			m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
-			m_db[name]->n = name;
-			m_db[name]->r = pls;
-		}
-	}
+	
 	auto ret = m_db["OPAQUE"].get();
 	m_isLoaded = true;
 	return ret;

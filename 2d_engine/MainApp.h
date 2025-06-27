@@ -46,7 +46,6 @@ enum class RenderLayer : int
 	Opaque = 0,
 	Transparent,
 	AlphaTested,
-	AlphaTestedTreeSprites,
 	Count
 };
 
@@ -76,7 +75,6 @@ private:
 	void BuildDescriptorHeaps();
     void BuildLandGeometry();
 	void BuildBoxGeometry();
-	void BuildTreeSpritesGeometry();
     void BuildFrameResources();
     void BuildMaterials();
     void BuildRenderItems();
