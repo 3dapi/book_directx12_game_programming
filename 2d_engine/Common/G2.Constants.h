@@ -20,6 +20,10 @@ struct IG2AppFrame
 	static IG2AppFrame* instance();
 	virtual int init(const std::any& initialValue = {}) = 0;
 	virtual int destroy() = 0;
+
+	virtual std::any getAttrib(int nAttrib) = 0;
+	virtual int      setAttrib(int nAttrib, const std::any& v = {}) = 0;
+	virtual int      command(int nCmd, const std::any& v = {}) = 0;
 };
 
 enum EG2GRAPHICS
@@ -43,6 +47,15 @@ struct IG2Graphics
 	virtual std::any getAttrib(int nAttrib) = 0;
 	virtual int      setAttrib(int nAttrib, const std::any& v = {}) = 0;
 	virtual int      command(int nCmd, const std::any& v = {}) = 0;
+};
+
+struct IG2Scene
+{
+	virtual int		Type()									= 0;
+	virtual int		Init(const std::any& initialValue = {}) = 0;
+	virtual int		Destroy()								= 0;
+	virtual int		Update(const std::any& t)				= 0;
+	virtual int		Render()								= 0;
 };
 
 } // namespace G2 {
