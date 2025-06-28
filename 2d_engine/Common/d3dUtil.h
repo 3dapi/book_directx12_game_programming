@@ -147,26 +147,34 @@ struct MeshGeometry
 	G2::StaticResBufIdx	idx{};
 };
 
-struct MaterialConstants
+struct ShaderConstTransform
+{
+	DirectX::XMFLOAT4X4 tmWorld = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 tmTex   = MathHelper::Identity4x4();
+};
+
+struct ShaderConstPass
+{
+	DirectX::XMFLOAT4X4 tmView = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 tmProj = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 tmViewProj = MathHelper::Identity4x4();
+};
+
+struct ShaderConstMaterial
 {
 	DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
-	DirectX::XMFLOAT4X4 MatTransform = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 tmTexCoord = MathHelper::Identity4x4();
 };
 
 // Simple struct to represent a material for our demos.  A production 3D engine
 // would likely create a class hierarchy of Materials.
 struct Material
 {
-	MaterialConstants   matConst;
+	ShaderConstMaterial   matConst;
 
 	// Index into constant buffer corresponding to this material.
 	int MatCBIndex = -1;
 
-	// Index into SRV heap for diffuse texture.
-	int DiffuseSrvHeapIndex = -1;
-
-	// Index into SRV heap for normal texture.
-	int NormalSrvHeapIndex = -1;
 
 	// Dirty flag indicating the material has changed and we need to update the constant buffer.
 	// Because we have a material constant buffer for each FrameResource, we have to apply the

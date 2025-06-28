@@ -19,20 +19,21 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
-// Lightweight structure stores parameters to draw a shape.  This will
-// vary from app-to-app.
+
 struct RenderItem
 {
 	RenderItem() = default;
+
+	MeshGeometry*				Geo = nullptr;
+	Material*					 Mat = nullptr;
+	ComPtr<ID3D12DescriptorHeap> srvDesc = nullptr;
+	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+
     XMFLOAT4X4 World = MathHelper::Identity4x4();
 	XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
 	int NumFramesDirty = d3dUtil::getFrameRscCount();
 	UINT ObjCBIndex = -1;
-
-	Material* Mat = nullptr;
-	MeshGeometry* Geo = nullptr;
-	ComPtr<ID3D12DescriptorHeap> srvDesc = nullptr;
-    D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 };
 
 enum class RenderLayer : int
@@ -84,7 +85,7 @@ private:
 	// Render items divided by PSO.
 
 
-    ShaderConstPass m_cnstbPass;
+    ShaderConstPass m_cnstPass;
 
 	XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
 	XMFLOAT4X4 mView = MathHelper::Identity4x4();

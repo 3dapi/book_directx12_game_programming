@@ -139,8 +139,5 @@
     <FxCompile Include="Shaders\Default.hlsl">
       <Filter>r</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\LightingUtil.hlsl">
-      <Filter>r</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

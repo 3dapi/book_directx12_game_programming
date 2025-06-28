@@ -264,7 +264,7 @@ void MainApp::UpdateCamera(const GameTimer& gt)
 
 void MainApp::UpdateObjectCBs(const GameTimer& gt)
 {
-	auto currObjectCB = m_frameRscCur->m_cnsgbMObject.get();
+	auto currObjectCB = m_frameRscCur->m_cnstTranform.get();
 
 	// Only update the cbuffer data if the constants have changed.  
 	// This needs to be tracked per frame resource.
@@ -272,7 +272,7 @@ void MainApp::UpdateObjectCBs(const GameTimer& gt)
 	{
 		XMMATRIX world = XMLoadFloat4x4(&m_wireBox->World);
 		ShaderConstTransform objConstants;
-		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+		XMStoreFloat4x4(&objConstants.tmWorld, XMMatrixTranspose(world));
 
 		currObjectCB->CopyData(m_wireBox->ObjCBIndex, objConstants);
 
@@ -289,11 +289,11 @@ void MainApp::UpdateMaterialCBs(const GameTimer& gt)
 
 	if (m_wireBox->Mat->NumFramesDirty > 0)
 	{
-		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireBox->Mat->matConst.MatTransform);
+		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireBox->Mat->matConst.tmTexCoord);
 
-		MaterialConstants matConstants;
+		ShaderConstMaterial matConstants;
 		matConstants.DiffuseAlbedo = m_wireBox->Mat->matConst.DiffuseAlbedo;
-		XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
+		XMStoreFloat4x4(&matConstants.tmTexCoord, XMMatrixTranspose(matTransform));
 
 		currMaterialCB->CopyData(m_wireBox->Mat->MatCBIndex, matConstants);
 
@@ -312,12 +312,12 @@ void MainApp::UpdateMainPassCB(const GameTimer& gt)
 	XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
 	XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
 
-	XMStoreFloat4x4(&m_cnstbPass.View, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&m_cnstbPass.Proj, XMMatrixTranspose(proj));
-	XMStoreFloat4x4(&m_cnstbPass.ViewProj, XMMatrixTranspose(viewProj));
+	XMStoreFloat4x4(&m_cnstPass.tmView, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&m_cnstPass.tmProj, XMMatrixTranspose(proj));
+	XMStoreFloat4x4(&m_cnstPass.tmViewProj, XMMatrixTranspose(viewProj));
 
-	auto currPassCB = m_frameRscCur->m_cnstbPass.get();
-	currPassCB->CopyData(0, m_cnstbPass);
+	auto currPassCB = m_frameRscCur->m_cnstPass.get();
+	currPassCB->CopyData(0, m_cnstPass);
 }
 
 int MainApp::UpdateFrameResource()
@@ -366,7 +366,6 @@ void MainApp::BuildBox()
 	//--------------------------------------------------------------------------
 	m_wireBox->Mat = new Material;
 	m_wireBox->Mat->MatCBIndex = 0;
-	m_wireBox->Mat->DiffuseSrvHeapIndex = 1;
 	m_wireBox->Mat->matConst.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 
@@ -379,7 +378,8 @@ void MainApp::BuildBox()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 2;
+	// 텍스처 갯수 : 10개의 경우
+	srvHeapDesc.NumDescriptors = 10;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_wireBox->srvDesc)));
@@ -393,16 +393,13 @@ void MainApp::BuildBox()
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-	auto grassTex = texture_factory->FindRes("grassTex");
-	srvDesc.Format = grassTex->GetDesc().Format;
+	auto fenceTex = texture_factory->FindRes("fenceTex");
+	srvDesc.Format = fenceTex->GetDesc().Format;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = -1;
-	d3dDevice->CreateShaderResourceView(grassTex, &srvDesc, hDescriptor);
-
-	auto fenceTex = texture_factory->FindRes("fenceTex");
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);							// next descriptor
-	srvDesc.Format = fenceTex->GetDesc().Format;
+	srvDesc.Texture2D.MipLevels = 3;
+	// 1장이면 안써도 됨
+	hDescriptor.Offset(0, mCbvSrvDescriptorSize);
 	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
 }
 
@@ -435,10 +432,10 @@ void MainApp::DrawBox(ID3D12GraphicsCommandList* cmdList)
 
 
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstTransform));
-	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
+	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstMaterial));
 
-	auto objectCB = m_frameRscCur->m_cnsgbMObject->Resource();
-	auto passCB = m_frameRscCur->m_cnstbPass->Resource();
+	auto objectCB = m_frameRscCur->m_cnstTranform->Resource();
+	auto passCB = m_frameRscCur->m_cnstPass->Resource();
 	auto matCB = m_frameRscCur->m_cnsgbMaterial->Resource();
 
 
@@ -447,7 +444,8 @@ void MainApp::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	cmdList->IASetPrimitiveTopology(m_wireBox->PrimitiveType);
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_wireBox->srvDesc->GetGPUDescriptorHandleForHeapStart());
-	gpu_tex_hp.Offset(m_wireBox->Mat->DiffuseSrvHeapIndex, mCbvSrvDescriptorSize);
+	// m_wireBox->srvDesc 에 텍스처가 여러게 바인딩 되었을 때 해당 인덱스
+	gpu_tex_hp.Offset(0, mCbvSrvDescriptorSize);
 
 	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress();
 	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
