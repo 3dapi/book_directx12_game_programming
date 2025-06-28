@@ -289,10 +289,10 @@ void MainApp::UpdateMaterialCBs(const GameTimer& gt)
 
 	if (m_wireBox->Mat->NumFramesDirty > 0)
 	{
-		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireBox->Mat->MatTransform);
+		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireBox->Mat->matConst.MatTransform);
 
 		MaterialConstants matConstants;
-		matConstants.DiffuseAlbedo = m_wireBox->Mat->DiffuseAlbedo;
+		matConstants.DiffuseAlbedo = m_wireBox->Mat->matConst.DiffuseAlbedo;
 		XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
 
 		currMaterialCB->CopyData(m_wireBox->Mat->MatCBIndex, matConstants);
@@ -313,25 +313,8 @@ void MainApp::UpdateMainPassCB(const GameTimer& gt)
 	XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
 
 	XMStoreFloat4x4(&m_cnstbPass.View, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&m_cnstbPass.InvView, XMMatrixTranspose(invView));
 	XMStoreFloat4x4(&m_cnstbPass.Proj, XMMatrixTranspose(proj));
-	XMStoreFloat4x4(&m_cnstbPass.InvProj, XMMatrixTranspose(invProj));
 	XMStoreFloat4x4(&m_cnstbPass.ViewProj, XMMatrixTranspose(viewProj));
-	XMStoreFloat4x4(&m_cnstbPass.InvViewProj, XMMatrixTranspose(invViewProj));
-	m_cnstbPass.EyePosW = mEyePos;
-	m_cnstbPass.RenderTargetSize = XMFLOAT2((float)m_screenSize.cx, (float)m_screenSize.cy);
-	m_cnstbPass.InvRenderTargetSize = XMFLOAT2(1.0f / m_screenSize.cx, 1.0f / m_screenSize.cy);
-	m_cnstbPass.NearZ = 1.0f;
-	m_cnstbPass.FarZ = 1000.0f;
-	m_cnstbPass.TotalTime = gt.TotalTime();
-	m_cnstbPass.DeltaTime = gt.DeltaTime();
-	m_cnstbPass.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-	m_cnstbPass.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
-	m_cnstbPass.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
-	m_cnstbPass.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
-	m_cnstbPass.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
-	m_cnstbPass.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
-	m_cnstbPass.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 
 	auto currPassCB = m_frameRscCur->m_cnstbPass.get();
 	currPassCB->CopyData(0, m_cnstbPass);
@@ -384,7 +367,7 @@ void MainApp::BuildBox()
 	m_wireBox->Mat = new Material;
 	m_wireBox->Mat->MatCBIndex = 0;
 	m_wireBox->Mat->DiffuseSrvHeapIndex = 1;
-	m_wireBox->Mat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_wireBox->Mat->matConst.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 
 	XMStoreFloat4x4(&m_wireBox->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
