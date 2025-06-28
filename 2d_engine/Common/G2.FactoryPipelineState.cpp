@@ -41,6 +41,18 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 	auto d3dMsaa4Quality = *std::any_cast<UINT*         >(d3d->getAttrib(EG2GRAPHICS_D3D::ATT_DEVICE_MSAASTATE4X_QUALITY));
 	auto shader_manager = FactoryShader::instance();
 
+	D3D12_RENDER_TARGET_BLEND_DESC alphaBlendDesc{};
+			alphaBlendDesc.BlendEnable = true;
+			alphaBlendDesc.LogicOpEnable = false;
+			alphaBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+			alphaBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+			alphaBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+			alphaBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+			alphaBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+			alphaBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+			alphaBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+			alphaBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
 	// for opaque objects
 	{
 		ID3D12PipelineState* pls{};
@@ -78,17 +90,6 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 		auto shader_vs = shader_manager->FindRes("standardVS");
 		auto shader_ps = shader_manager->FindRes("opaquePS");
 		auto signature = FactorySignature::instance()->FindRes(KEY_TEX_01);
-		D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc{};
-			transparencyBlendDesc.BlendEnable = true;
-			transparencyBlendDesc.LogicOpEnable = false;
-			transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-			transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
-			transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC plsDesc = {};
 			plsDesc.InputLayout = { VTX_NT::INPUT_LAYOUT.data(), (UINT)VTX_NT::INPUT_LAYOUT.size() };
 			plsDesc.pRootSignature = signature;
@@ -104,7 +105,7 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			plsDesc.SampleDesc.Count = d3dMsaa4State ? 4 : 1;
 			plsDesc.SampleDesc.Quality = d3dMsaa4State ? (d3dMsaa4Quality - 1) : 0;
 			plsDesc.DSVFormat = d3dFmtDepth;
-			plsDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+			plsDesc.BlendState.RenderTarget[0] = alphaBlendDesc;
 		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
 		if (SUCCEEDED(hr))
 		{
@@ -136,6 +137,7 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			plsDesc.SampleDesc.Count = d3dMsaa4State ? 4 : 1;
 			plsDesc.SampleDesc.Quality = d3dMsaa4State ? (d3dMsaa4Quality - 1) : 0;
 			plsDesc.DSVFormat = d3dFmtDepth;
+			plsDesc.BlendState.RenderTarget[0] = alphaBlendDesc;
 			plsDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
 		if (SUCCEEDED(hr))
@@ -147,41 +149,7 @@ TD3D_PIPELINESTATE* FactoryPipelineState::ResourceLoad()
 			m_db[name]->r = pls;
 		}
 	}
-	// for tree sprites
-	{
-		ID3D12PipelineState* pls{};
-		auto shader_vs = shader_manager->FindRes("treeSpriteVS");
-		auto shader_ps = shader_manager->FindRes("treeSpritePS");
-		auto shader_gs = shader_manager->FindRes("treeSpriteGS");
-		auto signature = FactorySignature::instance()->FindRes(KEY_TEX_01);
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC plsDesc{};
-			plsDesc.InputLayout = { VTX_POINT::INPUT_LAYOUT.data(), (UINT)VTX_POINT::INPUT_LAYOUT.size() };
-			plsDesc.pRootSignature = signature;
-			plsDesc.VS = { shader_vs->GetBufferPointer(), shader_vs->GetBufferSize() };
-			plsDesc.PS = { shader_ps->GetBufferPointer(), shader_ps->GetBufferSize() };
-			plsDesc.GS = { shader_gs->GetBufferPointer(), shader_gs->GetBufferSize() };
-
-			plsDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-			plsDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-			plsDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-			plsDesc.SampleMask = UINT_MAX;
-			plsDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-			plsDesc.NumRenderTargets = 1;
-			plsDesc.RTVFormats[0] = d3dFmtBack;
-			plsDesc.SampleDesc.Count = d3dMsaa4State ? 4 : 1;
-			plsDesc.SampleDesc.Quality = d3dMsaa4State ? (d3dMsaa4Quality - 1) : 0;
-			plsDesc.DSVFormat = d3dFmtDepth;
-			plsDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-		hr = d3dDevice->CreateGraphicsPipelineState(&plsDesc, IID_PPV_ARGS(&pls));
-		if (SUCCEEDED(hr))
-		{
-			// 저장
-			string name = "PLS_TREES";
-			m_db[name] = std::make_unique<TD3D_PIPELINESTATE>();
-			m_db[name]->n = name;
-			m_db[name]->r = pls;
-		}
-	}
+	
 	auto ret = m_db["OPAQUE"].get();
 	m_isLoaded = true;
 	return ret;
