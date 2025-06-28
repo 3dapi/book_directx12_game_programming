@@ -8,18 +8,7 @@
 #ifndef __D3DUTIL_H__
 #define __D3DUTIL_H__
 
-#include <algorithm>
-#include <any>
-#include <array>
-#include <memory>
 #include <string>
-#include <tuple>
-#include <vector>
-#include <unordered_map>
-#include <cstdint>
-#include <fstream>
-#include <sstream>
-#include <cassert>
 
 #include <windows.h>
 #include <wrl.h>
@@ -30,11 +19,6 @@
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 #include <DirectXCollision.h>
-
-#include "d3dx12/d3dx12.h"
-#include "DDSTextureLoader.h"
-#include "MathHelper.h"
-#include "G2.Geometry.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
@@ -139,39 +123,6 @@ public:
     std::wstring FunctionName;
     std::wstring Filename;
     int LineNumber = -1;
-};
-
-struct MeshGeometry
-{
-	G2::StaticResBufVtx	vtx{};
-	G2::StaticResBufIdx	idx{};
-};
-
-struct ShaderConstTransform
-{
-	DirectX::XMFLOAT4X4 tmWorld = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 tmTex   = MathHelper::Identity4x4();
-};
-
-struct ShaderConstPass
-{
-	DirectX::XMFLOAT4X4 tmView = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 tmProj = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 tmViewProj = MathHelper::Identity4x4();
-};
-
-struct ShaderConstMaterial
-{
-	DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
-	DirectX::XMFLOAT4X4 tmTexCoord = MathHelper::Identity4x4();
-};
-
-// Simple struct to represent a material for our demos.  A production 3D engine
-// would likely create a class hierarchy of Materials.
-struct Material
-{
-	ShaderConstMaterial   matConst;
-	int NumFramesDirty = d3dUtil::getFrameRscCount();
 };
 
 #ifndef ThrowIfFailed
