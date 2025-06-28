@@ -10,28 +10,19 @@ Texture2D    gTexDiifuse : register(t0);
 
 cbuffer cbTransform : register(b0)
 {
-    float4x4 tmWorld;
-	float4x4 tmTexture;
-};
-
-cbuffer cbPass : register(b1)
-{
-    float4x4 tmView;
-    float4x4 tmProj;
-    float4x4 tmViewProj;
+    float4x4 g_tmMVP;
 };
 
 cbuffer cbMaterial : register(b2)
 {
 	float4   gDiffAlbedo;
-	float4x4 tmTexCoord;
 };
 
 struct VS_IN
 {
-	float3 p    : POSITION;
-	float3 n    : NORMAL;
-	float2 t    : TEXCOORD;
+	float3 p : POSITION;
+	float4 d : COLOR;
+	float2 t : TEXCOORD;
 };
 
 struct PS_IN
@@ -40,16 +31,19 @@ struct PS_IN
 	float2 t    : TEXCOORD;
 };
 
+float4 PS(PS_IN pin) : SV_Target
+{
+    float4 diffuseAlbedo = gTexDiifuse.Sample(gsamAnisotropicWrap, pin.t) * gDiffAlbedo;
+	clip(diffuseAlbedo.a - 0.1f);
+    return diffuseAlbedo;
+}
 PS_IN VS(VS_IN vin)
 {
-	PS_IN vo = (PS_IN)0;
-	float4 p = mul(float4(vin.p, 1.0f), tmWorld);
-	vo.p = mul(p, tmViewProj);
-
-	float4 texC = mul(float4(vin.t, 0.0f, 1.0f), tmTexture);
-	vo.t = mul(texC, tmTexCoord).xy;
-
-	return vo;
+	PS_IN o = (PS_IN)0;
+	o.p = mul(float4(vin.p, 1.0f), g_tmMVP);
+	o.d = vin.d;
+	o.t = vin.t;
+	return o;
 }
 
 float4 PS(PS_IN pin) : SV_Target
@@ -58,5 +52,4 @@ float4 PS(PS_IN pin) : SV_Target
 	clip(diffuse.a - 0.1f);
 	return diffuse;
 }
-
 
