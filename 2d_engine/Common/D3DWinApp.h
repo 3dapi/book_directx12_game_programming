@@ -15,6 +15,9 @@ protected:
     virtual ~D3DWinApp();
 public:
 	int		init(const std::any& initialValue = {})				override;
+	std::any getAttrib(int nAttrib)								override {return E_FAIL; }
+	int		setAttrib(int nAttrib, const std::any& v = {})		override {return E_FAIL; }
+	int		command(int nCmd, const std::any& v = {})			override {return E_FAIL; }
 	int		Run()												override;
 	LRESULT	MsgProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l)	override;
 	int		Resize(bool update=true)							override;
@@ -26,8 +29,7 @@ public:
 
 	HINSTANCE	AppInst() const;
 	HWND		MainWnd() const;
-	float		AspectRatio() const;
-	void		Set4xMsaaState(bool value);
+	int			Set4xMsaaState(bool value);
 	int			Render3D();
 
 protected:
