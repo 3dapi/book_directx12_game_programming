@@ -142,11 +142,5 @@
     <FxCompile Include="Shaders\LightingUtil.hlsl">
       <Filter>r</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\TreeSprite.hlsl">
-      <Filter>r</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\2d.hlsl">
-      <Filter>r</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

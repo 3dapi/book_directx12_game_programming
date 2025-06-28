@@ -53,13 +53,10 @@ int MainApp::init(const std::any& initialValue /* = */)
 	// so we have to query this information.
 	mCbvSrvDescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		// 1. load texutre
+	// 1. load texutre
 	auto tex_manager = FactoryTexture::instance();
 	tex_manager->Load("grassTex", "Textures/grass.dds");
 	tex_manager->Load("fenceTex", "Textures/WireFence.dds");
-
-	//2 
-	BuildDescriptorHeaps();
 
 	// 3. Build Shaders And Input Layouts
 	const D3D_SHADER_MACRO defines[] =
@@ -79,13 +76,10 @@ int MainApp::init(const std::any& initialValue /* = */)
 	shader_manager->Load("opaquePS"     , "Shaders/Default.hlsl"   , "ps_5_0", "PS", defines         );
 	shader_manager->Load("alphaTestedPS", "Shaders/Default.hlsl"   , "ps_5_0", "PS", alphaTestDefines);
 
-	
-	BuildLandGeometry();
-	BuildBoxGeometry();
-	BuildMaterials();
-	BuildRenderItems();
-	BuildFrameResources();
 	auto pls_manager = FactoryPipelineState::instance();
+	
+	BuildBox();
+	BuildFrameResources();
 
 	// Execute the initialization commands.
 	ThrowIfFailed(d3dCommandList->Close());
@@ -171,7 +165,8 @@ int MainApp::Render()
 	d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Clear the back buffer and depth buffer.
-	d3dCommandList->ClearRenderTargetView(d3dBackBufferV, (float*)&m_cnstbPass.FogColor, 0, nullptr);
+	XMFLOAT4 clearColor = { 0.0f, 0.4f, 0.6f, 1.0f };
+	d3dCommandList->ClearRenderTargetView(d3dBackBufferV, (float*)&clearColor, 0, nullptr);
 	d3dCommandList->ClearDepthStencilView(d3dDepthV, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 	// Specify the buffers we are going to render to.
 	d3dCommandList->OMSetRenderTargets(1, &d3dBackBufferV, true, &d3dDepthV);
@@ -182,17 +177,8 @@ int MainApp::Render()
 	d3dCommandList->SetGraphicsRootSignature(signature);
 
 
-	// shader reource view desciptor 설정: texture 정보
-	ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvDescriptorHeap.Get() };
-	d3dCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-	
-	// 지형 그리기
-
-	// 알파 테스용 가운데 블록
-	auto pls = pls_manager->FindRes("PLS_ALPHATEST");
-	d3dCommandList->SetPipelineState(pls);
-	DrawRenderItems(d3dCommandList);
+	// Box 그리기
+	DrawBox(d3dCommandList);
 
 
 	// Indicate a state transition on the resource usage.
@@ -268,7 +254,7 @@ void MainApp::UpdateCamera(const GameTimer& gt)
 	mEyePos.y = mRadius * cosf(mPhi);
 
 	// Build the view matrix.
-	XMVECTOR pos = XMVectorSet(mEyePos.x, 150, -100, 1.0f);
+	XMVECTOR pos = XMVectorSet(20, 40, -40, 1.0f);
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
@@ -285,11 +271,8 @@ void MainApp::UpdateObjectCBs(const GameTimer& gt)
 	if (m_wireBox->NumFramesDirty > 0)
 	{
 		XMMATRIX world = XMLoadFloat4x4(&m_wireBox->World);
-		XMMATRIX texTransform = XMLoadFloat4x4(&m_wireBox->TexTransform);
-
 		ShaderConstTransform objConstants;
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
-		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 
 		currObjectCB->CopyData(m_wireBox->ObjCBIndex, objConstants);
 
@@ -304,20 +287,18 @@ void MainApp::UpdateMaterialCBs(const GameTimer& gt)
 	// Only update the cbuffer data if the constants have changed.  If the cbuffer
 	// data changes, it needs to be updated for each FrameResource.
 
-	if (m_wireMaterial->NumFramesDirty > 0)
+	if (m_wireBox->Mat->NumFramesDirty > 0)
 	{
-		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireMaterial->MatTransform);
+		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireBox->Mat->MatTransform);
 
 		MaterialConstants matConstants;
-		matConstants.DiffuseAlbedo = m_wireMaterial->DiffuseAlbedo;
-		matConstants.FresnelR0 = m_wireMaterial->FresnelR0;
-		matConstants.Roughness = m_wireMaterial->Roughness;
+		matConstants.DiffuseAlbedo = m_wireBox->Mat->DiffuseAlbedo;
 		XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
 
-		currMaterialCB->CopyData(m_wireMaterial->MatCBIndex, matConstants);
+		currMaterialCB->CopyData(m_wireBox->Mat->MatCBIndex, matConstants);
 
 		// Next FrameResource need to be updated too.
-		m_wireMaterial->NumFramesDirty--;
+		m_wireBox->Mat->NumFramesDirty--;
 	}
 }
 
@@ -368,46 +349,10 @@ int MainApp::UpdateFrameResource()
 	return S_OK;
 }
 
-void MainApp::BuildDescriptorHeaps()
+void MainApp::BuildBox()
 {
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	//
-	// Create the SRV heap.
-	//
-	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 2;
-	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
+	m_wireBox = new RenderItem;
 
-	//
-	// Fill out the heap with actual descriptors.
-	//
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	auto texture_factory = FactoryTexture::instance();
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-	auto grassTex = texture_factory->FindRes("grassTex");
-	srvDesc.Format = grassTex->GetDesc().Format;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = -1;
-	d3dDevice->CreateShaderResourceView(grassTex, &srvDesc, hDescriptor);
-
-	auto fenceTex = texture_factory->FindRes("fenceTex");
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);							// next descriptor
-	srvDesc.Format = fenceTex->GetDesc().Format;
-	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
-}
-
-void MainApp::BuildLandGeometry()
-{
-}
-
-void MainApp::BuildBoxGeometry()
-{
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(IG2GraphicsD3D::instance()->getCommandList());
 
@@ -428,11 +373,57 @@ void MainApp::BuildBoxGeometry()
 	std::vector<std::uint16_t> indices = box.GetIndices16();
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-	m_wireGeo = new MeshGeometry;
+	m_wireBox->Geo = new MeshGeometry;
 
-	m_wireGeo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
-	m_wireGeo->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
+	m_wireBox->Geo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
+	m_wireBox->Geo->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
+
+
+	// constant values
+	//--------------------------------------------------------------------------
+	m_wireBox->Mat = new Material;
+	m_wireBox->Mat->MatCBIndex = 0;
+	m_wireBox->Mat->DiffuseSrvHeapIndex = 1;
+	m_wireBox->Mat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+
+	XMStoreFloat4x4(&m_wireBox->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
+	m_wireBox->ObjCBIndex = 0;
+	m_wireBox->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// setup srv decriptor
+	//
+	// Create the SRV heap.
+	//
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.NumDescriptors = 2;
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_wireBox->srvDesc)));
+
+	//
+	// Fill out the heap with actual descriptors.
+	//
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_wireBox->srvDesc->GetCPUDescriptorHandleForHeapStart());
+	auto texture_factory = FactoryTexture::instance();
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+	auto grassTex = texture_factory->FindRes("grassTex");
+	srvDesc.Format = grassTex->GetDesc().Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;
+	d3dDevice->CreateShaderResourceView(grassTex, &srvDesc, hDescriptor);
+
+	auto fenceTex = texture_factory->FindRes("fenceTex");
+	hDescriptor.Offset(1, mCbvSrvDescriptorSize);							// next descriptor
+	srvDesc.Format = fenceTex->GetDesc().Format;
+	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
 }
+
+
 
 
 void MainApp::BuildFrameResources()
@@ -446,33 +437,19 @@ void MainApp::BuildFrameResources()
 	}
 }
 
-void MainApp::BuildMaterials()
+void MainApp::DrawBox(ID3D12GraphicsCommandList* cmdList)
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
+	auto pls_manager = FactoryPipelineState::instance();
 
-	m_wireMaterial = new Material;
-		m_wireMaterial->MatCBIndex = 0;
-	m_wireMaterial->DiffuseSrvHeapIndex = 1;
-	m_wireMaterial->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_wireMaterial->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	m_wireMaterial->Roughness = 0.25f;
-}
+	// shader reource view desciptor 설정: texture 정보
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_wireBox->srvDesc.Get() };
+	cmdList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
-void MainApp::BuildRenderItems()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
+	auto pls = pls_manager->FindRes("PLS_ALPHATEST");
+	cmdList->SetPipelineState(pls);
 
-	m_wireBox = new RenderItem;
-	XMStoreFloat4x4(&m_wireBox->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-	m_wireBox->ObjCBIndex = 0;
-	m_wireBox->Mat = m_wireMaterial;
-	m_wireBox->Geo = m_wireGeo;
-	m_wireBox->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-}
 
-void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList)
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstTransform));
 	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
@@ -486,7 +463,7 @@ void MainApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList)
 	cmdList->IASetIndexBuffer(&m_wireBox->Geo->idx.IndexBufferView());
 	cmdList->IASetPrimitiveTopology(m_wireBox->PrimitiveType);
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_wireBox->srvDesc->GetGPUDescriptorHandleForHeapStart());
 	gpu_tex_hp.Offset(m_wireBox->Mat->DiffuseSrvHeapIndex, mCbvSrvDescriptorSize);
 
 	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress();

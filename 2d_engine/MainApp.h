@@ -31,7 +31,7 @@ struct RenderItem
 
 	Material* Mat = nullptr;
 	MeshGeometry* Geo = nullptr;
-
+	ComPtr<ID3D12DescriptorHeap> srvDesc = nullptr;
     D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 };
 
@@ -64,13 +64,9 @@ private:
 	void UpdateMainPassCB(const GameTimer& gt);
 	int	 UpdateFrameResource();
 
-	void BuildDescriptorHeaps();
-    void BuildLandGeometry();
-	void BuildBoxGeometry();
+	void BuildBox();
     void BuildFrameResources();
-    void BuildMaterials();
-    void BuildRenderItems();
-    void DrawRenderItems(ID3D12GraphicsCommandList* cmdList);
+    void DrawBox(ID3D12GraphicsCommandList* cmdList);
 
     float GetHillsHeight(float x, float z)const;
     XMFLOAT3 GetHillsNormal(float x, float z)const;
@@ -83,10 +79,6 @@ private:
 
     UINT mCbvSrvDescriptorSize = 0;
 
-	ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
-
-	MeshGeometry*	m_wireGeo;
-	Material*		m_wireMaterial;
 	RenderItem*		m_wireBox{};
 
 	// Render items divided by PSO.
