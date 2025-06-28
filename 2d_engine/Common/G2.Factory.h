@@ -3,6 +3,7 @@
 #ifndef __G2_FACTORY_H__
 #define __G2_FACTORY_H__
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
