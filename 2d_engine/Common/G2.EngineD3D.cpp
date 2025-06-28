@@ -193,6 +193,7 @@ int EngineD3D::InitDevice()
 	CreateCommandObjects();
 	CreateSwapChain();
 	CreateRtvAndDsvDescriptorHeaps();
+	Resize();
 
 	return S_OK;
 }

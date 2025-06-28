@@ -100,7 +100,6 @@ int D3DWinApp::init(const std::any& initialValue)
 	if(FAILED(hr))
 		return false;
 
-    Resize();
 	return true;
 }
  
