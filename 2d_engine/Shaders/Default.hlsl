@@ -8,20 +8,20 @@ SamplerState gsamAnisotropicClamp : register(s5);
 
 Texture2D    gTexDiifuse : register(t0);
 
-cbuffer cbTransform : register(b0)
+cbuffer cbTrs : register(b0)
 {
     float4x4 tmWorld;
 	float4x4 tmTexture;
 };
 
-cbuffer cbPass : register(b1)
+cbuffer cbPss : register(b1)
 {
     float4x4 tmView;
     float4x4 tmProj;
     float4x4 tmViewProj;
 };
 
-cbuffer cbMaterial : register(b2)
+cbuffer cbMtl : register(b2)
 {
 	float4   gDiffAlbedo;
 	float4x4 tmTexCoord;
@@ -43,11 +43,11 @@ struct PS_IN
 PS_IN VS(VS_IN vin)
 {
 	PS_IN vo = (PS_IN)0;
-	float4 p = mul(float4(vin.p, 1.0f), tmWorld);
-	vo.p = mul(p, tmViewProj);
+	float4 p = mul(tmWorld, float4(vin.p, 1.0f));
+	vo.p = mul(tmViewProj, p);
 
-	float4 texC = mul(float4(vin.t, 0.0f, 1.0f), tmTexture);
-	vo.t = mul(texC, tmTexCoord).xy;
+	float4 texC = mul(tmTexture, float4(vin.t, 0.0f, 1.0f));
+	vo.t = mul(tmTexCoord, texC).xy;
 
 	return vo;
 }

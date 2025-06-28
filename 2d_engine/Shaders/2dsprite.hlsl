@@ -8,12 +8,12 @@ SamplerState gsamAnisotropicClamp : register(s5);
 
 Texture2D    gTexDiifuse : register(t0);
 
-cbuffer cbTransform : register(b0)
+cbuffer cbTrs : register(b0)
 {
     float4x4 g_tmMVP;
 };
 
-cbuffer cbMaterial : register(b2)
+cbuffer cbMtl : register(b2)
 {
 	float4   gDiffAlbedo;
 };

@@ -36,9 +36,6 @@
     <ClCompile Include="Common\DDSTextureLoader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="FrameResource.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="Common\GameTimer.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -75,12 +72,12 @@
     <ClCompile Include="SceneGameMesh.cpp">
       <Filter>s</Filter>
     </ClCompile>
+    <ClCompile Include="ShaderUploadChain.cpp">
+      <Filter>s</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\MathHelper.h">
-      <Filter>h</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\UploadBuffer.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="Common\D3DWinApp.h">
@@ -90,9 +87,6 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\DDSTextureLoader.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="FrameResource.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\G2.Constants.h">
@@ -143,9 +137,21 @@
     <ClInclude Include="SceneGameMesh.h">
       <Filter>s</Filter>
     </ClInclude>
+    <ClInclude Include="ShaderUploadChain.h">
+      <Filter>s</Filter>
+    </ClInclude>
     <ClInclude Include="MainApp.h">
       <Filter>s</Filter>
     </ClInclude>
+    <ClInclude Include="AppCommon.h">
+      <Filter>s</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\UploadBuffer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Default.hlsl">
@@ -154,10 +160,5 @@
     <FxCompile Include="Shaders\2dsprite.hlsl">
       <Filter>r</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config">
-      <Filter>s</Filter>
-    </None>
   </ItemGroup>
 </Project>

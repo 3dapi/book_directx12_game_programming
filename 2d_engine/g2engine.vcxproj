@@ -169,13 +169,14 @@
     <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\G2.EngineD3D.cpp" />
     <ClCompile Include="Common\MathHelper.cpp" />
-    <ClCompile Include="FrameResource.cpp" />
+    <ClCompile Include="ShaderUploadChain.cpp" />
     <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="SceneGameMesh.cpp" />
     <ClCompile Include="_main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MainApp.h" />
+    <ClInclude Include="AppCommon.h" />
+    <ClInclude Include="AppConst.h" />
     <ClInclude Include="Common\D3DWinApp.h" />
     <ClInclude Include="Common\d3dUtil.h" />
     <ClInclude Include="Common\d3dx12.h" />
@@ -195,8 +196,8 @@
     <ClInclude Include="Common\G2.EngineD3D.h" />
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
-    <ClInclude Include="FrameResource.h" />
-    <ClInclude Include="AppConst.h" />
+    <ClInclude Include="ShaderUploadChain.h" />
+    <ClInclude Include="MainApp.h" />
     <ClInclude Include="SceneGameMesh.h" />
   </ItemGroup>
   <ItemGroup>

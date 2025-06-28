@@ -57,6 +57,7 @@ struct IG2Scene
 	virtual int		Update(const std::any& t)				= 0;
 	virtual int		Render()								= 0;
 };
+typedef IG2Scene*			PG2Scene;
 
 } // namespace G2 {
 
