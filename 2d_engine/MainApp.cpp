@@ -113,17 +113,16 @@ int MainApp::Resize(bool up)
 
 int MainApp::Update(const std::any& t)
 {
+	// Cycle through the circular frame resource array.
+	UpdateFrameResource();
+
 	int hr = S_OK;
 	GameTimer gt = std::any_cast<GameTimer>(t);
 	OnKeyboardInput(gt);
 	UpdateCamera(gt);
 
-	// Cycle through the circular frame resource array.
-	UpdateFrameResource();
 
-	UpdateObjectCBs(gt);
-	UpdateMaterialCBs(gt);
-	UpdateMainPassCB(gt);
+	UpdateBox(gt);
 
 	return S_OK;
 }
@@ -260,34 +259,52 @@ void MainApp::UpdateCamera(const GameTimer& gt)
 
 	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
 	XMStoreFloat4x4(&mView, view);
+
+	//constant world transform
+	//auto currObjectCB = m_frameRscCur->m_cnstTranform.get();
+	//{
+	//	XMMATRIX world = XMLoadFloat4x4(&m_cnstWorld.tmWorld);
+	//	ShaderConstTransform objConstants;
+	//	XMStoreFloat4x4(&objConstants.tmWorld, XMMatrixTranspose(world));
+
+	//	currObjectCB->CopyData(0, objConstants);
+	//}
 }
 
-void MainApp::UpdateObjectCBs(const GameTimer& gt)
+void MainApp::UpdateBox(const GameTimer& gt)
 {
+	bool bUpdated = true;
 	auto currObjectCB = m_frameRscCur->m_cnstTranform.get();
 
-	// Only update the cbuffer data if the constants have changed.  
-	// This needs to be tracked per frame resource.
-	if (m_wireBox->NumFramesDirty > 0)
+	//constant world transform
 	{
-		XMMATRIX world = XMLoadFloat4x4(&m_wireBox->World);
+		XMMATRIX world = XMLoadFloat4x4(&m_wireBox->m_World);
 		ShaderConstTransform objConstants;
 		XMStoreFloat4x4(&objConstants.tmWorld, XMMatrixTranspose(world));
 
-		currObjectCB->CopyData(m_wireBox->ObjCBIndex, objConstants);
-
-		// Next FrameResource need to be updated too.
-		m_wireBox->NumFramesDirty--;
+		currObjectCB->CopyData(0, objConstants);
 	}
-}
 
-void MainApp::UpdateMaterialCBs(const GameTimer& gt)
-{
+	// constant pass
+	auto currPassCB = m_frameRscCur->m_cnstPass.get();
+	{
+		XMMATRIX view = XMLoadFloat4x4(&mView);
+		XMMATRIX proj = XMLoadFloat4x4(&mProj);
+
+		XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+		XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+		XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
+		XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
+
+		XMStoreFloat4x4(&m_cnstPass.tmView, XMMatrixTranspose(view));
+		XMStoreFloat4x4(&m_cnstPass.tmProj, XMMatrixTranspose(proj));
+		XMStoreFloat4x4(&m_cnstPass.tmViewProj, XMMatrixTranspose(viewProj));
+
+		currPassCB->CopyData(0, m_cnstPass);
+	}
+
+	// const material
 	auto currMaterialCB = m_frameRscCur->m_cnsgbMaterial.get();
-	// Only update the cbuffer data if the constants have changed.  If the cbuffer
-	// data changes, it needs to be updated for each FrameResource.
-
-	if (m_wireBox->Mat->NumFramesDirty > 0)
 	{
 		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireBox->Mat->matConst.tmTexCoord);
 
@@ -295,29 +312,8 @@ void MainApp::UpdateMaterialCBs(const GameTimer& gt)
 		matConstants.DiffuseAlbedo = m_wireBox->Mat->matConst.DiffuseAlbedo;
 		XMStoreFloat4x4(&matConstants.tmTexCoord, XMMatrixTranspose(matTransform));
 
-		currMaterialCB->CopyData(m_wireBox->Mat->MatCBIndex, matConstants);
-
-		// Next FrameResource need to be updated too.
-		m_wireBox->Mat->NumFramesDirty--;
+		currMaterialCB->CopyData(0, matConstants);
 	}
-}
-
-void MainApp::UpdateMainPassCB(const GameTimer& gt)
-{
-	XMMATRIX view = XMLoadFloat4x4(&mView);
-	XMMATRIX proj = XMLoadFloat4x4(&mProj);
-
-	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
-	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
-	XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
-	XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
-
-	XMStoreFloat4x4(&m_cnstPass.tmView, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&m_cnstPass.tmProj, XMMatrixTranspose(proj));
-	XMStoreFloat4x4(&m_cnstPass.tmViewProj, XMMatrixTranspose(viewProj));
-
-	auto currPassCB = m_frameRscCur->m_cnstPass.get();
-	currPassCB->CopyData(0, m_cnstPass);
 }
 
 int MainApp::UpdateFrameResource()
@@ -356,22 +352,17 @@ void MainApp::BuildBox()
 	std::vector<std::uint16_t> indices = box.GetIndices16();
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-	m_wireBox->Geo = new MeshGeometry;
-
-	m_wireBox->Geo->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
-	m_wireBox->Geo->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
+	m_wireBox->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
+	m_wireBox->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 
 	// constant values
 	//--------------------------------------------------------------------------
 	m_wireBox->Mat = new Material;
-	m_wireBox->Mat->MatCBIndex = 0;
 	m_wireBox->Mat->matConst.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
-
-	XMStoreFloat4x4(&m_wireBox->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-	m_wireBox->ObjCBIndex = 0;
-	m_wireBox->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	XMStoreFloat4x4(&m_wireBox->m_World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
+	m_wireBox->primitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	// setup srv decriptor
 	//
@@ -439,9 +430,9 @@ void MainApp::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	auto matCB = m_frameRscCur->m_cnsgbMaterial->Resource();
 
 
-	cmdList->IASetVertexBuffers(0, 1, &m_wireBox->Geo->vtx.VertexBufferView());
-	cmdList->IASetIndexBuffer(&m_wireBox->Geo->idx.IndexBufferView());
-	cmdList->IASetPrimitiveTopology(m_wireBox->PrimitiveType);
+	cmdList->IASetVertexBuffers(0, 1, &m_wireBox->vtx.VertexBufferView());
+	cmdList->IASetIndexBuffer(&m_wireBox->idx.IndexBufferView());
+	cmdList->IASetPrimitiveTopology(m_wireBox->primitive);
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_wireBox->srvDesc->GetGPUDescriptorHandleForHeapStart());
 	// m_wireBox->srvDesc 에 텍스처가 여러게 바인딩 되었을 때 해당 인덱스
@@ -456,7 +447,7 @@ void MainApp::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	cmdList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 	cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
 
-	cmdList->DrawIndexedInstanced(m_wireBox->Geo->idx.entryCount, 1, 0, 0, 0);
+	cmdList->DrawIndexedInstanced(m_wireBox->idx.entryCount, 1, 0, 0, 0);
 }
 
 float MainApp::GetHillsHeight(float x, float z)const

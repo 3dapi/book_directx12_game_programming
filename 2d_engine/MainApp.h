@@ -24,16 +24,16 @@ struct RenderItem
 {
 	RenderItem() = default;
 
-	MeshGeometry*				Geo = nullptr;
-	Material*					 Mat = nullptr;
+	G2::StaticResBufVtx			vtx{};
+	G2::StaticResBufIdx			idx{};
+	Material*					Mat = nullptr;
 	ComPtr<ID3D12DescriptorHeap> srvDesc = nullptr;
-	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	D3D_PRIMITIVE_TOPOLOGY		primitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 
-    XMFLOAT4X4 World = MathHelper::Identity4x4();
+    XMFLOAT4X4 m_World = MathHelper::Identity4x4();
 	XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
-	int NumFramesDirty = d3dUtil::getFrameRscCount();
-	UINT ObjCBIndex = -1;
+	bool bUpdated = true;
 };
 
 enum class RenderLayer : int
@@ -60,9 +60,7 @@ public:
 private:
     void OnKeyboardInput(const GameTimer& gt);
 	void UpdateCamera(const GameTimer& gt);
-	void UpdateObjectCBs(const GameTimer& gt);
-	void UpdateMaterialCBs(const GameTimer& gt);
-	void UpdateMainPassCB(const GameTimer& gt);
+	void UpdateBox(const GameTimer& gt);
 	int	 UpdateFrameResource();
 
 	void BuildBox();
