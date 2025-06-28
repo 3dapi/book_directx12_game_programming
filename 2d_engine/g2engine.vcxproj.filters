@@ -72,15 +72,15 @@
     <ClCompile Include="Common\G2.FrameConsts.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="SceneGameMesh.cpp">
+      <Filter>s</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\MathHelper.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="Common\UploadBuffer.h">
-      <Filter>h</Filter>
-    </ClInclude>
-    <ClInclude Include="MainApp.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="Common\D3DWinApp.h">
@@ -137,9 +137,15 @@
     <ClInclude Include="Common\G2.FrameConsts.h">
       <Filter>Common</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <ClInclude Include="AppConst.h">
+      <Filter>s</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneGameMesh.h">
+      <Filter>s</Filter>
+    </ClInclude>
+    <ClInclude Include="MainApp.h">
+      <Filter>s</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Default.hlsl">
@@ -148,5 +154,10 @@
     <FxCompile Include="Shaders\2dsprite.hlsl">
       <Filter>r</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config">
+      <Filter>s</Filter>
+    </None>
   </ItemGroup>
 </Project>
