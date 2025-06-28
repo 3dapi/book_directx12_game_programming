@@ -12,43 +12,8 @@
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
 #include "Common/GeometryGenerator.h"
-#include "FrameResource.h"
 #include "Common/D3DWinApp.h"
-
-using Microsoft::WRL::ComPtr;
-using namespace DirectX;
-using namespace DirectX::PackedVector;
-
-// Lightweight structure stores parameters to draw a shape.  This will
-// vary from app-to-app.
-struct RenderItem
-{
-	RenderItem() = default;
-    XMFLOAT4X4 World = MathHelper::Identity4x4();
-	XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
-	int NumFramesDirty = d3dUtil::getFrameRscCount();
-	UINT ObjCBIndex = -1;
-
-	Material* Mat = nullptr;
-	MeshGeometry* Geo = nullptr;
-
-    // Primitive topology.
-    D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-    // DrawIndexedInstanced parameters.
-    UINT IndexCount = 0;
-    UINT StartIndexLocation = 0;
-    int BaseVertexLocation = 0;
-};
-
-enum class RenderLayer : int
-{
-	Opaque = 0,
-	Transparent,
-	AlphaTested,
-	AlphaTestedTreeSprites,
-	Count
-};
+#include "AppCommon.h"
 
 class MainApp : public D3DWinApp
 {
@@ -64,55 +29,8 @@ public:
 	void	OnMouseDown(WPARAM btnState, const ::POINT& )	override;
 	void	OnMouseUp(WPARAM btnState, const ::POINT& )		override;
 	void	OnMouseMove(WPARAM btnState, const ::POINT& )	override;
+	void	OnKeyboardInput(const GameTimer& gt);
 
-private:
-    void OnKeyboardInput(const GameTimer& gt);
-	void UpdateCamera(const GameTimer& gt);
-	void UpdateObjectCBs(const GameTimer& gt);
-	void UpdateMaterialCBs(const GameTimer& gt);
-	void UpdateMainPassCB(const GameTimer& gt);
-	int	 UpdateFrameResource();
-
-	void BuildDescriptorHeaps();
-    void BuildLandGeometry();
-	void BuildBoxGeometry();
-	void BuildTreeSpritesGeometry();
-    void BuildFrameResources();
-    void BuildMaterials();
-    void BuildRenderItems();
-    void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
-
-    float GetHillsHeight(float x, float z)const;
-    XMFLOAT3 GetHillsNormal(float x, float z)const;
-
-private:
-
-	std::vector<std::unique_ptr<FrameResource>> m_frameRscLst;
-	FrameResource*	m_frameRscCur = nullptr;
-	int				m_frameRscIdx = 0;
-
-    UINT mCbvSrvDescriptorSize = 0;
-
-	ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
-
-	std::unordered_map<std::string, std::unique_ptr<MeshGeometry> > mGeometries;
-	std::unordered_map<std::string, std::unique_ptr<Material> > mMaterials;
-
-	// List of all the render items.
-	std::vector<std::unique_ptr<RenderItem>> mAllRitems;
-
-	// Render items divided by PSO.
-	std::vector<RenderItem*> mRitemLayer[(int)RenderLayer::Count];
-
-    ShaderConstPass m_cnstbPass;
-
-	XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
-	XMFLOAT4X4 mView = MathHelper::Identity4x4();
-	XMFLOAT4X4 mProj = MathHelper::Identity4x4();
-
-    float mTheta = 1.5f*XM_PI;
-    float mPhi = XM_PIDIV2 - 0.1f;
-    float mRadius = 50.0f;
-
-    POINT mLastMousePos	{};
+protected:
+	unique_ptr<IG2Scene>					m_pSceneMesh{};
 };
