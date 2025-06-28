@@ -6,34 +6,18 @@
 #include "Common/G2.Geometry.h"
 #include "common/G2.ConstantsWin.h"
 #include "Common/GameTimer.h"
-#include "AppConst.h"
-#include "FrameResource.h"
+#include "AppCommon.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace G2;
-
-struct RenderItem
-{
-	RenderItem() = default;
-
-	::G2::StaticResBufVtx	vtx{};
-	::G2::StaticResBufIdx	idx{};
-	Material* Mat = nullptr;
-	ComPtr<ID3D12DescriptorHeap> srvDesc = nullptr;
-	D3D_PRIMITIVE_TOPOLOGY		primitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-
-	XMFLOAT4X4 m_World = MathHelper::Identity4x4();
-	XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
-	bool bUpdated = true;
-};
 
 class SceneGameMesh : public IG2Scene
 {
 public:
 	SceneGameMesh();
 	virtual ~SceneGameMesh();
+
 	int		Type()									override { return EAPP_SCENE::EAPP_SCENE_MESH; }
 	int		Init(const std::any& initialValue = {})	override;
 	int		Destroy()								override;
@@ -41,23 +25,24 @@ public:
 	int		Render()								override;
 
 protected:
-	void BuildFrameResources();
-	int	 UpdateFrameResource();
+	void SetupUploadChain();
+	int	 UpdateUploadChain();
+
+	void UpdateCamera(const GameTimer& gt);
 	void BuildBox();
 	void UpdateBox(const GameTimer& gt);
-	void DrawBox();
+    void DrawBox(ID3D12GraphicsCommandList* cmdList);
 
-protected:
-	std::vector<std::unique_ptr<FrameResource>> m_frameRscLst;
-	FrameResource*	m_frameRscCur = nullptr;
-	int				m_frameRscIdx = 0;
+public:
+	vector<unique_ptr<ShaderUploadChain>>	m_subLst	;
+	ShaderUploadChain*						m_subCur	{};
+	int										m_subIdx	{};
+	RenderItem			m_wireBox{};
 
-	ShaderConstPass		m_cnstPass;
-	XMFLOAT3			mEyePos = { 0.0f, 0.0f, 0.0f };
-	XMFLOAT4X4			mView = MathHelper::Identity4x4();
-	XMFLOAT4X4			mProj = MathHelper::Identity4x4();
-
-	RenderItem*			m_wireBox{};
+	XMFLOAT3	m_tmEyePos = { 0.0f, 0.0f, 0.0f };
+	float		mTheta = 1.5f*XM_PI;
+	float		mPhi = XM_PIDIV2 - 0.1f;
+	float		mRadius = 50.0f;
 };
 
 #endif // _SceneGameMesh_H_

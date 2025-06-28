@@ -1,20 +1,18 @@
-﻿//***************************************************************************************
-// SceneGameMesh.cpp by Frank Luna (C) 2015 All Rights Reserved.
-//***************************************************************************************
+﻿//--------------------------------------------------------------------------------------------------------------------------------------------------------------
+// SceneGameMesh
 
 #include <d3d12.h>
-#include "SceneGameMesh.h"
 #include "Common/DDSTextureLoader.h"
 #include "Common/G2.FactoryTexture.h"
 #include "Common/G2.FactoryShader.h"
 #include "Common/G2.FactorySIgnature.h"
 #include "Common/G2.FactoryPipelineState.h"
+#include "Common/G2.Geometry.h"
 #include "Common/G2.Util.h"
 #include "Common/GeometryGenerator.h"
 #include "SceneGameMesh.h"
-#include "FrameResource.h"
 
-using namespace G2;
+using std::any_cast;
 
 SceneGameMesh::SceneGameMesh()
 {
@@ -24,17 +22,14 @@ SceneGameMesh::~SceneGameMesh()
 {
 }
 
-int SceneGameMesh::Init(const std::any& initialValue /* = */)
+int SceneGameMesh::Init(const std::any&)
 {
-	auto d3d         = IG2GraphicsD3D::instance();
-	auto d3dDevice   = std::any_cast<ID3D12Device*>(d3d->getDevice());
-	auto aspectRatio = *std::any_cast<float*>(d3d->getAttrib(ATT_ASPECTRATIO));
+	auto d3d = IG2GraphicsD3D::instance();
+	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	float aspectRatio    = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
+	 m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
 
-	// 1. load texture
-	auto tex_manager = FactoryTexture::instance();
-	tex_manager->Load("fenceTex", "Textures/WireFence.dds");
-
-	BuildFrameResources();
+	SetupUploadChain();
 	BuildBox();
 
 	return S_OK;
@@ -42,57 +37,107 @@ int SceneGameMesh::Init(const std::any& initialValue /* = */)
 
 int SceneGameMesh::Destroy()
 {
+	FactoryPipelineState::instance()->UnLoadAll();
+	FactorySignature::instance()->UnLoadAll();
+	FactoryShader::instance()->UnLoadAll();
+	FactoryTexture::instance()->UnLoadAll();
 	return S_OK;
 }
 
 int SceneGameMesh::Update(const std::any& t)
 {
-	UpdateFrameResource();
 	GameTimer gt = std::any_cast<GameTimer>(t);
+	// Cycle through the circular frame resource array.
+	UpdateUploadChain();
+	int hr = S_OK;
+	UpdateCamera(gt);
+	UpdateBox(gt);
+
 	return S_OK;
 }
 
 int SceneGameMesh::Render()
 {
 	int hr = S_OK;
+	auto d3d = IG2GraphicsD3D::instance();
+	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
 
 	// Box 그리기
-	DrawBox();
+	DrawBox(d3dCommandList);
 
 	return S_OK;
 }
 
-void SceneGameMesh::BuildFrameResources()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
-	int frameReouseNum = d3dUtil::getFrameRscCount();
-	for (int i = 0; i < frameReouseNum; ++i)
+void SceneGameMesh::UpdateCamera(const GameTimer& t)
+{
+	GameTimer gt = std::any_cast<GameTimer>(t);
+	float aspectRatio = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
+	m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
+
+	// Convert Spherical to Cartesian coordinates.
+	m_tmEyePos.x = mRadius * sinf(mPhi) * cosf(mTheta);
+	m_tmEyePos.z = mRadius * sinf(mPhi) * sinf(mTheta);
+	m_tmEyePos.y = mRadius * cosf(mPhi);
+
+	// Build the view matrix.
+	XMVECTOR pos = XMVectorSet(20, 40, -40, 1.0f);
+	XMVECTOR target = XMVectorZero();
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	m_wireBox.cbPss.tmView = XMMatrixLookAtLH(pos, target, up);
+
+	//constant world transform
+	//auto currObjectCB = m_subCur->m_cnstTranform.get();
+	//{
+	//	XMMATRIX world = XMLoadFloat4x4(&m_cnstWorld.tmWorld);
+	//	ShaderConstTransform objConstants;
+	//	XMStoreFloat4x4(&objConstants.tmWorld, XMMatrixTranspose(world));
+
+	//	currObjectCB->CopyData(0, objConstants);
+	//}
+}
+
+void SceneGameMesh::UpdateBox(const GameTimer& gt)
+{
+	//constant world transform
+	auto currObjectCB = m_subCur->m_cnstTrs.get();
 	{
-		m_frameRscLst.push_back(std::make_unique<FrameResource>(d3dDevice, 1, 1, 1));
+		currObjectCB->CopyData(0, m_wireBox.cbTrs);
+	}
+
+	// constant pass
+	auto currPassCB = m_subCur->m_cnstPss.get();
+	{
+		m_wireBox.cbPss.tmViewProj = XMMatrixMultiply(m_wireBox.cbPss.tmView, m_wireBox.cbPss.tmProj);
+		currPassCB->CopyData(0, m_wireBox.cbPss);
+	}
+
+	// const material
+	auto currMaterialCB = m_subCur->m_cnstMtl.get();
+	{
+		currMaterialCB->CopyData(0, m_wireBox.cbMtl);
 	}
 }
 
-int SceneGameMesh::UpdateFrameResource()
+int SceneGameMesh::UpdateUploadChain()
 {
 	auto d3d = IG2GraphicsD3D::instance();
 	int hr = S_OK;
 	// Cycle through the circular frame resource array.
 	auto rscCount = d3dUtil::getFrameRscCount();
-	m_frameRscIdx = (m_frameRscIdx + 1) % rscCount;
-	m_frameRscCur = m_frameRscLst[m_frameRscIdx].get();
+	m_subIdx = (m_subIdx + 1) % rscCount;
+	m_subCur = m_subLst[m_subIdx].get();
 
 	return S_OK;
 }
 
 void SceneGameMesh::BuildBox()
 {
-	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice       = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	auto cmdList         = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
-	auto srvDescHeapSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	m_wireBox = new RenderItem;
+	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
+	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(IG2GraphicsD3D::instance()->getCommandList());
+	UINT srvDescSize    = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	GeometryGenerator geoGen;
 	GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
@@ -111,17 +156,15 @@ void SceneGameMesh::BuildBox()
 	std::vector<std::uint16_t> indices = box.GetIndices16();
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-	m_wireBox->vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, cmdList);
-	m_wireBox->idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, cmdList);
+	m_wireBox.vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
+	m_wireBox.idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 
 	// constant values
 	//--------------------------------------------------------------------------
-	m_wireBox->Mat = new Material;
-	m_wireBox->Mat->matConst.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-
-	XMStoreFloat4x4(&m_wireBox->m_World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-	m_wireBox->primitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	m_wireBox.cbMtl.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_wireBox.cbTrs.tmWorld = XMMatrixTranslation(3.0f, 2.0f, -9.0f);
+	m_wireBox.primitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	// setup srv decriptor
 	//
@@ -132,12 +175,12 @@ void SceneGameMesh::BuildBox()
 	srvHeapDesc.NumDescriptors = 10;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_wireBox->srvDesc)));
+	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_wireBox.srvDesc)));
 
 	//
 	// Fill out the heap with actual descriptors.
 	//
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_wireBox->srvDesc->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_wireBox.srvDesc->GetCPUDescriptorHandleForHeapStart());
 	auto texture_factory = FactoryTexture::instance();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -149,68 +192,37 @@ void SceneGameMesh::BuildBox()
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = 3;
 	// 1장이면 안써도 됨
-	hDescriptor.Offset(0, srvDescHeapSize);
+	hDescriptor.Offset(0, srvDescSize);
 	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
 }
 
-void SceneGameMesh::UpdateBox(const GameTimer& gt)
+
+
+
+void SceneGameMesh::SetupUploadChain()
 {
-	auto currObjectCB = m_frameRscCur->m_cnstTranform.get();
+	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
-	//constant world transform
+	int frameReouseNum = d3dUtil::getFrameRscCount();
+	for (int i = 0; i < frameReouseNum; ++i)
 	{
-		XMMATRIX world = XMLoadFloat4x4(&m_wireBox->m_World);
-		ShaderConstTransform objConstants;
-		XMStoreFloat4x4(&objConstants.tmWorld, XMMatrixTranspose(world));
-
-		currObjectCB->CopyData(0, objConstants);
-	}
-
-	// constant pass
-	auto currPassCB = m_frameRscCur->m_cnstPass.get();
-	{
-		XMMATRIX view = XMLoadFloat4x4(&mView);
-		XMMATRIX proj = XMLoadFloat4x4(&mProj);
-
-		XMMATRIX viewProj = XMMatrixMultiply(view, proj);
-		XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
-		XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
-		XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
-
-		XMStoreFloat4x4(&m_cnstPass.tmView, XMMatrixTranspose(view));
-		XMStoreFloat4x4(&m_cnstPass.tmProj, XMMatrixTranspose(proj));
-		XMStoreFloat4x4(&m_cnstPass.tmViewProj, XMMatrixTranspose(viewProj));
-
-		currPassCB->CopyData(0, m_cnstPass);
-	}
-
-	// const material
-	auto currMaterialCB = m_frameRscCur->m_cnsgbMaterial.get();
-	{
-		XMMATRIX matTransform = XMLoadFloat4x4(&m_wireBox->Mat->matConst.tmTexCoord);
-
-		ShaderConstMaterial matConstants;
-		matConstants.DiffuseAlbedo = m_wireBox->Mat->matConst.DiffuseAlbedo;
-		XMStoreFloat4x4(&matConstants.tmTexCoord, XMMatrixTranspose(matTransform));
-
-		currMaterialCB->CopyData(0, matConstants);
+		m_subLst.push_back(std::make_unique<ShaderUploadChain>(d3dDevice, 1, 1, 1));
 	}
 }
 
-void SceneGameMesh::DrawBox()
+void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 {
-	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice       = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	auto cmdList         = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
-	auto srvDescHeapSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	FrameResource* currentRsc = m_frameRscCur;// std::any_cast<FrameResource*>(IG2AppFrame::instance()->getAttrib(EAPP_ATT_CUR_CB));
+	auto d3dDevice      = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
+	UINT srvDescSize    = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	auto pls_manager    = FactoryPipelineState::instance();
 
-	auto pls_manager = FactoryPipelineState::instance();
+	// root signature
 	auto signature = FactorySignature::instance()->FindRes("TEX_1");
 	cmdList->SetGraphicsRootSignature(signature);
 
+
 	// shader reource view desciptor 설정: texture 정보
-	ID3D12DescriptorHeap* descriptorHeaps[] = { m_wireBox->srvDesc.Get() };
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_wireBox.srvDesc.Get() };
 	cmdList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 	auto pls = pls_manager->FindRes("PLS_ALPHATEST");
@@ -221,27 +233,27 @@ void SceneGameMesh::DrawBox()
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstTransform));
 	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstMaterial));
 
-	auto objectCB = currentRsc->m_cnstTranform->Resource();
-	auto passCB = currentRsc->m_cnstPass->Resource();
-	auto matCB = currentRsc->m_cnsgbMaterial->Resource();
+	auto cbTrs = m_subCur->m_cnstTrs->Resource();
+	auto cbPss = m_subCur->m_cnstPss->Resource();
+	auto cbMtl = m_subCur->m_cnstMtl->Resource();
 
 
-	cmdList->IASetVertexBuffers(0, 1, &m_wireBox->vtx.VertexBufferView());
-	cmdList->IASetIndexBuffer(&m_wireBox->idx.IndexBufferView());
-	cmdList->IASetPrimitiveTopology(m_wireBox->primitive);
+	cmdList->IASetVertexBuffers(0, 1, &m_wireBox.vtx.VertexBufferView());
+	cmdList->IASetIndexBuffer(&m_wireBox.idx.IndexBufferView());
+	cmdList->IASetPrimitiveTopology(m_wireBox.primitive);
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_wireBox->srvDesc->GetGPUDescriptorHandleForHeapStart());
-	// m_wireBox->srvDesc 에 텍스처가 여러게 바인딩 되었을 때 해당 인덱스
-	gpu_tex_hp.Offset(0, srvDescHeapSize);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_wireBox.srvDesc->GetGPUDescriptorHandleForHeapStart());
+	// m_wireBox.srvDesc 에 텍스처가 여러게 바인딩 되었을 때 해당 인덱스
+	gpu_tex_hp.Offset(0, srvDescSize);
 
-	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress();
-	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress();
+	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = cbTrs->GetGPUVirtualAddress();
+	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = cbMtl->GetGPUVirtualAddress();
 
 	cmdList->SetGraphicsRootDescriptorTable(0, gpu_tex_hp);
 	// t0가 사용중이라 상수 버퍼 b0는 1에서부터 시작
 	cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
-	cmdList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	cmdList->SetGraphicsRootConstantBufferView(2, cbPss->GetGPUVirtualAddress());
 	cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
 
-	cmdList->DrawIndexedInstanced(m_wireBox->idx.entryCount, 1, 0, 0, 0);
+	cmdList->DrawIndexedInstanced(m_wireBox.idx.entryCount, 1, 0, 0, 0);
 }

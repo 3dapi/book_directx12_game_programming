@@ -29,30 +29,8 @@ public:
 	void	OnMouseDown(WPARAM btnState, const ::POINT& )	override;
 	void	OnMouseUp(WPARAM btnState, const ::POINT& )		override;
 	void	OnMouseMove(WPARAM btnState, const ::POINT& )	override;
+	void	OnKeyboardInput(const GameTimer& gt);
 
 protected:
-	void OnKeyboardInput(const GameTimer& gt);
-
-	void SetupUploadChain();
-	int	 UpdateUploadChain();
-
-	void UpdateCamera(const GameTimer& gt);
-	void BuildBox();
-	void UpdateBox(const GameTimer& gt);
-    void DrawBox(ID3D12GraphicsCommandList* cmdList);
-
-    float GetHillsHeight(float x, float z)const;
-    XMFLOAT3 GetHillsNormal(float x, float z)const;
-
-protected:
-	vector<unique_ptr<ShaderUploadChain>>	m_subLst	;
-	ShaderUploadChain*						m_subCur	{};
-	int										m_subIdx	{};
-	RenderItem			m_wireBox{};
-
-	XMFLOAT3	m_tmEyePos = { 0.0f, 0.0f, 0.0f };
-	float		mTheta = 1.5f*XM_PI;
-	float		mPhi = XM_PIDIV2 - 0.1f;
-	float		mRadius = 50.0f;
-	POINT		mLastMousePos	{};
+	unique_ptr<IG2Scene>					m_pSceneMesh{};
 };
