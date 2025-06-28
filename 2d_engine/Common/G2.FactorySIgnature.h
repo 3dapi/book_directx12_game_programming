@@ -71,7 +71,7 @@ public:
 	// find ID3D12Resource*
 	ID3D12RootSignature* FindRes(const std::string& name);
 protected:
-	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> staticSamplers();
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> samplerRegister();
 protected:
 	bool	m_isLoaded{};
 };

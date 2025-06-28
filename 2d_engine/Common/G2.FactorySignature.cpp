@@ -60,7 +60,7 @@ TD3D_ROOTSIGNATURE* FactorySignature::ResourceLoad()
 			slotRootParameter[i].InitAsConstantBufferView(j);		// register b~~
 		}
 
-		auto samps = staticSamplers();
+		auto samps = samplerRegister();
 
 		// => D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc((UINT)slotRootParameter.size(), slotRootParameter.data(), (UINT)samps.size(), samps.data(), (D3D12_ROOT_SIGNATURE_FLAGS)0x0001);
@@ -122,7 +122,7 @@ ID3D12RootSignature* FactorySignature::FindRes(const std::string& name)
 	return {};
 }
 
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> FactorySignature::staticSamplers()
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> FactorySignature::samplerRegister()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
 
