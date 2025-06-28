@@ -54,10 +54,22 @@ public:
     {
         memcpy(&mMappedData[elementIndex*mElementByteSize], &data, sizeof(T));
     }
+    uint8_t* PtrMapping()
+    {
+        return mMappedData;
+    }
+	UINT PtrSize() const
+	{
+		return mElementByteSize;
+	}
+	bool PtrIsConstBuffer() const
+	{
+		return mIsConstantBuffer;
+	}
 
 private:
     ComPtr<ID3D12Resource> mUploadBuffer;
-    BYTE* mMappedData = nullptr;
+    uint8_t* mMappedData = nullptr;
 
     UINT mElementByteSize = 0;
     bool mIsConstantBuffer = false;

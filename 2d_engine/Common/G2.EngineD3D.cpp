@@ -33,6 +33,7 @@ std::any EngineD3D::getAttrib(int nAttrib)
 	switch ((EG2GRAPHICS_D3D)nAttrib)
 	{
 		case EG2GRAPHICS_D3D::ATT_DEVICE:						return m_d3dDevice;
+		case EG2GRAPHICS_D3D::ATT_ASPECTRATIO:					return &m_aspectRatio;
 		case EG2GRAPHICS_D3D::ATT_SCREEN_SIZE:					return &m_screenSize;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_BACKBUFFER_FORAT:		return &m_d3dFormatBackbuffer;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_DEPTH_STENCIL_FORAT:	return &m_d3dFormatDepthStencil;
@@ -166,7 +167,7 @@ int EngineD3D::InitDevice()
 
 	m_sizeDescriptorB = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	m_sizeDescriptorD = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	mCbvSrvUavDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_srvDescHeapSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	// Check 4X MSAA quality support for our back buffer format.
 	// All Direct3D 11 capable devices support 4X MSAA for all render 
@@ -380,6 +381,8 @@ int EngineD3D::Resize()
 	}
 	m_d3dDepthBuffer.Reset();
 
+	//set up apspect ratio
+	m_aspectRatio = static_cast<float>(m_screenSize.cx) / m_screenSize.cy;
 	// Resize the swap chain.
 	hr = m_d3dSwapChain->ResizeBuffers(FRAME_BUFFER_COUNT, m_screenSize.cx, m_screenSize.cy, m_d3dFormatBackbuffer, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 	if (FAILED(hr))

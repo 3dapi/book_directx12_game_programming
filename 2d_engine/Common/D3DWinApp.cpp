@@ -29,18 +29,15 @@ HWND D3DWinApp::MainWnd()const
 	return mhMainWnd;
 }
 
-float D3DWinApp::AspectRatio()const
-{
-	return static_cast<float>(m_screenSize.cx) / m_screenSize.cx;
-}
-
-void D3DWinApp::Set4xMsaaState(bool value)
+int D3DWinApp::Set4xMsaaState(bool value)
 {
 	int hr = G2::IG2Graphics::instance()->command(G2::EG2GRAPHICS_D3D::CMD_MSAASTATE4X, value);
 	if(SUCCEEDED(hr))
 	{
 		Resize(false);
+		return S_OK;
 	}
+	return E_FAIL;
 }
 
 int D3DWinApp::Run()

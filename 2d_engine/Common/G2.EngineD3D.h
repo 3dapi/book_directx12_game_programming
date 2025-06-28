@@ -67,6 +67,7 @@ public:
 protected:
 	HWND        m_hWnd				{};
 	::SIZE      m_screenSize		{1280, 600};
+	float       	m_aspectRatio		{};
 	// Set true to use 4X MSAA (?.1.8).  The default is false.
 	bool        m_msaa4State		{};    // 4X MSAA enabled
 	UINT        m_msaa4Quality		{};      // quality level of 4X MSAA
@@ -99,7 +100,7 @@ protected:
 	D3D12_RECT                          m_d3dScissor            {};
 	UINT                                m_sizeDescriptorB       {};	// back buffer
 	UINT                                m_sizeDescriptorD       {};	// depth stencil
-	UINT                                mCbvSrvUavDescriptorSize{};
+	UINT                                m_srvDescHeapSize       {};	// srv descriptor heap size
 };
 
 }// namespace G2
