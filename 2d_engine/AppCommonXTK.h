@@ -27,7 +27,7 @@
 #include "SpriteFont.h"
 #include "DescriptorHeap.h"
 #include "CommonStates.h"
-
+#include "WICTextureLoader.h"
 
 
 typedef PrimitiveBatch<DirectX::VertexPositionColor>		XTK_BATCH;

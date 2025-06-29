@@ -324,7 +324,7 @@ void SceneXtkGame::CreateDeviceDependentResources()
 
 		ThrowIfFailed(CreateDDSTextureFromFile(device,resourceUpload,L"assets/seafloor.dds",m_texture1.ReleaseAndGetAddressOf()) );
 		CreateShaderResourceView(device,m_texture1.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::SeaFloor));
-		ThrowIfFailed( CreateDDSTextureFromFile(device,resourceUpload,L"assets/windowslogo.dds",m_texture2.ReleaseAndGetAddressOf()) );
+		ThrowIfFailed( CreateWICTextureFromFileEx(device,resourceUpload,L"assets/texture/res_checker.png", 0, D3D12_RESOURCE_FLAG_NONE, WIC_LOADER_DEFAULT, m_texture2.ReleaseAndGetAddressOf()) );
 
 		CreateShaderResourceView(device,m_texture2.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::WindowsLogo));
 
