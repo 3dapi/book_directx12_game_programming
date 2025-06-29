@@ -481,6 +481,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="DirectXTK12\DirectXTK12.vcxproj">
+      <Project>{3049d276-bc04-419e-b8e7-1842bf09a49e}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="packages\Microsoft.Direct3D.D3D12.1.616.1\build\native\Microsoft.Direct3D.D3D12.targets" Condition="Exists('packages\Microsoft.Direct3D.D3D12.1.616.1\build\native\Microsoft.Direct3D.D3D12.targets')" />
