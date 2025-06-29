@@ -2,7 +2,6 @@
 #include <iostream>
 #include <memory>
 #include <Windows.h>
-#include "d3dUtil.h"
 #include "G2.Util.h"
 #include "G2.EngineD3D.h"
 
@@ -465,7 +464,7 @@ int EngineD3D::FlushCommandQueue()
 	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dFenceIndex);
 	if(FAILED(hr))
 	{
-		DebugToOutputWindow("FAILED: EngineD3D::FlushCommandQueue:: Signal");
+		debugToOutputWindow("FAILED: EngineD3D::FlushCommandQueue:: Signal");
 	}
 	ThrowIfFailed(hr);
 

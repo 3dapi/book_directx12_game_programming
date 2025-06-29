@@ -1,13 +1,9 @@
-﻿//***************************************************************************************
-// d3dApp.cpp by Frank Luna (C) 2015 All Rights Reserved.
-//***************************************************************************************
-
+﻿
 #include <WindowsX.h>
 #include "D3DWinApp.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace std;
-using namespace DirectX;
 using namespace G2;
 
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)

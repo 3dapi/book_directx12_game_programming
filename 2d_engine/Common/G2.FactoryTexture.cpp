@@ -1,9 +1,8 @@
 ﻿
 #include <tuple>
 #include <string>
-#include "d3dUtil.h"
-#include "G2.ConstantsWin.h"
 #include "D12DDSTextureLoader.h"
+#include "G2.ConstantsWin.h"
 #include "G2.FactoryTexture.h"
 #include "G2.Util.h"
 

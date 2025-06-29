@@ -16,6 +16,11 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace G2;
 
+enum EAPP_CONST
+{
+	EAPP_FRAME_RESOURCE_CHAIN_NUMBER	= 2,		// Cycle through the circular frame resource array.
+};
+
 enum EAPP_ATTRIB
 {
 	EAPP_ATT_CUR_CB		= 0x0101,		// current const buffer

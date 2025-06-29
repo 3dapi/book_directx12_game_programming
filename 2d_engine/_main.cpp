@@ -13,6 +13,7 @@
 #endif
 #include "MainApp.h"
 
+
 #if 0
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, PSTR cmdLine, int showCmd)
 {
@@ -36,7 +37,7 @@ int main(int, char**)
         hr = appMain->Run();
         delete appMain;
     }
-    catch(DxException& e)
+    catch(DXException& e)
     {
         MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
         return 0;

@@ -3,7 +3,7 @@
 
 #include <Windows.h>
 #include "G2.ConstantsWin.h"
-#include "d3dUtil.h"
+#include "G2.Util.h"
 #include "GameTimer.h"
 
 using namespace std;

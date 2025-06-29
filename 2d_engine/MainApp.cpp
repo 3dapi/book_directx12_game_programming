@@ -14,7 +14,6 @@
 #include "SceneGameMesh.h"
 
 static MainApp* g_pMain{};
-
 G2::IG2AppFrame* G2::IG2AppFrame::instance()
 {
 	if (!g_pMain)
@@ -26,12 +25,17 @@ G2::IG2AppFrame* G2::IG2AppFrame::instance()
 
 MainApp::MainApp()
 {
-	d3dUtil::setFrameReourceNumer(2);
 }
 
 MainApp::~MainApp()
 {
 }
+
+bool IsKeyDown(int vkeyCode)
+{
+	return (GetAsyncKeyState(vkeyCode) & 0x8000) != 0;
+}
+
 
 int MainApp::init(const std::any& initialValue /* = */)
 {

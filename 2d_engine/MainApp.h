@@ -15,6 +15,8 @@
 #include "Common/D3DWinApp.h"
 #include "AppCommon.h"
 
+using namespace G2;
+
 class MainApp : public D3DWinApp
 {
 public:

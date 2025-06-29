@@ -6,6 +6,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <Windows.h>
 #include <d3dcommon.h>
@@ -82,7 +83,7 @@ inline std::wstring utf8ToWstr(const std::string& str)
 	return wstr;
 }
 
-inline std::wstring mbToWstr(const std::string& str)
+inline std::wstring ansiToWstr(const std::string& str)
 {
 	int len = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, nullptr, 0);
 	if (1 >= len)
@@ -92,7 +93,7 @@ inline std::wstring mbToWstr(const std::string& str)
 	return wstr;
 }
 
-inline void DebugToOutputWindow(const char* format, ...)
+inline void debugToOutputWindow(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -112,8 +113,50 @@ inline void DebugToOutputWindow(const char* format, ...)
 	va_end(args);
 }
 
+inline UINT alignTo256(UINT byteSize)
+{
+	// Constant buffers must be a multiple of the minimum hardware
+	// allocation size (usually 256 bytes).  So round up to nearest
+	// multiple of 256.  We do this by adding 255 and then masking off
+	// the lower 2 bytes which store all bits < 256.
+	// Example: Suppose byteSize = 300.
+	// (300 + 255) & ~255
+	// 555 & ~255
+	// 0x022B & ~0x00ff
+	// 0x022B & 0xff00
+	// 0x0200
+	// 512
+	return (byteSize + 255) & ~255;
+}
+
 ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string& shaderModel, const std::string& entryPoint, const void* macros = {});
 //HRESULT		DXCreateDDSTextureFromFile(ID3D12Device* device , ID3D12GraphicsCommandList* cmdList, const std::string& szFileName , ComPtr<ID3D12Resource>& texture, ComPtr<ID3D12Resource>& uploadHeap);
+
+std::pair<std::vector<uint8_t>, int>	// buffer, result
+readFileBinary(const std::string& fileName);
+ComPtr<ID3DBlob> readFileToBlob(const std::string& fileName);
+
+class DXException
+{
+public:
+	DXException() = default;
+	DXException(HRESULT hr, const std::string& functionName, const std::string& filename, int lineNumber);
+	std::wstring ToString()const;
+
+	HRESULT     errorCode = S_OK;
+	std::string functionName;
+	std::string fileName;
+	int         lineNumber = -1;
+};
+
+#ifndef ThrowIfFailed
+#define ThrowIfFailed(x) {                              \
+    if(FAILED(x)) {                                     \
+		throw DXException(x, __func__ , __FILE__, __LINE__);  \
+	}                                                   \
+}
+#endif
+
 
 } // namespace G2
 

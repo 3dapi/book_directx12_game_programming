@@ -170,9 +170,7 @@ int SceneGameMesh::UpdateUploadChain()
 {
 	auto d3d = IG2GraphicsD3D::instance();
 	int hr = S_OK;
-	// Cycle through the circular frame resource array.
-	auto rscCount = d3dUtil::getFrameRscCount();
-	m_subIdx = (m_subIdx + 1) % rscCount;
+	m_subIdx = (m_subIdx + 1) % int(EAPP_CONST::EAPP_FRAME_RESOURCE_CHAIN_NUMBER);
 	m_subCur = m_subLst[m_subIdx].get();
 
 	return S_OK;
@@ -247,9 +245,7 @@ void SceneGameMesh::BuildBox()
 void SceneGameMesh::SetupUploadChain()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-
-	int frameReouseNum = d3dUtil::getFrameRscCount();
-	for (int i = 0; i < frameReouseNum; ++i)
+	for (int i = 0; i < int(EAPP_CONST::EAPP_FRAME_RESOURCE_CHAIN_NUMBER); ++i)
 	{
 		m_subLst.push_back(std::make_unique<ShaderUploadChain>(d3dDevice, 1, 1, 1));
 	}
@@ -275,8 +271,8 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 
 
 
-	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstTransform));
-	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstMaterial));
+	UINT objCBByteSize = G2::alignTo256(sizeof(ShaderConstTransform));
+	UINT matCBByteSize = G2::alignTo256(sizeof(ShaderConstMaterial));
 
 	auto cbTrs = m_subCur->m_cnstTrs->Resource();
 	auto cbPss = m_subCur->m_cnstPss->Resource();
