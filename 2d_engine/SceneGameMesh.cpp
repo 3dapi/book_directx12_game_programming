@@ -2,7 +2,8 @@
 // SceneGameMesh
 
 #include <d3d12.h>
-#include "Common/DDSTextureLoader.h"
+#include "DDSTextureLoader.h"
+#include "Common/D12DDSTextureLoader.h"
 #include "Common/G2.FactoryTexture.h"
 #include "Common/G2.FactoryShader.h"
 #include "Common/G2.FactorySIgnature.h"
@@ -11,6 +12,9 @@
 #include "Common/G2.Util.h"
 #include "Common/GeometryGenerator.h"
 #include "SceneGameMesh.h"
+
+#include <pix.h>
+#include "CommonStates.h"
 
 using std::any_cast;
 
@@ -25,13 +29,31 @@ SceneGameMesh::~SceneGameMesh()
 int SceneGameMesh::Init(const std::any&)
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto device       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	float aspectRatio    = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
 	 m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
 
 	SetupUploadChain();
 	BuildBox();
 
+	auto formatBackBuffer  = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_BACKBUFFER_FORAT	));
+	auto formatDepthBuffer = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_DEPTH_STENCIL_FORAT));
+
+	m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
+	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(device);
+
+	const RenderTargetState rtState(formatBackBuffer, formatDepthBuffer);
+	{
+		EffectPipelineStateDescription pd(
+			&VertexPositionColor::InputLayout,
+			CommonStates::Opaque,
+			CommonStates::DepthNone,
+			CommonStates::CullNone,
+			rtState,
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+
+		m_lineEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, pd);
+	}
 	return S_OK;
 }
 
@@ -53,6 +75,24 @@ int SceneGameMesh::Update(const std::any& t)
 	UpdateCamera(gt);
 	UpdateBox(gt);
 
+	m_world = XMMatrixRotationY(gt.TotalTime() * XM_PIDIV4);
+
+	const XMFLOAT3 eye(0.0f, 0.7f, -8.0f);
+	const XMFLOAT3 at(0.0f, -0.1f, 0.0f);
+	const XMFLOAT3 up(0.0f,  1.0f, 0.0f);
+	//m_view = Matrix::CreateLookAt(eye, at, up);
+	m_view = XMMatrixLookAtRH(XMLoadFloat3(&eye), XMLoadFloat3(&at), XMLoadFloat3(&up));
+
+	m_lineEffect->SetView(m_view);
+
+	XMMATRIX projLH = m_wireBox.cbPss.tmProj;
+	XMMATRIX flipZ = XMMatrixScaling(1.0f, 1.0f, -1.0f); // Z축 반전
+
+	XMMATRIX projRH = flipZ * projLH;
+
+	m_lineEffect->SetProjection(projRH);
+	m_lineEffect->SetWorld(XMMatrixIdentity());
+
 	return S_OK;
 }
 
@@ -66,6 +106,11 @@ int SceneGameMesh::Render()
 	// Box 그리기
 	DrawBox(d3dCommandList);
 
+	// Draw procedurally generated dynamic grid
+	const XMVECTORF32 xaxis = { 20.f, 0.f, 0.f };
+	const XMVECTORF32 yaxis = { 0.f, 0.f, 20.f };
+	DrawGrid(xaxis, yaxis, g_XMZero, 20, 20, Colors::Gray);
+
 	return S_OK;
 }
 
@@ -74,7 +119,7 @@ void SceneGameMesh::UpdateCamera(const GameTimer& t)
 {
 	GameTimer gt = std::any_cast<GameTimer>(t);
 	float aspectRatio = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
-	m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
+	m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovRH(0.25f * XM_PI, aspectRatio, 1.0f, 5000.0f);
 
 	// Convert Spherical to Cartesian coordinates.
 	m_tmEyePos.x = mRadius * sinf(mPhi) * cosf(mTheta);
@@ -86,7 +131,7 @@ void SceneGameMesh::UpdateCamera(const GameTimer& t)
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	m_wireBox.cbPss.tmView = XMMatrixLookAtLH(pos, target, up);
+	m_wireBox.cbPss.tmView = XMMatrixLookAtRH(pos, target, up);
 
 	//constant world transform
 	//auto currObjectCB = m_subCur->m_cnstTranform.get();
@@ -256,4 +301,48 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
 
 	cmdList->DrawIndexedInstanced(m_wireBox.idx.entryCount, 1, 0, 0, 0);
+}
+
+void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMVECTOR yAxis, DirectX::FXMVECTOR origin, size_t xdivs, size_t ydivs, DirectX::GXMVECTOR color)
+{
+	auto d3d = IG2GraphicsD3D::instance();
+	auto d3dDevice    = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto commandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
+
+	PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Draw grid");
+
+	m_lineEffect->Apply(commandList);
+
+	m_batch->Begin(commandList);
+
+	xdivs = std::max<size_t>(1, xdivs);
+	ydivs = std::max<size_t>(1, ydivs);
+
+	for (size_t i = 0; i <= xdivs; ++i)
+	{
+		float fPercent = float(i) / float(xdivs);
+		fPercent = (fPercent * 2.0f) - 1.0f;
+		XMVECTOR vScale = XMVectorScale(xAxis, fPercent);
+		vScale = XMVectorAdd(vScale, origin);
+
+		const VertexPositionColor v1(XMVectorSubtract(vScale, yAxis), color);
+		const VertexPositionColor v2(XMVectorAdd(vScale, yAxis), color);
+		m_batch->DrawLine(v1, v2);
+	}
+
+	for (size_t i = 0; i <= ydivs; i++)
+	{
+		float fPercent = float(i) / float(ydivs);
+		fPercent = (fPercent * 2.0f) - 1.0f;
+		XMVECTOR vScale = XMVectorScale(yAxis, fPercent);
+		vScale = XMVectorAdd(vScale, origin);
+
+		const VertexPositionColor v1(XMVectorSubtract(vScale, xAxis), color);
+		const VertexPositionColor v2(XMVectorAdd(vScale, xAxis), color);
+		m_batch->DrawLine(v1, v2);
+	}
+
+	m_batch->End();
+
+	PIXEndEvent(commandList);
 }

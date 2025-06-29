@@ -18,12 +18,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Common\MathHelper.cpp">
-      <Filter>s</Filter>
-    </ClCompile>
-    <ClCompile Include="MainApp.cpp">
-      <Filter>s</Filter>
-    </ClCompile>
     <ClCompile Include="_main.cpp">
       <Filter>s</Filter>
     </ClCompile>
@@ -33,7 +27,7 @@
     <ClCompile Include="Common\d3dUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Common\DDSTextureLoader.cpp">
+    <ClCompile Include="Common\D12DDSTextureLoader.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Common\GameTimer.cpp">
@@ -75,18 +69,21 @@
     <ClCompile Include="ShaderUploadChain.cpp">
       <Filter>s</Filter>
     </ClCompile>
+    <ClCompile Include="MainApp.cpp">
+      <Filter>s</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\MathHelper.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Common\MathHelper.h">
-      <Filter>h</Filter>
-    </ClInclude>
     <ClInclude Include="Common\D3DWinApp.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\d3dUtil.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Common\DDSTextureLoader.h">
+    <ClInclude Include="Common\D12DDSTextureLoader.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\G2.Constants.h">
@@ -103,9 +100,6 @@
     </ClInclude>
     <ClInclude Include="Common\G2.ConstantsWin.h">
       <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\d3dx12.h">
-      <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="Common\G2.FactoryTexture.h">
       <Filter>Common</Filter>
@@ -134,6 +128,15 @@
     <ClInclude Include="AppConst.h">
       <Filter>s</Filter>
     </ClInclude>
+    <ClInclude Include="AppCommon.h">
+      <Filter>s</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\UploadBuffer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\d3dx12.h">
+      <Filter>Common</Filter>
+    </ClInclude>
     <ClInclude Include="SceneGameMesh.h">
       <Filter>s</Filter>
     </ClInclude>
@@ -143,10 +146,7 @@
     <ClInclude Include="MainApp.h">
       <Filter>s</Filter>
     </ClInclude>
-    <ClInclude Include="AppCommon.h">
-      <Filter>s</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\UploadBuffer.h">
+    <ClInclude Include="Common\MathHelper.h">
       <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>

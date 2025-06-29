@@ -2,11 +2,21 @@
 #ifndef _SceneGameMesh_H_
 #define _SceneGameMesh_H_
 
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include <DirectXMath.h>
+#include <DirectXColors.h>
+#include <VertexTypes.h>
+
 #include "Common/G2.Constants.h"
 #include "Common/G2.Geometry.h"
 #include "common/G2.ConstantsWin.h"
 #include "Common/GameTimer.h"
 #include "AppCommon.h"
+
+#include "PrimitiveBatch.h"
+#include "Effects.h"				// BasicEffect
+#include "Model.h"					// #include "GraphicsMemory.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -43,6 +53,16 @@ public:
 	float		mTheta = 1.5f*XM_PI;
 	float		mPhi = XM_PIDIV2 - 0.1f;
 	float		mRadius = 50.0f;
+
+
+	std::unique_ptr<DirectX::GraphicsMemory>                                m_graphicsMemory;
+	std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>  m_batch;
+	std::unique_ptr<DirectX::BasicEffect>                                   m_lineEffect;
+
+	XMMATRIX		m_world			= XMMatrixIdentity();
+	XMMATRIX		m_view			= XMMatrixIdentity();;
+
+	void XM_CALLCONV DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMVECTOR yAxis, DirectX::FXMVECTOR origin, size_t xdivs, size_t ydivs, DirectX::GXMVECTOR color);
 };
 
 #endif // _SceneGameMesh_H_
