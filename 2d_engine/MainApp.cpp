@@ -76,8 +76,8 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 	// 1. load texutre
 	auto tex_manager = FactoryTexture::instance();
-	tex_manager->Load("grassTex", "Textures/grass.dds");
-	tex_manager->Load("fenceTex", "Textures/WireFence.dds");
+	tex_manager->Load("grassTex", "assets/texture/grass.dds");
+	tex_manager->Load("fenceTex", "assets/texture/WireFence.dds");
 
 	// 3. Build Shaders And Input Layouts
 	const D3D_SHADER_MACRO defines[] =
