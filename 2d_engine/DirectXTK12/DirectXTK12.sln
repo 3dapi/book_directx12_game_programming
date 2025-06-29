@@ -3,9 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.36107.64
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "g2engine", "g2engine.vcxproj", "{4BA7D399-CD23-4C80-8682-28FC20024F94}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTK12", "DirectXTK12\DirectXTK12.vcxproj", "{3049D276-BC04-419E-B8E7-1842BF09A49E}"
+Project("{B26DD670-F8C7-4069-8FCC-244E818569E6}") = "DirectXTK12", "DirectXTK12.vcxproj", "{3049D276-BC04-419E-B8E7-1842BF09A49E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,14 +13,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Debug|x64.ActiveCfg = Debug|x64
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Debug|x64.Build.0 = Debug|x64
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Debug|x86.ActiveCfg = Debug|Win32
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Debug|x86.Build.0 = Debug|Win32
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Release|x64.ActiveCfg = Release|x64
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Release|x64.Build.0 = Release|x64
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Release|x86.ActiveCfg = Release|Win32
-		{4BA7D399-CD23-4C80-8682-28FC20024F94}.Release|x86.Build.0 = Release|Win32
 		{3049D276-BC04-419E-B8E7-1842BF09A49E}.Debug|x64.ActiveCfg = Debug|x64
 		{3049D276-BC04-419E-B8E7-1842BF09A49E}.Debug|x64.Build.0 = Debug|x64
 		{3049D276-BC04-419E-B8E7-1842BF09A49E}.Debug|x86.ActiveCfg = Debug|Win32
@@ -34,8 +24,5 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {98DF29D9-F2AE-419A-9EBB-EB70D79FE1F0}
 	EndGlobalSection
 EndGlobal
