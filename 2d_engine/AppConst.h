@@ -23,7 +23,11 @@ enum EAPP_CONST
 
 enum EAPP_ATTRIB
 {
-	EAPP_ATT_CUR_CB		= 0x0101,		// current const buffer
+	EAPP_ATT_WIN_HWND					= 0x0101,	// window handle
+	EAPP_ATT_WIN_HINST					,			//
+	EAPP_ATT_XTK_GRAPHICS_MEMORY		,			//
+	EAPP_ATT_XTK_BATCH					,			//
+	EAPP_ATT_CUR_CB			= 0x0301	,			// current const buffer
 };
 enum EAPP_CMD
 {
@@ -34,9 +38,10 @@ enum EAPP_SCENE
 {
 	EAPP_SCENE_NONE  = 0,
 	EAPP_SCENE_MESH,
-	EAPP_SCENE_BEGIN,
-	EAPP_SCENE_LOBBY,
-	EAPP_SCENE_PLAY,
+	EAPP_SCENE_XTK,
+	EAPP_SCENE_BEGIN		=11,
+	EAPP_SCENE_LOBBY		,
+	EAPP_SCENE_PLAY			,
 };
 
 #endif __APPCONST_H__

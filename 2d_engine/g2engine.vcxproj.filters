@@ -13,6 +13,9 @@
       <UniqueIdentifier>{6DB3BBE0-0E5C-4951-9308-68F4F93541F4}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="assets">
+      <UniqueIdentifier>{7c3405bb-5876-4a15-9d39-5194a7d4995a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="_main.cpp">
@@ -138,6 +141,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="StepTimer.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="AppCommonXTK.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

@@ -18,7 +18,7 @@
 
 using std::any_cast;
 
-SceneGameMesh::SceneGameMesh()
+SceneGameMesh::SceneGameMesh() noexcept
 {
 }
 
@@ -38,9 +38,6 @@ int SceneGameMesh::Init(const std::any&)
 
 	auto formatBackBuffer  = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_BACKBUFFER_FORAT	));
 	auto formatDepthBuffer = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_DEPTH_STENCIL_FORAT));
-
-	m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
-	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(device);
 
 	const RenderTargetState rtState(formatBackBuffer, formatDepthBuffer);
 	{
@@ -302,14 +299,15 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMVECTOR yAxis, DirectX::FXMVECTOR origin, size_t xdivs, size_t ydivs, DirectX::GXMVECTOR color)
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto commandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
+	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
+	auto pBatch       = std::any_cast<XTK_BATCH* >(IG2AppFrame::instance()->getAttrib(EAPP_ATTRIB::EAPP_ATT_XTK_BATCH));
 
 	PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Draw grid");
 
 	m_lineEffect->Apply(commandList);
 
-	m_batch->Begin(commandList);
+	pBatch->Begin(commandList);
 
 	xdivs = std::max<size_t>(1, xdivs);
 	ydivs = std::max<size_t>(1, ydivs);
@@ -323,7 +321,7 @@ void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMV
 
 		const VertexPositionColor v1(XMVectorSubtract(vScale, yAxis), color);
 		const VertexPositionColor v2(XMVectorAdd(vScale, yAxis), color);
-		m_batch->DrawLine(v1, v2);
+		pBatch->DrawLine(v1, v2);
 	}
 
 	for (size_t i = 0; i <= ydivs; i++)
@@ -335,10 +333,10 @@ void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMV
 
 		const VertexPositionColor v1(XMVectorSubtract(vScale, xAxis), color);
 		const VertexPositionColor v2(XMVectorAdd(vScale, xAxis), color);
-		m_batch->DrawLine(v1, v2);
+		pBatch->DrawLine(v1, v2);
 	}
 
-	m_batch->End();
+	pBatch->End();
 
 	PIXEndEvent(commandList);
 }
