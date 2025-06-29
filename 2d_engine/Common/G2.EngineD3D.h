@@ -84,6 +84,7 @@ protected:
 	ComPtr<ID3D12Fence>                 m_d3dFence              {};
 	UINT64                              m_d3dFenceIndex         {};
 	UINT64                              m_d3dFenceCurrent       {};
+	HANDLE                              m_fenceEvent            {};
 
 	ComPtr<ID3D12CommandQueue>          m_d3dCommandQueue       {};
 	ComPtr<ID3D12CommandAllocator>      m_d3dCommandAlloc       {};

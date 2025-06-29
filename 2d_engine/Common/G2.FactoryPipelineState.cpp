@@ -1,7 +1,6 @@
 ﻿
 #include <tuple>
 #include <string>
-#include "d3dUtil.h"
 #include "G2.ConstantsWin.h"
 #include "G2.FactoryShader.h"
 #include "G2.FactorySignature.h"

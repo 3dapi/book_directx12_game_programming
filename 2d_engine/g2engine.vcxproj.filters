@@ -13,15 +13,15 @@
       <UniqueIdentifier>{6DB3BBE0-0E5C-4951-9308-68F4F93541F4}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="assets">
+      <UniqueIdentifier>{7c3405bb-5876-4a15-9d39-5194a7d4995a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="_main.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="Common\D3DWinApp.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="Common\d3dUtil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Common\D12DDSTextureLoader.cpp">
@@ -63,18 +63,15 @@
     <ClCompile Include="SceneGameMesh.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="ShaderUploadChain.cpp">
+    <ClCompile Include="MainApp.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="MainApp.cpp">
+    <ClCompile Include="SceneXtkGame.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\D3DWinApp.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\d3dUtil.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\D12DDSTextureLoader.h">
@@ -128,9 +125,6 @@
     <ClInclude Include="Common\UploadBuffer.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Common\d3dx12.h">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="SceneGameMesh.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -142,6 +136,15 @@
     </ClInclude>
     <ClInclude Include="Common\MathHelper.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneXtkGame.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="StepTimer.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="AppCommonXTK.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

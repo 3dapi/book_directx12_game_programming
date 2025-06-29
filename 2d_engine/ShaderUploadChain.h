@@ -27,12 +27,16 @@ struct ShaderConstMaterial
 
 struct ShaderUploadChain
 {
-public:
-	ShaderUploadChain(ID3D12Device* device, UINT cbTrsCount=1, UINT cbPssCount=1, UINT cbMtlCount=1);
+	std::unique_ptr<UploadBuffer<ShaderConstTransform>	>   m_cnstTrs ={};
+	std::unique_ptr<UploadBuffer<ShaderConstPass>       >   m_cnstPss ={};
+	std::unique_ptr<UploadBuffer<ShaderConstMaterial>   >   m_cnstMtl ={};
+
 	ShaderUploadChain(const ShaderUploadChain& rhs) = delete;
 	ShaderUploadChain& operator=(const ShaderUploadChain& rhs) = delete;
-
-	std::unique_ptr<UploadBuffer<ShaderConstTransform>	>   m_cnstTrs = {};
-	std::unique_ptr<UploadBuffer<ShaderConstPass>       >   m_cnstPss = {};
-	std::unique_ptr<UploadBuffer<ShaderConstMaterial>   >   m_cnstMtl = {};
+	ShaderUploadChain(ID3D12Device* device,UINT cbTrsCount=1,UINT cbPssCount=1,UINT cbMtlCount=1)
+	{
+		m_cnstTrs   = std::make_unique<UploadBuffer<ShaderConstTransform    > >(device,cbTrsCount,true);
+		m_cnstPss   = std::make_unique<UploadBuffer<ShaderConstPass         > >(device,cbPssCount,true);
+		m_cnstMtl   = std::make_unique<UploadBuffer<ShaderConstMaterial     > >(device,cbMtlCount,true);
+	}
 };

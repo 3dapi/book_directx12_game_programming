@@ -2,7 +2,6 @@
 #include <iostream>
 #include <memory>
 #include <Windows.h>
-#include "d3dUtil.h"
 #include "G2.Util.h"
 #include "G2.EngineD3D.h"
 
@@ -149,6 +148,11 @@ int EngineD3D::init(const std::any& initialValue)
 
 int EngineD3D::destroy()
 {
+	if(m_fenceEvent)
+	{
+		CloseHandle(m_fenceEvent);
+		m_fenceEvent = nullptr;
+	}
 	return this->ReleaseDevice();
 }
 
@@ -163,6 +167,14 @@ int EngineD3D::InitDevice()
 		return hr;
 
 	// 1. Create synchronization objects.
+	// Create an event handle to use for frame synchronization.
+	m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if(m_fenceEvent == nullptr)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		if(FAILED(hr))
+			return hr;
+	}
 	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3dFence)));
 
 	m_sizeDescriptorB = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -465,21 +477,18 @@ int EngineD3D::FlushCommandQueue()
 	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dFenceIndex);
 	if(FAILED(hr))
 	{
-		DebugToOutputWindow("FAILED: EngineD3D::FlushCommandQueue:: Signal");
+		debugToOutputWindow("FAILED: EngineD3D::FlushCommandQueue:: Signal");
 	}
 	ThrowIfFailed(hr);
 
 	// Wait until the GPU has completed commands up to this fence point.
 	if (m_d3dFence->GetCompletedValue() < m_d3dFenceIndex)
 	{
-		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-
 		// Fire event when GPU hits current fence.  
-		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dFenceIndex, eventHandle));
+		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dFenceIndex, m_fenceEvent));
 
 		// Wait until the GPU hits current fence event is fired.
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
+		std::ignore = WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 	}
 
 	return S_OK;
@@ -492,12 +501,10 @@ int EngineD3D::FenceWait()
 	auto fence = m_d3dFence.Get();
 	if (m_d3dFenceCurrent != 0 && fence->GetCompletedValue() < m_d3dFenceCurrent)
 	{
-		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-		int hr = fence->SetEventOnCompletion(m_d3dFenceCurrent, eventHandle);
+		int hr = fence->SetEventOnCompletion(m_d3dFenceCurrent, m_fenceEvent);
 		if (FAILED(hr))
 			return hr;
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
+		std::ignore = WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 	}
 	return 0;
 }

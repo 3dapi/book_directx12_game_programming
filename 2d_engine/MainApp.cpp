@@ -12,9 +12,9 @@
 #include "Common/G2.Geometry.h"
 #include "Common/G2.Util.h"
 #include "SceneGameMesh.h"
+#include "SceneXtkGame.h"
 
 static MainApp* g_pMain{};
-
 G2::IG2AppFrame* G2::IG2AppFrame::instance()
 {
 	if (!g_pMain)
@@ -26,12 +26,39 @@ G2::IG2AppFrame* G2::IG2AppFrame::instance()
 
 MainApp::MainApp()
 {
-	d3dUtil::setFrameReourceNumer(2);
 }
 
 MainApp::~MainApp()
 {
 }
+
+std::any MainApp::getAttrib(int nAttrib)
+{
+	switch((EAPP_ATTRIB)nAttrib)
+	{
+		case EAPP_ATTRIB::EAPP_ATT_WIN_HWND:					return mhMainWnd;
+		case EAPP_ATTRIB::EAPP_ATT_WIN_HINST:					return mhAppInst;
+		case EAPP_ATTRIB::EAPP_ATT_XTK_GRAPHICS_MEMORY:			return m_graphicsMemory.get();
+		case EAPP_ATTRIB::EAPP_ATT_XTK_BATCH:					return m_batch.get();
+	}
+	return D3DWinApp::getAttrib(nAttrib);
+}
+
+int MainApp::setAttrib(int nAttrib,const std::any& v)
+{
+	 return D3DWinApp::setAttrib(nAttrib);
+}
+
+int MainApp::command(int nCmd,const std::any& v)
+{
+	return D3DWinApp::command(nCmd, v);
+}
+
+bool IsKeyDown(int vkeyCode)
+{
+	return (GetAsyncKeyState(vkeyCode) & 0x8000) != 0;
+}
+
 
 int MainApp::init(const std::any& initialValue /* = */)
 {
@@ -72,14 +99,31 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 	auto pls_manager = FactoryPipelineState::instance();
 
-	auto scene = std::make_unique<SceneGameMesh>();
-	if (scene)
+
+	// create XTK Instance
+	m_graphicsMemory = std::make_unique<GraphicsMemory>(d3dDevice);
+	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(d3dDevice);
 	{
-		if (SUCCEEDED(scene->Init()))
+		auto scene = std::make_unique<SceneGameMesh>();
+		if (scene)
 		{
-			m_pSceneMesh = std::move(scene);
+			if (SUCCEEDED(scene->Init()))
+			{
+				m_pSceneMesh = std::move(scene);
+			}
 		}
 	}
+	{
+		auto scene = std::make_unique<SceneXtkGame>();
+		if(scene)
+		{
+			if(SUCCEEDED(scene->Init()))
+			{
+				m_pSceneXKT = std::move(scene);
+			}
+		}
+	}
+	
 	
 	
 	// Execute the initialization commands.
@@ -120,6 +164,7 @@ int MainApp::Update(const std::any& t)
 	//UpdateBox(gt);
 
 	m_pSceneMesh->Update(t);
+	m_pSceneXKT->Update(t);
 
 	return S_OK;
 }
@@ -170,7 +215,9 @@ int MainApp::Render()
 
 	// Box 그리기
 	m_pSceneMesh->Render();
-	//DrawBox(d3dCommandList);
+
+	// game 그리기
+	m_pSceneXKT->Render();
 
 
 	// Indicate a state transition on the resource usage.

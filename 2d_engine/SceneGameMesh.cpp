@@ -18,7 +18,7 @@
 
 using std::any_cast;
 
-SceneGameMesh::SceneGameMesh()
+SceneGameMesh::SceneGameMesh() noexcept
 {
 }
 
@@ -38,9 +38,6 @@ int SceneGameMesh::Init(const std::any&)
 
 	auto formatBackBuffer  = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_BACKBUFFER_FORAT	));
 	auto formatDepthBuffer = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_DEPTH_STENCIL_FORAT));
-
-	m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
-	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(device);
 
 	const RenderTargetState rtState(formatBackBuffer, formatDepthBuffer);
 	{
@@ -170,9 +167,7 @@ int SceneGameMesh::UpdateUploadChain()
 {
 	auto d3d = IG2GraphicsD3D::instance();
 	int hr = S_OK;
-	// Cycle through the circular frame resource array.
-	auto rscCount = d3dUtil::getFrameRscCount();
-	m_subIdx = (m_subIdx + 1) % rscCount;
+	m_subIdx = (m_subIdx + 1) % int(EAPP_CONST::EAPP_FRAME_RESOURCE_CHAIN_NUMBER);
 	m_subCur = m_subLst[m_subIdx].get();
 
 	return S_OK;
@@ -247,9 +242,7 @@ void SceneGameMesh::BuildBox()
 void SceneGameMesh::SetupUploadChain()
 {
 	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-
-	int frameReouseNum = d3dUtil::getFrameRscCount();
-	for (int i = 0; i < frameReouseNum; ++i)
+	for (int i = 0; i < int(EAPP_CONST::EAPP_FRAME_RESOURCE_CHAIN_NUMBER); ++i)
 	{
 		m_subLst.push_back(std::make_unique<ShaderUploadChain>(d3dDevice, 1, 1, 1));
 	}
@@ -275,8 +268,8 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 
 
 
-	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstTransform));
-	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ShaderConstMaterial));
+	UINT objCBByteSize = G2::alignTo256(sizeof(ShaderConstTransform));
+	UINT matCBByteSize = G2::alignTo256(sizeof(ShaderConstMaterial));
 
 	auto cbTrs = m_subCur->m_cnstTrs->Resource();
 	auto cbPss = m_subCur->m_cnstPss->Resource();
@@ -306,14 +299,15 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMVECTOR yAxis, DirectX::FXMVECTOR origin, size_t xdivs, size_t ydivs, DirectX::GXMVECTOR color)
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto commandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
+	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
+	auto pBatch       = std::any_cast<XTK_BATCH* >(IG2AppFrame::instance()->getAttrib(EAPP_ATTRIB::EAPP_ATT_XTK_BATCH));
 
 	PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Draw grid");
 
 	m_lineEffect->Apply(commandList);
 
-	m_batch->Begin(commandList);
+	pBatch->Begin(commandList);
 
 	xdivs = std::max<size_t>(1, xdivs);
 	ydivs = std::max<size_t>(1, ydivs);
@@ -327,7 +321,7 @@ void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMV
 
 		const VertexPositionColor v1(XMVectorSubtract(vScale, yAxis), color);
 		const VertexPositionColor v2(XMVectorAdd(vScale, yAxis), color);
-		m_batch->DrawLine(v1, v2);
+		pBatch->DrawLine(v1, v2);
 	}
 
 	for (size_t i = 0; i <= ydivs; i++)
@@ -339,10 +333,10 @@ void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMV
 
 		const VertexPositionColor v1(XMVectorSubtract(vScale, xAxis), color);
 		const VertexPositionColor v2(XMVectorAdd(vScale, xAxis), color);
-		m_batch->DrawLine(v1, v2);
+		pBatch->DrawLine(v1, v2);
 	}
 
-	m_batch->End();
+	pBatch->End();
 
 	PIXEndEvent(commandList);
 }

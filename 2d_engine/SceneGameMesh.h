@@ -13,10 +13,7 @@
 #include "common/G2.ConstantsWin.h"
 #include "Common/GameTimer.h"
 #include "AppCommon.h"
-
-#include "PrimitiveBatch.h"
-#include "Effects.h"				// BasicEffect
-#include "Model.h"					// #include "GraphicsMemory.h"
+#include "AppCommonXTK.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -25,7 +22,7 @@ using namespace G2;
 class SceneGameMesh : public IG2Scene
 {
 public:
-	SceneGameMesh();
+	SceneGameMesh()  noexcept;
 	virtual ~SceneGameMesh();
 
 	int		Type()									override { return EAPP_SCENE::EAPP_SCENE_MESH; }
@@ -55,9 +52,7 @@ public:
 	float		mRadius = 50.0f;
 
 
-	std::unique_ptr<DirectX::GraphicsMemory>                                m_graphicsMemory;
-	std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>  m_batch;
-	std::unique_ptr<DirectX::BasicEffect>                                   m_lineEffect;
+	std::unique_ptr<BasicEffect>                                   m_lineEffect;
 
 	XMMATRIX		m_world			= XMMatrixIdentity();
 	XMMATRIX		m_view			= XMMatrixIdentity();;

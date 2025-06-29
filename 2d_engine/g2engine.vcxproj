@@ -104,10 +104,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\;DirectXTK12\Inc;DirectXTK12\Src;DirectXTK12\Audio;DirectXTK12\Src\Shaders\Compiled;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\;DirectXTK12\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,10 +141,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\;DirectXTK12\Inc;DirectXTK12\Src;DirectXTK12\Audio;DirectXTK12\Src\Shaders\Compiled;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\;DirectXTK12\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -155,7 +155,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Common\D3DWinApp.cpp" />
-    <ClCompile Include="Common\d3dUtil.cpp" />
     <ClCompile Include="Common\D12DDSTextureLoader.cpp" />
     <ClCompile Include="Common\G2.FactoryPipelineState.cpp" />
     <ClCompile Include="Common\G2.FactoryShader.cpp" />
@@ -168,17 +167,16 @@
     <ClCompile Include="Common\GameTimer.cpp" />
     <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\G2.EngineD3D.cpp" />
-    <ClCompile Include="ShaderUploadChain.cpp" />
+    <ClCompile Include="SceneXtkGame.cpp" />
     <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="SceneGameMesh.cpp" />
     <ClCompile Include="_main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppCommon.h" />
+    <ClInclude Include="AppCommonXTK.h" />
     <ClInclude Include="AppConst.h" />
     <ClInclude Include="Common\D3DWinApp.h" />
-    <ClInclude Include="Common\d3dUtil.h" />
-    <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\D12DDSTextureLoader.h" />
     <ClInclude Include="Common\G2.Factory.h" />
     <ClInclude Include="Common\G2.FactoryPipelineState.h" />
@@ -195,9 +193,11 @@
     <ClInclude Include="Common\G2.EngineD3D.h" />
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
+    <ClInclude Include="SceneXtkGame.h" />
     <ClInclude Include="ShaderUploadChain.h" />
     <ClInclude Include="MainApp.h" />
     <ClInclude Include="SceneGameMesh.h" />
+    <ClInclude Include="StepTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\2dsprite.hlsl">
