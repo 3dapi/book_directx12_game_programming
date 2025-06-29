@@ -3,7 +3,8 @@
 
 #include <d3d12.h>
 #include "MainApp.h"
-#include "Common/DDSTextureLoader.h"
+#include "DDSTextureLoader.h"
+#include "Common/D12DDSTextureLoader.h"
 #include "Common/G2.FactoryTexture.h"
 #include "Common/G2.FactoryShader.h"
 #include "Common/G2.FactorySIgnature.h"

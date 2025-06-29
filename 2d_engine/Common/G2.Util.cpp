@@ -38,15 +38,5 @@ ID3DBlob* DXCompileShaderFromFile(const std::string& fileName, const std::string
 	return pBlobRet;
 }
 
-//HRESULT G2::DXCreateDDSTextureFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList
-//	, const std::string& szFileName
-//	, ComPtr<ID3D12Resource>& texture
-//	, ComPtr<ID3D12Resource>& uploadHeap)
-//{
-//	auto wFileName = G2::stringMultiByte2WString(szFileName);
-//	HRESULT hr = DirectX::CreateDDSTextureFromFile12(device, cmdList, wFileName.c_str(), texture, uploadHeap);
-//	return hr;
-//}
-
 } // namespace G2
 

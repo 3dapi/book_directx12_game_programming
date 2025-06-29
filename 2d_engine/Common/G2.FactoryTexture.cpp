@@ -3,7 +3,7 @@
 #include <string>
 #include "d3dUtil.h"
 #include "G2.ConstantsWin.h"
-#include "DDSTextureLoader.h"
+#include "D12DDSTextureLoader.h"
 #include "G2.FactoryTexture.h"
 #include "G2.Util.h"
 
@@ -36,7 +36,7 @@ TD3D_TEXTURE* FactoryTexture::ResourceLoad(const std::string& name, const std::s
 	ComPtr<ID3D12Resource> rs_tx{};
 	ComPtr<ID3D12Resource> rs_up{};
 	std::wstring wFile = ansiToWstr(file);
-	HRESULT hr = DirectX::CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, wFile.c_str(), rs_tx, rs_up);
+	HRESULT hr = DirectX::D12CreateDDSTextureFromFile12(d3dDevice, d3dCommandList, wFile.c_str(), rs_tx, rs_up);
 	ThrowIfFailed(hr);
 
 	pItem->r = std::move(rs_tx);
