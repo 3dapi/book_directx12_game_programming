@@ -33,7 +33,7 @@ int SceneGameMesh::Init(const std::any&)
 	float aspectRatio    = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
 	m_boxCbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
 
-	SetupUploadChain();
+	m_cbUploader = std::make_unique<ShaderUploadChain>(device, 1, 1, 1);
 	BuildBox();
 	return S_OK;
 }
@@ -51,7 +51,7 @@ int SceneGameMesh::Update(const std::any& t)
 {
 	GameTimer gt = std::any_cast<GameTimer>(t);
 	// Cycle through the circular frame resource array.
-	UpdateUploadChain();
+
 	int hr = S_OK;
 	UpdateCamera(gt);
 	UpdateBox(gt);
@@ -103,33 +103,23 @@ void SceneGameMesh::UpdateCamera(const GameTimer& t)
 void SceneGameMesh::UpdateBox(const GameTimer& gt)
 {
 	//constant world transform
-	auto currObjectCB = m_subCur->m_cnstTrs.get();
+	auto currObjectCB = m_cbUploader->m_cnstTrs.get();
 	{
 		currObjectCB->CopyData(0, m_boxCbTrs);
 	}
 
 	// constant pass
-	auto currPassCB = m_subCur->m_cnstPss.get();
+	auto currPassCB = m_cbUploader->m_cnstPss.get();
 	{
 		m_boxCbPss.tmViewProj = XMMatrixMultiply(m_boxCbPss.tmView, m_boxCbPss.tmProj);
 		currPassCB->CopyData(0, m_boxCbPss);
 	}
 
 	// const material
-	auto currMaterialCB = m_subCur->m_cnstMtl.get();
+	auto currMaterialCB = m_cbUploader->m_cnstMtl.get();
 	{
 		currMaterialCB->CopyData(0, m_boxCbMtl);
 	}
-}
-
-int SceneGameMesh::UpdateUploadChain()
-{
-	auto d3d = IG2GraphicsD3D::instance();
-	int hr = S_OK;
-	m_subIdx = (m_subIdx + 1) % int(EAPP_CONST::EAPP_FRAME_RESOURCE_CHAIN_NUMBER);
-	m_subCur = m_subLst[m_subIdx].get();
-
-	return S_OK;
 }
 
 void SceneGameMesh::BuildBox()
@@ -194,15 +184,6 @@ void SceneGameMesh::BuildBox()
 	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
 }
 
-void SceneGameMesh::SetupUploadChain()
-{
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	for (int i = 0; i < int(EAPP_CONST::EAPP_FRAME_RESOURCE_CHAIN_NUMBER); ++i)
-	{
-		m_subLst.push_back(std::make_unique<ShaderUploadChain>(d3dDevice, 1, 1, 1));
-	}
-}
-
 void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 {
 	auto d3dDevice      = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
@@ -226,9 +207,9 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	UINT objCBByteSize = G2::alignTo256(sizeof(ShaderConstTransform));
 	UINT matCBByteSize = G2::alignTo256(sizeof(ShaderConstMaterial));
 
-	auto cbTrs = m_subCur->m_cnstTrs->Resource();
-	auto cbPss = m_subCur->m_cnstPss->Resource();
-	auto cbMtl = m_subCur->m_cnstMtl->Resource();
+	auto cbTrs = m_cbUploader->m_cnstTrs->Resource();
+	auto cbPss = m_cbUploader->m_cnstPss->Resource();
+	auto cbMtl = m_cbUploader->m_cnstMtl->Resource();
 
 
 	cmdList->IASetVertexBuffers(0, 1, &m_boxVtx.VertexBufferView());

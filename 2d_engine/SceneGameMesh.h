@@ -32,18 +32,13 @@ public:
 	int		Render()								override;
 
 protected:
-	void SetupUploadChain();
-	int	 UpdateUploadChain();
-
 	void UpdateCamera(const GameTimer& gt);
 	void BuildBox();
 	void UpdateBox(const GameTimer& gt);
     void DrawBox(ID3D12GraphicsCommandList* cmdList);
 
 public:
-	vector<unique_ptr<ShaderUploadChain>>	m_subLst	;
-	ShaderUploadChain*						m_subCur	{};
-	int										m_subIdx	{};
+	unique_ptr<ShaderUploadChain>	m_cbUploader	{};
 	
 	// descriptor
 	ComPtr<ID3D12DescriptorHeap>	m_boxSrvDesc{};
