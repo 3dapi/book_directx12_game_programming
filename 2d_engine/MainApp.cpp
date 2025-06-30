@@ -134,6 +134,16 @@ int MainApp::init(const std::any& initialValue /* = */)
 			}
 		}
 	}
+	{
+		auto scene = std::make_unique<SceneSpine>();
+		if(scene)
+		{
+			if(SUCCEEDED(scene->Init()))
+			{
+				m_pSceneSpine = std::move(scene);
+			}
+		}
+	}
 	
 	
 	
