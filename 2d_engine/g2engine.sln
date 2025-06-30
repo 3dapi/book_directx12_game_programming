@@ -7,7 +7,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "g2engine", "g2engine.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTK12", "3rdparty\DirectXTK12\DirectXTK12.vcxproj", "{3049D276-BC04-419E-B8E7-1842BF09A49E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spine-c", "3rdparty\spine-c\spine-c.vcxproj", "{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spine-cpp", "3rdparty\spine-cpp\spine-cpp.vcxproj", "{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,18 +53,18 @@ Global
 		{3049D276-BC04-419E-B8E7-1842BF09A49E}.RelWithDebInfo|x64.Build.0 = Release|x64
 		{3049D276-BC04-419E-B8E7-1842BF09A49E}.RelWithDebInfo|x86.ActiveCfg = Release|Win32
 		{3049D276-BC04-419E-B8E7-1842BF09A49E}.RelWithDebInfo|x86.Build.0 = Release|Win32
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.Debug|x64.ActiveCfg = Debug|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.Debug|x64.Build.0 = Debug|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.Debug|x86.ActiveCfg = Debug|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.MinSizeRel|x64.ActiveCfg = MinSizeRel|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.MinSizeRel|x64.Build.0 = MinSizeRel|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.MinSizeRel|x86.ActiveCfg = MinSizeRel|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.Release|x64.ActiveCfg = Release|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.Release|x64.Build.0 = Release|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.Release|x86.ActiveCfg = Release|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.RelWithDebInfo|x64.ActiveCfg = RelWithDebInfo|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.RelWithDebInfo|x64.Build.0 = RelWithDebInfo|x64
-		{0BD85F01-7A18-3E41-9C49-2B13CB4D8ACA}.RelWithDebInfo|x86.ActiveCfg = RelWithDebInfo|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.Debug|x64.ActiveCfg = Debug|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.Debug|x64.Build.0 = Debug|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.Debug|x86.ActiveCfg = Debug|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.MinSizeRel|x64.ActiveCfg = MinSizeRel|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.MinSizeRel|x64.Build.0 = MinSizeRel|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.MinSizeRel|x86.ActiveCfg = MinSizeRel|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.Release|x64.ActiveCfg = Release|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.Release|x64.Build.0 = Release|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.Release|x86.ActiveCfg = Release|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.RelWithDebInfo|x64.ActiveCfg = RelWithDebInfo|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.RelWithDebInfo|x64.Build.0 = RelWithDebInfo|x64
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}.RelWithDebInfo|x86.ActiveCfg = RelWithDebInfo|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -21,8 +21,13 @@
 #include "ResourceUploadBatch.h"
 #include "GraphicsMemory.h"
 #include "MainApp.h"
-
 using std::any_cast;
+
+
+#include "spine-glfw.h"
+#include "spine/Bone.h"
+using namespace spine;
+
 
 SceneSpine::SceneSpine() noexcept
 {
@@ -33,6 +38,29 @@ SceneSpine::~SceneSpine()
 	Destroy();
 }
 
+class D3DTextureLoader: public spine::TextureLoader {
+public:
+
+	void load(spine::AtlasPage& page,const spine::String& path) {
+		auto fileName = path.buffer();
+		page.texture = nullptr;
+	}
+
+	void unload(void* texture) {
+	}
+};
+
+
+SpineExtension * spine::getDefaultExtension()
+{
+	static DefaultSpineExtension _default_spineExtension;
+	return &_default_spineExtension;
+}
+Skeleton*       m_spineSkeleton;
+AnimationState* m_spineAniState;
+renderer_t*     m_spineRenderer;
+SkeletonData*   m_spineSkeletonData;
+Atlas*          m_spineAtlas;
 // Initialize the Direct3D resources required to run.
 int SceneSpine::Init(const std::any&)
 {
@@ -40,15 +68,49 @@ int SceneSpine::Init(const std::any&)
 	auto device            = std::any_cast<ID3D12Device*>(d3d->getDevice());
 	auto formatBackBuffer  = *any_cast<DXGI_FORMAT*>(d3d->getAttrib(ATT_DEVICE_BACKBUFFER_FORAT));
 	auto formatDepthBuffer = *any_cast<DXGI_FORMAT*>(d3d->getAttrib(ATT_DEVICE_DEPTH_STENCIL_FORAT));
+	SIZE screenSize        = *any_cast<::SIZE*>(IG2GraphicsD3D::instance()->getAttrib(ATT_SCREEN_SIZE));
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
+
+	// We use a y-down coordinate system, see renderer_set_viewport_size()
+	Bone::setYDown(true);
+
+	// Load the atlas and the skeleton data
+	D3DTextureLoader textureLoader;
+	m_spineAtlas = new Atlas("assets/spine/spineboy-pma.atlas",&textureLoader);
+	SkeletonBinary binary(m_spineAtlas);
+	m_spineSkeletonData = binary.readSkeletonDataFile("assets/spine/spineboy-pro.skel");
+
+	// Create a skeleton from the data, set the skeleton's position to the bottom center of
+	// the screen and scale it to make it smaller.
+	m_spineSkeleton = new Skeleton(m_spineSkeletonData);
+	m_spineSkeleton->setPosition(screenSize.cx / 2.0F, screenSize.cy /2.0F);
+	m_spineSkeleton->setScaleX(0.3f);
+	m_spineSkeleton->setScaleY(0.3f);
+
+	// Create an AnimationState to drive animations on the skeleton. Set the "portal" animation
+	// on track with index 0.
+	AnimationStateData animationStateData(m_spineSkeletonData);
+	animationStateData.setDefaultMix(0.2f);
+	m_spineAniState = new AnimationState(&animationStateData);
+	m_spineAniState->setAnimation(0,"portal",true);
+	m_spineAniState->addAnimation(0,"run",true,0);
+
+	// Create the renderer and set the viewport size to match the window size. This sets up a
+	// pixel perfect orthogonal projection for 2D rendering.
+	m_spineRenderer = renderer_create();
+	renderer_set_viewport_size(m_spineRenderer,screenSize.cx, screenSize.cy);
 
 	return S_OK;
 }
 
 int SceneSpine::Destroy()
 {
+	renderer_dispose(m_spineRenderer);
+	delete m_spineSkeletonData;
+	delete m_spineAtlas;
+
 	m_states  = {};
 	m_resourceDescriptors = {};
 	m_sprites = {};
@@ -75,6 +137,16 @@ int SceneSpine::Update(const std::any& t)
 	//m_view = Matrix::CreateLookAt(eye, at, up);
 	m_view = XMMatrixLookAtRH(XMLoadFloat3(&eye),XMLoadFloat3(&at),XMLoadFloat3(&up));
 	m_world = XMMatrixRotationY(float(gt.TotalTime() * XM_PIDIV4));
+
+	// Update and apply the animation state to the skeleton
+	m_spineAniState->update(gt.DeltaTime());
+	m_spineAniState->apply(*m_spineSkeleton);
+
+	// Update the skeleton time (used for physics)
+	m_spineSkeleton->update(gt.DeltaTime());
+
+	// Calculate the new pose
+	m_spineSkeleton->updateWorldTransform(spine::Physics_Update);
 
 	PIXEndEvent();
 
@@ -110,6 +182,9 @@ int SceneSpine::Render()
 	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw sprite");
 	m_sprites->Begin(commandList);
 	m_sprites->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo), DirectX::GetTextureSize(m_checkerRsc.Get()), XMFLOAT2(10,75));
+
+	renderer_draw(m_spineRenderer,m_spineSkeleton,true);
+
 
 	m_font->DrawString(m_sprites.get(),L"DirectXTK12 Simple Sample",XMFLOAT2(100,10),Colors::Yellow);
 	m_sprites->End();

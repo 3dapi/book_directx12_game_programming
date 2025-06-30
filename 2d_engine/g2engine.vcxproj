@@ -104,7 +104,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\;3rdparty\DirectXTK12\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>3rdparty\DirectXTK12\Inc;3rdparty\spine-cpp\spine-cpp\include;spine-glfw;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
@@ -141,7 +141,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\;3rdparty\DirectXTK12\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>3rdparty\DirectXTK12\Inc;3rdparty\spine-cpp\spine-cpp\include;spine-glfw;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
@@ -171,6 +171,7 @@
     <ClCompile Include="SceneXtkGame.cpp" />
     <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="SceneGameMesh.cpp" />
+    <ClCompile Include="spine-glfw\spine-glfw.cpp" />
     <ClCompile Include="_main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -199,6 +200,8 @@
     <ClInclude Include="ShaderUploadChain.h" />
     <ClInclude Include="MainApp.h" />
     <ClInclude Include="SceneGameMesh.h" />
+    <ClInclude Include="spine-glfw\spine-glfw.h" />
+    <ClInclude Include="spine-glfw\stb_image.h" />
     <ClInclude Include="StepTimer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -217,8 +220,8 @@
     <ProjectReference Include="3rdparty\DirectXTK12\DirectXTK12.vcxproj">
       <Project>{3049d276-bc04-419e-b8e7-1842bf09a49e}</Project>
     </ProjectReference>
-    <ProjectReference Include="3rdparty\spine-c\spine-c.vcxproj">
-      <Project>{0bd85f01-7a18-3e41-9c49-2b13cb4d8aca}</Project>
+    <ProjectReference Include="3rdparty\spine-cpp\spine-cpp.vcxproj">
+      <Project>{3d2f4e62-79e0-4b6c-9c67-f8f4c377ef55}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
