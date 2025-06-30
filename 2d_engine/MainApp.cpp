@@ -110,7 +110,7 @@ int MainApp::init(const std::any& initialValue /* = */)
 		{
 			if (SUCCEEDED(scene->Init()))
 			{
-				//m_pSceneMesh = std::move(scene);
+				m_pSceneMesh = std::move(scene);
 			}
 		}
 	}
@@ -120,7 +120,7 @@ int MainApp::init(const std::any& initialValue /* = */)
 		{
 			if(SUCCEEDED(scene->Init()))
 			{
-				//m_pSceneXKT = std::move(scene);
+				m_pSceneXKT = std::move(scene);
 			}
 		}
 	}
@@ -134,18 +134,6 @@ int MainApp::init(const std::any& initialValue /* = */)
 			}
 		}
 	}
-	{
-		auto scene = std::make_unique<SceneSpine>();
-		if(scene)
-		{
-			if(SUCCEEDED(scene->Init()))
-			{
-				m_pSceneSpine = std::move(scene);
-			}
-		}
-	}
-	
-	
 	
 	// Execute the initialization commands.
 	//ThrowIfFailed(d3dCommandList->Close());
