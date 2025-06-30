@@ -24,6 +24,7 @@ SceneGameMesh::SceneGameMesh() noexcept
 
 SceneGameMesh::~SceneGameMesh()
 {
+	Destroy();
 }
 
 int SceneGameMesh::Init(const std::any&)
@@ -124,9 +125,16 @@ void SceneGameMesh::UpdateBox(const GameTimer& gt)
 
 void SceneGameMesh::BuildBox()
 {
-	auto d3dDevice = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
-	auto d3dCommandList = std::any_cast<ID3D12GraphicsCommandList*>(IG2GraphicsD3D::instance()->getCommandList());
-	UINT srvDescSize    = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	int hr = 0;
+	auto d3d = IG2GraphicsD3D::instance();
+	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
+	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
+	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
+	UINT srvDescSize     = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+
+	hr = d3dCommandList->Reset(d3dCommandAlloc,nullptr);
 
 	GeometryGenerator geoGen;
 	GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
@@ -147,6 +155,7 @@ void SceneGameMesh::BuildBox()
 
 	m_boxVtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
 	m_boxIdx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
+
 
 	// constant values
 	//--------------------------------------------------------------------------
@@ -182,6 +191,12 @@ void SceneGameMesh::BuildBox()
 	// 1장이면 안써도 됨
 	hDescriptor.Offset(0, srvDescSize);
 	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
+
+	hr = d3dCommandList->Close();
+	ID3D12CommandList* cmdsLists[] ={d3dCommandList};
+	d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists),cmdsLists);
+	d3d->command(CMD_WAIT_GPU);
+	return;
 }
 
 void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)

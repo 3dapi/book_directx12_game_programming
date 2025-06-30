@@ -110,7 +110,7 @@ int MainApp::init(const std::any& initialValue /* = */)
 		{
 			if (SUCCEEDED(scene->Init()))
 			{
-				m_pSceneMesh = std::move(scene);
+				//m_pSceneMesh = std::move(scene);
 			}
 		}
 	}
@@ -138,12 +138,12 @@ int MainApp::init(const std::any& initialValue /* = */)
 	
 	
 	// Execute the initialization commands.
-	ThrowIfFailed(d3dCommandList->Close());
-	ID3D12CommandList* cmdsLists[] = { d3dCommandList };
-	d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	//ThrowIfFailed(d3dCommandList->Close());
+	//ID3D12CommandList* cmdsLists[] = { d3dCommandList };
+	//d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// Wait until initialization is complete.
-	hr = d3d->command(CMD_FLUSH_COMMAND_QUEUE);
+	hr = d3d->command(CMD_WAIT_GPU);
 
 	return S_OK;
 }
@@ -251,7 +251,7 @@ int MainApp::Render()
 	// 1. 화면 표시.
 	hr = d3d->command(EG2GRAPHICS_D3D::CMD_PRESENT);
 	// 2. GPU가 해당 작업을 완료할 때까지 대기.
-	hr = d3d->command(EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE);
+	hr = d3d->command(EG2GRAPHICS_D3D::CMD_WAIT_GPU);
 
 	return S_OK;
 }

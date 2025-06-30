@@ -382,7 +382,7 @@ void SceneXtkGame::CreateDeviceDependentResources()
 		auto uploadResourcesFinished = resourceUpload.End(cmdQueue);
 
 		// Wait for the command list to finish executing
-		d3d->command(EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE);
+		d3d->command(EG2GRAPHICS_D3D::CMD_WAIT_GPU);
 		
 		// Wait for the upload thread to terminate
 		uploadResourcesFinished.wait();

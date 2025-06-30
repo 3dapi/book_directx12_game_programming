@@ -151,10 +151,8 @@ void SceneSpine::CreateDeviceDependentResources()
 
 		// Upload the resources to the GPU.
 		auto cmdQueue      = std::any_cast<ID3D12CommandQueue*>(d3d->getCommandQueue());
-		auto uploadResourcesFinished = resourceUpload.End(cmdQueue);
-
 		// Wait for the command list to finish executing
-		d3d->command(EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE);
+		auto uploadResourcesFinished = resourceUpload.End(cmdQueue);
 		
 		// Wait for the upload thread to terminate
 		uploadResourcesFinished.wait();

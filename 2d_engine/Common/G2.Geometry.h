@@ -155,13 +155,20 @@ struct VTX_POINT		// point sprite: position + size
 class StaticResBuf
 {
 public:
+	virtual ~StaticResBuf() {
+		if(!cpuData.empty())
+			cpuData.clear();
+		gpu.Reset();
+		upLoader.Reset();
+	}
+	int CreateDefaultBufferWithUploader(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);public:
+public:
 	std::vector<uint8_t>   cpuData		;	// cpu memory
 	ComPtr<ID3D12Resource> gpu			{};	// default gpu memory
 	ComPtr<ID3D12Resource> upLoader		{};	// upLoader
 	UINT                   size			{};	// buffer size: 이전 버퍼를 사용할 경우 VertexBufferView, 또는 IndexBufferView 만 설정하는 경우에 필요한 size.
 	UINT                   stride		{};	// vertex byte stride
 	UINT                   entryCount	{};	// vertex or index numbers
-	int CreateDefaultBufferWithUploader(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
 
 class StaticResBufVtx : public StaticResBuf

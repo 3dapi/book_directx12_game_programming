@@ -71,9 +71,9 @@ int EngineD3D::command(int nCmd, const std::any& v)
 			m_screenSize = std::any_cast<::SIZE>(v);
 			return this->Resize();
 		}
-		case EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE:
+		case EG2GRAPHICS_D3D::CMD_WAIT_GPU:
 		{
-			return this->FlushCommandQueue();
+			return this->WaitGpu();
 		}
 		case EG2GRAPHICS_D3D::CMD_FENCE_WAIT:
 		{
@@ -283,7 +283,7 @@ int EngineD3D::CreateDevice()
 
 int EngineD3D::ReleaseDevice()
 {
-	FlushCommandQueue();
+	WaitGpu();
 
 	m_d3dSwapChain.Reset();
 	m_d3dFence.Reset();
@@ -377,7 +377,7 @@ int EngineD3D::Resize()
 	assert(m_d3dCommandAlloc);
 
 	// Flush before changing any resources.
-	FlushCommandQueue();
+	WaitGpu();
 
 	BOOL isFullscreen = FALSE;
 	if (SUCCEEDED(m_d3dSwapChain->GetFullscreenState(&isFullscreen, nullptr)) && isFullscreen)
@@ -448,7 +448,7 @@ int EngineD3D::Resize()
 	m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// Wait until resize is complete.
-	FlushCommandQueue();
+	WaitGpu();
 
 	// Update the viewport transform to cover the client area.
 	m_d3dViewport.TopLeftX = 0;
@@ -464,16 +464,12 @@ int EngineD3D::Resize()
 }
 
 
-int EngineD3D::FlushCommandQueue()
+int EngineD3D::WaitGpu()
 {
 	HRESULT hr = S_OK;
 
-	// Advance the fence value to mark commands up to this fence point.
-	++m_d3dFenceIndex;
-
-	// Add an instruction to the command queue to set a new fence point.  Because we 
-	// are on the GPU timeline, the new fence point won't be set until the GPU finishes
-	// processing all the commands prior to this Signal().
+	// gpu 작업이 완료되었는지 확인. signal에는 어떤 값도 상관 없음.
+	// 고유 값을 주면 좋은데, 일단 현재 값을 넣어봄.
 	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dFenceIndex);
 	if(FAILED(hr))
 	{
@@ -481,15 +477,18 @@ int EngineD3D::FlushCommandQueue()
 	}
 	ThrowIfFailed(hr);
 
-	// Wait until the GPU has completed commands up to this fence point.
-	if (m_d3dFence->GetCompletedValue() < m_d3dFenceIndex)
-	{
-		// Fire event when GPU hits current fence.  
-		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dFenceIndex, m_fenceEvent));
+	// 바로 받음.
+	auto rcv_gpu = m_d3dFence->GetCompletedValue();
 
-		// Wait until the GPU hits current fence event is fired.
+	// signal에 준 값과 같은지 판정. 입력 값과 같은지 확인.
+	if (rcv_gpu != m_d3dFenceIndex)
+	{
+		// 작업이 완료될 때까지 기다림.
+		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dFenceIndex, m_fenceEvent));
 		std::ignore = WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 	}
+	//작업이 완료. 현재 값을 증가시켜 고유 값을 유지함.
+	++m_d3dFenceIndex;
 
 	return S_OK;
 }
