@@ -13,6 +13,7 @@
 #include "Common/G2.Util.h"
 #include "SceneGameMesh.h"
 #include "SceneXtkGame.h"
+#include "SceneSpine.h"
 
 static MainApp* g_pMain{};
 G2::IG2AppFrame* G2::IG2AppFrame::instance()
@@ -119,7 +120,17 @@ int MainApp::init(const std::any& initialValue /* = */)
 		{
 			if(SUCCEEDED(scene->Init()))
 			{
-				m_pSceneXKT = std::move(scene);
+				//m_pSceneXKT = std::move(scene);
+			}
+		}
+	}
+	{
+		auto scene = std::make_unique<SceneSpine>();
+		if(scene)
+		{
+			if(SUCCEEDED(scene->Init()))
+			{
+				m_pSceneSpine = std::move(scene);
 			}
 		}
 	}
@@ -163,8 +174,12 @@ int MainApp::Update(const std::any& t)
 	//UpdateCamera(gt);
 	//UpdateBox(gt);
 
-	m_pSceneMesh->Update(t);
-	m_pSceneXKT->Update(t);
+	if(m_pSceneMesh)
+		m_pSceneMesh->Update(t);
+	if(m_pSceneXKT)
+		m_pSceneXKT->Update(t);
+	if(m_pSceneSpine)
+		m_pSceneSpine->Update(t);
 
 	return S_OK;
 }
@@ -213,11 +228,12 @@ int MainApp::Render()
 	d3dCommandList->OMSetRenderTargets(1, &d3dBackBufferV, true, &d3dDepthV);
 
 
-	// Box 그리기
-	m_pSceneMesh->Render();
-
-	// game 그리기
-	m_pSceneXKT->Render();
+	if(m_pSceneMesh)
+		m_pSceneMesh->Render();
+	if(m_pSceneXKT)
+		m_pSceneXKT->Render();
+	if(m_pSceneSpine)
+		m_pSceneSpine->Render();
 
 
 	// Indicate a state transition on the resource usage.

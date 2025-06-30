@@ -31,26 +31,10 @@ int SceneGameMesh::Init(const std::any&)
 	auto d3d = IG2GraphicsD3D::instance();
 	auto device       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	float aspectRatio    = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
-	 m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
+	m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
 
 	SetupUploadChain();
 	BuildBox();
-
-	auto formatBackBuffer  = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_BACKBUFFER_FORAT	));
-	auto formatDepthBuffer = *any_cast<DXGI_FORMAT*>(IG2GraphicsD3D::instance()->getAttrib(ATT_DEVICE_DEPTH_STENCIL_FORAT));
-
-	const RenderTargetState rtState(formatBackBuffer, formatDepthBuffer);
-	{
-		EffectPipelineStateDescription pd(
-			&VertexPositionColor::InputLayout,
-			CommonStates::Opaque,
-			CommonStates::DepthNone,
-			CommonStates::CullNone,
-			rtState,
-			D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
-
-		m_lineEffect = std::make_unique<BasicEffect>(device, EffectFlags::VertexColor, pd);
-	}
 	return S_OK;
 }
 
@@ -80,16 +64,6 @@ int SceneGameMesh::Update(const std::any& t)
 	//m_view = Matrix::CreateLookAt(eye, at, up);
 	m_view = XMMatrixLookAtRH(XMLoadFloat3(&eye), XMLoadFloat3(&at), XMLoadFloat3(&up));
 
-	m_lineEffect->SetView(m_view);
-
-	XMMATRIX projLH = m_wireBox.cbPss.tmProj;
-	XMMATRIX flipZ = XMMatrixScaling(1.0f, 1.0f, -1.0f); // Z축 반전
-
-	XMMATRIX projRH = flipZ * projLH;
-
-	m_lineEffect->SetProjection(projRH);
-	m_lineEffect->SetWorld(XMMatrixIdentity());
-
 	return S_OK;
 }
 
@@ -102,11 +76,6 @@ int SceneGameMesh::Render()
 
 	// Box 그리기
 	DrawBox(d3dCommandList);
-
-	// Draw procedurally generated dynamic grid
-	const XMVECTORF32 xaxis = { 20.f, 0.f, 0.f };
-	const XMVECTORF32 yaxis = { 0.f, 0.f, 20.f };
-	DrawGrid(xaxis, yaxis, g_XMZero, 20, 20, Colors::Gray);
 
 	return S_OK;
 }
@@ -129,16 +98,6 @@ void SceneGameMesh::UpdateCamera(const GameTimer& t)
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	m_wireBox.cbPss.tmView = XMMatrixLookAtRH(pos, target, up);
-
-	//constant world transform
-	//auto currObjectCB = m_subCur->m_cnstTranform.get();
-	//{
-	//	XMMATRIX world = XMLoadFloat4x4(&m_cnstWorld.tmWorld);
-	//	ShaderConstTransform objConstants;
-	//	XMStoreFloat4x4(&objConstants.tmWorld, XMMatrixTranspose(world));
-
-	//	currObjectCB->CopyData(0, objConstants);
-	//}
 }
 
 void SceneGameMesh::UpdateBox(const GameTimer& gt)
@@ -199,7 +158,6 @@ void SceneGameMesh::BuildBox()
 	m_wireBox.vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
 	m_wireBox.idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
-
 	// constant values
 	//--------------------------------------------------------------------------
 	m_wireBox.cbMtl.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -235,9 +193,6 @@ void SceneGameMesh::BuildBox()
 	hDescriptor.Offset(0, srvDescSize);
 	d3dDevice->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
 }
-
-
-
 
 void SceneGameMesh::SetupUploadChain()
 {
@@ -294,49 +249,4 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
 
 	cmdList->DrawIndexedInstanced(m_wireBox.idx.entryCount, 1, 0, 0, 0);
-}
-
-void XM_CALLCONV SceneGameMesh::DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMVECTOR yAxis, DirectX::FXMVECTOR origin, size_t xdivs, size_t ydivs, DirectX::GXMVECTOR color)
-{
-	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
-	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
-	auto pBatch       = std::any_cast<XTK_BATCH* >(IG2AppFrame::instance()->getAttrib(EAPP_ATTRIB::EAPP_ATT_XTK_BATCH));
-
-	PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Draw grid");
-
-	m_lineEffect->Apply(commandList);
-
-	pBatch->Begin(commandList);
-
-	xdivs = std::max<size_t>(1, xdivs);
-	ydivs = std::max<size_t>(1, ydivs);
-
-	for (size_t i = 0; i <= xdivs; ++i)
-	{
-		float fPercent = float(i) / float(xdivs);
-		fPercent = (fPercent * 2.0f) - 1.0f;
-		XMVECTOR vScale = XMVectorScale(xAxis, fPercent);
-		vScale = XMVectorAdd(vScale, origin);
-
-		const VertexPositionColor v1(XMVectorSubtract(vScale, yAxis), color);
-		const VertexPositionColor v2(XMVectorAdd(vScale, yAxis), color);
-		pBatch->DrawLine(v1, v2);
-	}
-
-	for (size_t i = 0; i <= ydivs; i++)
-	{
-		float fPercent = float(i) / float(ydivs);
-		fPercent = (fPercent * 2.0f) - 1.0f;
-		XMVECTOR vScale = XMVectorScale(yAxis, fPercent);
-		vScale = XMVectorAdd(vScale, origin);
-
-		const VertexPositionColor v1(XMVectorSubtract(vScale, xAxis), color);
-		const VertexPositionColor v2(XMVectorAdd(vScale, xAxis), color);
-		pBatch->DrawLine(v1, v2);
-	}
-
-	pBatch->End();
-
-	PIXEndEvent(commandList);
 }
