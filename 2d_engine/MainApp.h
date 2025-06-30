@@ -43,6 +43,7 @@ protected:
 	std::unique_ptr<GraphicsMemory>			m_graphicsMemory;
 	std::unique_ptr<XTK_BATCH>				m_batch;
 
-	unique_ptr<IG2Scene>					m_pSceneMesh{};
-	unique_ptr<IG2Scene>					m_pSceneXKT{};
+	unique_ptr<IG2Scene>					m_pSceneMesh	{};
+	unique_ptr<IG2Scene>					m_pSceneXKT		{};
+	unique_ptr<IG2Scene>					m_pSceneSpine	{};
 };
