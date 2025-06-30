@@ -310,9 +310,9 @@ renderer_t *renderer_create() {
 
 void renderer_set_viewport_size(renderer_t *renderer, int width, int height) {
 	float matrix[16];
-	matrix_ortho_projection(matrix, (float) width, (float) height);
-	shader_use(renderer->shader);
-	shader_set_matrix4(renderer->shader, "uMatrix", matrix);
+	//matrix_ortho_projection(matrix, (float) width, (float) height);
+	//shader_use(renderer->shader);
+	//shader_set_matrix4(renderer->shader, "uMatrix", matrix);
 }
 
 //void renderer_draw_lite(renderer_t *renderer, spine_skeleton skeleton, bool premultipliedAlpha) {
@@ -320,8 +320,8 @@ void renderer_set_viewport_size(renderer_t *renderer, int width, int height) {
 //}
 
 void renderer_draw(renderer_t *renderer, Skeleton *skeleton, bool premultipliedAlpha) {
-	shader_use(renderer->shader);
-	shader_set_int(renderer->shader, "uTexture", 0);
+	//shader_use(renderer->shader);
+	//shader_set_int(renderer->shader, "uTexture", 0);
 	//glEnable(GL_BLEND);
 
 	RenderCommand *command = renderer->renderer->render(*skeleton);

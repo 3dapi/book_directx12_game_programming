@@ -47,6 +47,7 @@ public:
 	}
 
 	void unload(void* texture) {
+		texture = nullptr;
 	}
 };
 
