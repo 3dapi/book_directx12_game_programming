@@ -19,6 +19,9 @@ struct TD3D_SHADER
 	std::string			sm	;	// shader model vs_5_0, ps_5_0
 	std::string			ep	;	// shader main function entry point
 	ComPtr<ID3DBlob>	r {};	// resource
+	~TD3D_SHADER() {
+		r.Reset();
+	}
 };
 
 class FactoryShader : public IG2Factory<FactoryShader, TD3D_SHADER>

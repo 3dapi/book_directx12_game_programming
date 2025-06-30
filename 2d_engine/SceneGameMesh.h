@@ -57,13 +57,8 @@ public:
 	float		mPhi = XM_PIDIV2 - 0.1f;
 	float		mRadius = 50.0f;
 
-
-	std::unique_ptr<BasicEffect>                                   m_lineEffect;
-
 	XMMATRIX		m_world			= XMMatrixIdentity();
 	XMMATRIX		m_view			= XMMatrixIdentity();;
-
-	void XM_CALLCONV DrawGrid(DirectX::FXMVECTOR xAxis, DirectX::FXMVECTOR yAxis, DirectX::FXMVECTOR origin, size_t xdivs, size_t ydivs, DirectX::GXMVECTOR color);
 };
 
 #endif // _SceneGameMesh_H_

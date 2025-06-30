@@ -36,8 +36,8 @@ std::any EngineD3D::getAttrib(int nAttrib)
 		case EG2GRAPHICS_D3D::ATT_SCREEN_SIZE:					return &m_screenSize;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_BACKBUFFER_FORAT:		return &m_d3dFormatBackbuffer;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_DEPTH_STENCIL_FORAT:	return &m_d3dFormatDepthStencil;
-		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FRAME_INDEX:	return &m_d3dIndexBackBuffer;
-		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FENCE_INDEX:	return &m_d3dFenceIndex;
+		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FRAME_INDEX:	return &m_d3dCurrentFrameIndex;
+		case EG2GRAPHICS_D3D::ATT_DEVICE_CURRENT_FENCE_VALUE:	return &m_fenceValue[m_d3dCurrentFrameIndex];
 
 		case EG2GRAPHICS_D3D::ATT_DEVICE_VIEWPORT:				return &m_d3dViewport;
 		case EG2GRAPHICS_D3D::ATT_DEVICE_SCISSOR_RECT:			return &m_d3dScissor;
@@ -71,13 +71,9 @@ int EngineD3D::command(int nCmd, const std::any& v)
 			m_screenSize = std::any_cast<::SIZE>(v);
 			return this->Resize();
 		}
-		case EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE:
+		case EG2GRAPHICS_D3D::CMD_WAIT_GPU:
 		{
-			return this->FlushCommandQueue();
-		}
-		case EG2GRAPHICS_D3D::CMD_FENCE_WAIT:
-		{
-			return this->FenceWait();
+			return this->WaitForGPU();
 		}
 		case EG2GRAPHICS_D3D::CMD_PRESENT:
 		{
@@ -125,7 +121,7 @@ std::any EngineD3D::getFence()
 }
 int  EngineD3D::getCurrentBackbufferdex()	const
 {
-	return m_d3dIndexBackBuffer;
+	return m_d3dCurrentFrameIndex;
 }
 std::any EngineD3D::getCurrentBackBuffer()
 {
@@ -283,7 +279,7 @@ int EngineD3D::CreateDevice()
 
 int EngineD3D::ReleaseDevice()
 {
-	FlushCommandQueue();
+	WaitForGPU();
 
 	m_d3dSwapChain.Reset();
 	m_d3dFence.Reset();
@@ -349,7 +345,7 @@ void EngineD3D::CreateSwapChain()
 	ThrowIfFailed(m_dxgiFactory->CreateSwapChain(
 		m_d3dCommandQueue.Get(),
 		&sd,
-		m_d3dSwapChain.GetAddressOf()));
+		(IDXGISwapChain**)m_d3dSwapChain.GetAddressOf()));
 }
 
 void EngineD3D::CreateRtvAndDsvDescriptorHeaps()
@@ -377,7 +373,7 @@ int EngineD3D::Resize()
 	assert(m_d3dCommandAlloc);
 
 	// Flush before changing any resources.
-	FlushCommandQueue();
+	WaitForGPU();
 
 	BOOL isFullscreen = FALSE;
 	if (SUCCEEDED(m_d3dSwapChain->GetFullscreenState(&isFullscreen, nullptr)) && isFullscreen)
@@ -406,7 +402,7 @@ int EngineD3D::Resize()
 		return hr;
 	}
 
-	m_d3dIndexBackBuffer = 0;
+	m_d3dCurrentFrameIndex = m_d3dSwapChain->GetCurrentBackBufferIndex();
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(m_heapBackBuffer->GetCPUDescriptorHandleForHeapStart());
 	for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
@@ -448,7 +444,7 @@ int EngineD3D::Resize()
 	m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// Wait until resize is complete.
-	FlushCommandQueue();
+	WaitForGPU();
 
 	// Update the viewport transform to cover the client area.
 	m_d3dViewport.TopLeftX = 0;
@@ -464,49 +460,28 @@ int EngineD3D::Resize()
 }
 
 
-int EngineD3D::FlushCommandQueue()
+int EngineD3D::WaitForGPU()
 {
 	HRESULT hr = S_OK;
-
-	// Advance the fence value to mark commands up to this fence point.
-	++m_d3dFenceIndex;
-
-	// Add an instruction to the command queue to set a new fence point.  Because we 
-	// are on the GPU timeline, the new fence point won't be set until the GPU finishes
-	// processing all the commands prior to this Signal().
-	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dFenceIndex);
+	m_d3dCurrentFrameIndex = m_d3dSwapChain->GetCurrentBackBufferIndex();
+	// 값을 던저 본다.
+	auto fenceValue  = &m_fenceValue[m_d3dCurrentFrameIndex];
+	hr = m_d3dCommandQueue->Signal(m_d3dFence.Get(),*fenceValue);
 	if(FAILED(hr))
+		return hr;
+	// 일단 받아보고
+	auto rcv_fence = m_d3dFence->GetCompletedValue();
+	// 받아본 값이 던진 것과 같다면 gpu 작업 완료. 아니면 왼료 될때까지 기다림.
+	if(rcv_fence != *fenceValue)
 	{
-		debugToOutputWindow("FAILED: EngineD3D::FlushCommandQueue:: Signal");
-	}
-	ThrowIfFailed(hr);
-
-	// Wait until the GPU has completed commands up to this fence point.
-	if (m_d3dFence->GetCompletedValue() < m_d3dFenceIndex)
-	{
-		// Fire event when GPU hits current fence.  
-		ThrowIfFailed(m_d3dFence->SetEventOnCompletion(m_d3dFenceIndex, m_fenceEvent));
-
-		// Wait until the GPU hits current fence event is fired.
-		std::ignore = WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-	}
-
-	return S_OK;
-}
-
-int EngineD3D::FenceWait()
-{
-	// Has the GPU finished processing the commands of the current frame resource?
-	// If not, wait until the GPU has completed commands up to this fence point.
-	auto fence = m_d3dFence.Get();
-	if (m_d3dFenceCurrent != 0 && fence->GetCompletedValue() < m_d3dFenceCurrent)
-	{
-		int hr = fence->SetEventOnCompletion(m_d3dFenceCurrent, m_fenceEvent);
-		if (FAILED(hr))
+		hr = m_d3dFence->SetEventOnCompletion(*fenceValue,m_fenceEvent);
+		if(FAILED(hr))
 			return hr;
-		std::ignore = WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+		WaitForSingleObject(m_fenceEvent,INFINITE);
 	}
-	return 0;
+	// 다른 값으로 만든다. 그냥 1 증가 시킴.
+	++(*fenceValue);
+	return S_OK;
 }
 
 int EngineD3D::Present()
@@ -516,22 +491,18 @@ int EngineD3D::Present()
 	if (FAILED(hr))
 		return hr;
 
-	m_d3dIndexBackBuffer = (m_d3dIndexBackBuffer + 1) % FRAME_BUFFER_COUNT;
-	++m_d3dFenceIndex;
-	m_d3dCommandQueue->Signal(m_d3dFence.Get(), m_d3dFenceIndex);
-
-	m_d3dFenceCurrent = m_d3dFenceIndex;
+	hr = WaitForGPU();
 	return S_OK;
 }
 
 ID3D12Resource* EngineD3D::CurrentBackBuffer() const
 {
-	return m_d3dBackBuffer[m_d3dIndexBackBuffer].Get();
+	return m_d3dBackBuffer[m_d3dCurrentFrameIndex].Get();
 }
 
 CD3DX12_CPU_DESCRIPTOR_HANDLE EngineD3D::CurrentBackBufferView() const
 {
-	return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_heapBackBuffer->GetCPUDescriptorHandleForHeapStart(), m_d3dIndexBackBuffer, m_sizeDescriptorB);
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_heapBackBuffer->GetCPUDescriptorHandleForHeapStart(), m_d3dCurrentFrameIndex, m_sizeDescriptorB);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE EngineD3D::DepthStencilView() const
