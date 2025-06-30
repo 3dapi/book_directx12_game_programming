@@ -184,7 +184,7 @@ static bool isFirstRender = true;
 int SceneXtkGame::Render()
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto device    = std::any_cast<ID3D12Device*>(d3d->getDevice());
 	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
 
 	// Don't try to render anything before the first Update.
@@ -241,7 +241,7 @@ int SceneXtkGame::Render()
 void XM_CALLCONV SceneXtkGame::DrawGrid(DirectX::FXMVECTOR xAxis,DirectX::FXMVECTOR yAxis,DirectX::FXMVECTOR origin,size_t xdivs,size_t ydivs,DirectX::GXMVECTOR color)
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto device    = std::any_cast<ID3D12Device*>(d3d->getDevice());
 	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
 	auto pBatch       = std::any_cast<XTK_BATCH* >(IG2AppFrame::instance()->getAttrib(EAPP_ATTRIB::EAPP_ATT_XTK_BATCH));
 

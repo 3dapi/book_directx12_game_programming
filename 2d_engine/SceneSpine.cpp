@@ -83,7 +83,7 @@ static bool isFirstRender = true;
 int SceneSpine::Render()
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto device    = std::any_cast<ID3D12Device*>(d3d->getDevice());
 	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
 
 	// Don't try to render anything before the first Update.

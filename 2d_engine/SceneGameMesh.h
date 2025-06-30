@@ -42,7 +42,7 @@ public:
 	
 	// descriptor
 	ComPtr<ID3D12DescriptorHeap>	m_boxSrvDesc{};
-	D3D_PRIMITIVE_TOPOLOGY			m_boxPrimitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	D3D_PRIMITIVE_TOPOLOGY			m_boxPrimitive{D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST};
 	// vertex buffer
 	G2::StaticResBufVtx				m_boxVtx{};
 	G2::StaticResBufIdx				m_boxIdx{};
