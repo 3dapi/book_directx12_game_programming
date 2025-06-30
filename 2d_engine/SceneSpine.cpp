@@ -52,6 +52,7 @@ int SceneSpine::Destroy()
 }
 
 #pragma region Frame Update
+
 // Updates the world.
 int SceneSpine::Update(const std::any& t)
 {
@@ -67,7 +68,6 @@ int SceneSpine::Update(const std::any& t)
 	//m_view = Matrix::CreateLookAt(eye, at, up);
 	m_view = XMMatrixLookAtRH(XMLoadFloat3(&eye),XMLoadFloat3(&at),XMLoadFloat3(&up));
 	m_world = XMMatrixRotationY(float(gt.TotalTime() * XM_PIDIV4));
-
 
 	PIXEndEvent();
 
@@ -93,10 +93,7 @@ int SceneSpine::Render()
 		return S_OK;
 	}
 
-
 	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Render");
-
-
 
 	// Set the descriptor heaps
 	ID3D12DescriptorHeap* heaps[] ={ (ID3D12DescriptorHeap*)m_resourceDescriptors->Heap(),(ID3D12DescriptorHeap*)m_states->Heap()};
@@ -105,14 +102,14 @@ int SceneSpine::Render()
 	// Draw sprite
 	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw sprite");
 	m_sprites->Begin(commandList);
-	m_sprites->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo), DirectX::GetTextureSize(m_checker.Get()), XMFLOAT2(10,75));
+	m_sprites->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo), DirectX::GetTextureSize(m_checkerRsc.Get()), XMFLOAT2(10,75));
+
 	m_font->DrawString(m_sprites.get(),L"DirectXTK12 Simple Sample",XMFLOAT2(100,10),Colors::Yellow);
 	m_sprites->End();
 	PIXEndEvent(commandList);
 
 	return S_OK;
 }
-
 
 #pragma endregion
 
@@ -134,23 +131,18 @@ void SceneSpine::CreateDeviceDependentResources()
 	m_states = std::make_unique<CommonStates>(device);
 	m_resourceDescriptors = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
 
-
 	{
 		ResourceUploadBatch resourceUpload(device);
-
 		resourceUpload.Begin();
 
-
-		ThrowIfFailed( CreateWICTextureFromFileEx(device,resourceUpload,L"assets/texture/res_checker.png", 0, D3D12_RESOURCE_FLAG_NONE, WIC_LOADER_DEFAULT, m_checker.ReleaseAndGetAddressOf()) );
-		CreateShaderResourceView(device,m_checker.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::WindowsLogo));
+		ThrowIfFailed( CreateWICTextureFromFileEx(device,resourceUpload,L"assets/texture/res_checker.png", 0, D3D12_RESOURCE_FLAG_NONE, WIC_LOADER_DEFAULT, m_checkerRsc.ReleaseAndGetAddressOf()) );
+		CreateShaderResourceView(device,m_checkerRsc.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::WindowsLogo));
 
 		const RenderTargetState rtState(formatBackBuffer, formatDepthBuffer);
 		{
 			SpriteBatchPipelineStateDescription pd(rtState);
 			m_sprites = std::make_unique<SpriteBatch>(device,resourceUpload,pd);
 		}
-
-		
 
 		m_font = std::make_unique<SpriteFont>(device,resourceUpload,
 			L"assets/SegoeUI_18.spritefont",
@@ -159,10 +151,8 @@ void SceneSpine::CreateDeviceDependentResources()
 
 		// Upload the resources to the GPU.
 		auto cmdQueue      = std::any_cast<ID3D12CommandQueue*>(d3d->getCommandQueue());
-		auto uploadResourcesFinished = resourceUpload.End(cmdQueue);
-
 		// Wait for the command list to finish executing
-		d3d->command(EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE);
+		auto uploadResourcesFinished = resourceUpload.End(cmdQueue);
 		
 		// Wait for the upload thread to terminate
 		uploadResourcesFinished.wait();
@@ -187,7 +177,6 @@ void SceneSpine::CreateWindowSizeDependentResources()
 
 	// This sample makes use of a right-handed coordinate system using row-major matrices.
 	m_projection = XMMatrixPerspectiveFovRH(fovAngleY, aspectRatio,  0.1f, 5000.0f);
-
 	m_sprites->SetViewport(d3dViewport);
 }
 

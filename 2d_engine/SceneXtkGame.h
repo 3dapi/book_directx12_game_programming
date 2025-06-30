@@ -71,7 +71,7 @@ protected:
 	std::unique_ptr<DirectX::SoundEffectInstance>                           m_effect2;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource>                                  m_texture1;
-	Microsoft::WRL::ComPtr<ID3D12Resource>                                  m_checker;
+	Microsoft::WRL::ComPtr<ID3D12Resource>                                  m_checkerRsc;
 
 	uint32_t                                                                m_audioEvent;
 	float                                                                   m_audioTimerAcc;

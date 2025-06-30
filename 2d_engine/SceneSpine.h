@@ -21,13 +21,13 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
 
-class SceneSpine: public IG2Scene
+class SceneSpine : public IG2Scene
 {
 public:
 	SceneSpine()  noexcept;
 	virtual ~SceneSpine();
 
-	int		Type()									override { return EAPP_SCENE::EAPP_SCENE_SPINE; }
+	int		Type()									override { return EAPP_SCENE::EAPP_SCENE_XTK; }
 	int		Init(const std::any& initialValue ={})	override;
 	int		Destroy()								override;
 	int		Update(const std::any& t)				override;
@@ -42,7 +42,7 @@ protected:
 	std::unique_ptr<DirectX::SpriteBatch>                                   m_sprites;
 	std::unique_ptr<DirectX::SpriteFont>                                    m_font;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource>                                  m_checker;
+	Microsoft::WRL::ComPtr<ID3D12Resource>                                  m_checkerRsc;
 
 	XMMATRIX                                             m_world;
 	XMMATRIX                                             m_view;

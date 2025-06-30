@@ -209,7 +209,7 @@ int SceneXtkGame::Render()
 	// Draw sprite
 	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw sprite");
 	m_sprites->Begin(commandList);
-	m_sprites->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo), DirectX::GetTextureSize(m_checker.Get()), XMFLOAT2(10,75));
+	m_sprites->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo), DirectX::GetTextureSize(m_checkerRsc.Get()), XMFLOAT2(10,75));
 
 	m_font->DrawString(m_sprites.get(),L"DirectXTK12 Simple Sample",XMFLOAT2(100,10),Colors::Yellow);
 	m_sprites->End();
@@ -324,9 +324,9 @@ void SceneXtkGame::CreateDeviceDependentResources()
 
 		ThrowIfFailed(CreateDDSTextureFromFile(device,resourceUpload,L"assets/seafloor.dds",m_texture1.ReleaseAndGetAddressOf()) );
 		CreateShaderResourceView(device,m_texture1.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::SeaFloor));
-		ThrowIfFailed( CreateWICTextureFromFileEx(device,resourceUpload,L"assets/texture/res_checker.png", 0, D3D12_RESOURCE_FLAG_NONE, WIC_LOADER_DEFAULT, m_checker.ReleaseAndGetAddressOf()) );
+		ThrowIfFailed( CreateWICTextureFromFileEx(device,resourceUpload,L"assets/texture/res_checker.png", 0, D3D12_RESOURCE_FLAG_NONE, WIC_LOADER_DEFAULT, m_checkerRsc.ReleaseAndGetAddressOf()) );
 
-		CreateShaderResourceView(device,m_checker.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::WindowsLogo));
+		CreateShaderResourceView(device,m_checkerRsc.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::WindowsLogo));
 
 		const RenderTargetState rtState(formatBackBuffer, formatDepthBuffer);
 		{
@@ -382,7 +382,7 @@ void SceneXtkGame::CreateDeviceDependentResources()
 		auto uploadResourcesFinished = resourceUpload.End(cmdQueue);
 
 		// Wait for the command list to finish executing
-		d3d->command(EG2GRAPHICS_D3D::CMD_FLUSH_COMMAND_QUEUE);
+		d3d->command(EG2GRAPHICS_D3D::CMD_WAIT_GPU);
 		
 		// Wait for the upload thread to terminate
 		uploadResourcesFinished.wait();

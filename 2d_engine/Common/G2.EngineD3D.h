@@ -50,7 +50,8 @@ public:
 	void	CreateSwapChain();
 	void	CreateRtvAndDsvDescriptorHeaps();
 	int		Resize();
-	int		WaitForGPU();
+	int		WaitGpu();
+	int		FenceWait();
 	int		Present();
 
 	ID3D12Resource* CurrentBackBuffer()const;
@@ -79,10 +80,11 @@ protected:
 	D3D_FEATURE_LEVEL                   m_featureLevel          {};
 	D3D_DRIVER_TYPE                     m_driverType            {};
 	ComPtr<ID3D12Device>                m_d3dDevice             {};
-	ComPtr<IDXGISwapChain4>             m_d3dSwapChain          {};
+	ComPtr<IDXGISwapChain>              m_d3dSwapChain          {};
 	ComPtr<ID3D12Fence>                 m_d3dFence              {};
+	UINT64                              m_d3dFenceIndex         {1};
+	UINT64                              m_d3dFenceCurrent       {1};
 	HANDLE                              m_fenceEvent            {};
-	UINT64                              m_fenceValue            [FRAME_BUFFER_COUNT]{1,1};
 
 	ComPtr<ID3D12CommandQueue>          m_d3dCommandQueue       {};
 	ComPtr<ID3D12CommandAllocator>      m_d3dCommandAlloc       {};
@@ -90,7 +92,7 @@ protected:
 
 	ComPtr<ID3D12Resource>              m_d3dBackBuffer         [FRAME_BUFFER_COUNT]{};
 	ComPtr<ID3D12Resource>              m_d3dDepthBuffer        {};
-	UINT                                m_d3dCurrentFrameIndex  {};
+	UINT                                m_d3dIndexBackBuffer    {};
 
 	ComPtr<ID3D12DescriptorHeap>        m_heapBackBuffer        {};
 	ComPtr<ID3D12DescriptorHeap>        m_heapDepthStencil      {};
