@@ -51,6 +51,7 @@ struct IG2Graphics
 
 struct IG2Scene
 {
+	virtual ~IG2Scene() = default;
 	virtual int		Type()									= 0;
 	virtual int		Init(const std::any& initialValue = {}) = 0;
 	virtual int		Destroy()								= 0;

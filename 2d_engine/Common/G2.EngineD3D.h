@@ -53,6 +53,8 @@ public:
 	int		WaitGpu();
 	int		FenceWait();
 	int		Present();
+	int		CommandListBegin();
+	int		CommandListEnd();
 
 	ID3D12Resource* CurrentBackBuffer()const;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;

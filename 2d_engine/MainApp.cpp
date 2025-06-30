@@ -31,6 +31,7 @@ MainApp::MainApp()
 
 MainApp::~MainApp()
 {
+	destroy();
 }
 
 std::any MainApp::getAttrib(int nAttrib)
@@ -69,11 +70,8 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 	auto d3d = IG2GraphicsD3D::instance();
 	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
-	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
-	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
 	
-	ThrowIfFailed(d3dCommandList->Reset(d3dCommandAlloc, nullptr));
+	d3d->command(CMD_COMMAND_BEGIN);
 
 	// 1. load texutre
 	auto tex_manager = FactoryTexture::instance();
@@ -100,6 +98,7 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 	auto pls_manager = FactoryPipelineState::instance();
 
+	d3d->command(CMD_COMMAND_END);
 
 	// create XTK Instance
 	m_graphicsMemory = std::make_unique<GraphicsMemory>(d3dDevice);
@@ -108,9 +107,9 @@ int MainApp::init(const std::any& initialValue /* = */)
 		auto scene = std::make_unique<SceneGameMesh>();
 		if (scene)
 		{
-			if (SUCCEEDED(scene->Init()))
+			//if (SUCCEEDED(scene->Init()))
 			{
-				m_pSceneMesh = std::move(scene);
+				//m_pSceneMesh = std::move(scene);
 			}
 		}
 	}
@@ -118,9 +117,9 @@ int MainApp::init(const std::any& initialValue /* = */)
 		auto scene = std::make_unique<SceneXtkGame>();
 		if(scene)
 		{
-			if(SUCCEEDED(scene->Init()))
+			//if(SUCCEEDED(scene->Init()))
 			{
-				m_pSceneXKT = std::move(scene);
+				//m_pSceneXKT = std::move(scene);
 			}
 		}
 	}
@@ -134,20 +133,16 @@ int MainApp::init(const std::any& initialValue /* = */)
 			}
 		}
 	}
-	
-	// Execute the initialization commands.
-	//ThrowIfFailed(d3dCommandList->Close());
-	//ID3D12CommandList* cmdsLists[] = { d3dCommandList };
-	//d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	// Wait until initialization is complete.
-	hr = d3d->command(CMD_WAIT_GPU);
 
 	return S_OK;
 }
 
 int MainApp::destroy()
 {
+	m_pSceneMesh	= {};
+	m_pSceneXKT		= {};
+	m_pSceneSpine	= {};
+
 	FactoryPipelineState::instance()->UnLoadAll();
 	FactorySignature::instance()->UnLoadAll();
 	FactoryShader::instance()->UnLoadAll();
@@ -189,7 +184,7 @@ int MainApp::Render()
 	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
 	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
-	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
+	auto commandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
 	auto d3dViewport     = std::any_cast<D3D12_VIEWPORT*            >(d3d->getAttrib(ATT_DEVICE_VIEWPORT));
 	auto d3dScissor      = std::any_cast<D3D12_RECT*                >(d3d->getAttrib(ATT_DEVICE_SCISSOR_RECT));
 	auto d3dBackBuffer   = std::any_cast<ID3D12Resource*            >(d3d->getCurrentBackBuffer());
@@ -244,7 +239,7 @@ int MainApp::Render()
 
 	// Add the command list to the queue for execution.
 	ID3D12CommandList* cmdsLists[] = { d3dCommandList };
-	d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	commandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// 1. 화면 표시.
 	hr = d3d->command(EG2GRAPHICS_D3D::CMD_PRESENT);

@@ -34,13 +34,17 @@ int SceneGameMesh::Init(const std::any&)
 	float aspectRatio = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
 	m_boxCbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
 
+	d3d->command(CMD_COMMAND_BEGIN);
 	m_cbUploader = std::make_unique<ShaderUploadChain>(device, 1, 1, 1);
 	BuildBox();
+	d3d->command(CMD_COMMAND_END);
 	return S_OK;
 }
 
 int SceneGameMesh::Destroy()
 {
+	m_boxVtx.~StaticResBufVtx();
+	m_boxIdx.~StaticResBufIdx();
 	FactoryPipelineState::instance()->UnLoadAll();
 	FactorySignature::instance()->UnLoadAll();
 	FactoryShader::instance()->UnLoadAll();
@@ -70,13 +74,8 @@ int SceneGameMesh::Update(const std::any& t)
 
 int SceneGameMesh::Render()
 {
-	int hr = S_OK;
-	auto d3d = IG2GraphicsD3D::instance();
-	auto device   = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto cmdList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
-
 	// Box 그리기
-	DrawBox(cmdList);
+	DrawBox();
 
 	return S_OK;
 }
@@ -129,12 +128,8 @@ void SceneGameMesh::BuildBox()
 	auto d3d = IG2GraphicsD3D::instance();
 	auto device   = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	auto cmdList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
-	auto cmdAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
-	auto cmdQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
 	UINT srvDescSize     = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-
-	hr = cmdList->Reset(cmdAlloc,nullptr);
 
 	GeometryGenerator geoGen;
 	GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
@@ -192,16 +187,16 @@ void SceneGameMesh::BuildBox()
 	hDescriptor.Offset(0, srvDescSize);
 	device->CreateShaderResourceView(fenceTex, &srvDesc, hDescriptor);
 
-	hr = cmdList->Close();
-	ID3D12CommandList* cmdsLists[] ={cmdList};
-	cmdQue->ExecuteCommandLists(_countof(cmdsLists),cmdsLists);
-	d3d->command(CMD_WAIT_GPU);
 	return;
 }
 
-void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
+void SceneGameMesh::DrawBox()
 {
-	auto device      = std::any_cast<ID3D12Device*>(IG2GraphicsD3D::instance()->getDevice());
+	int hr = S_OK;
+	auto d3d        = IG2GraphicsD3D::instance();
+	auto device     = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto cmdList    = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
+
 	UINT srvDescSize    = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	auto pls_manager    = FactoryPipelineState::instance();
 

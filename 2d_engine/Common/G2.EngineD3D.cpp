@@ -83,6 +83,14 @@ int EngineD3D::command(int nCmd, const std::any& v)
 		{
 			return this->Present();
 		}
+		case EG2GRAPHICS_D3D::CMD_COMMAND_BEGIN:
+		{
+			return this->CommandListBegin();
+		}
+		case EG2GRAPHICS_D3D::CMD_COMMAND_END:
+		{
+			return this->CommandListEnd();
+		}
 		default:
 			break;
 	}
@@ -521,6 +529,24 @@ int EngineD3D::Present()
 
 	m_d3dFenceCurrent = m_d3dFenceIndex;
 	return S_OK;
+}
+
+int EngineD3D::CommandListBegin()
+{
+	auto hr = m_d3dCommandList->Reset(m_d3dCommandAlloc.Get(), nullptr);
+	ThrowIfFailed(hr);
+	return hr;
+}
+
+int EngineD3D::CommandListEnd()
+{
+	auto hr = m_d3dCommandList->Close();
+	ThrowIfFailed(hr);
+	ID3D12CommandList* cmdsLists[] ={m_d3dCommandList.Get()};
+	m_d3dCommandQueue->ExecuteCommandLists(_countof(cmdsLists),cmdsLists);
+	// Wait until resize is complete.
+	WaitGpu();
+	return hr;
 }
 
 ID3D12Resource* EngineD3D::CurrentBackBuffer() const

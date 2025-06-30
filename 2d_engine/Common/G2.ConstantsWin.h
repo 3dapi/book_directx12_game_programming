@@ -34,6 +34,8 @@ enum EG2GRAPHICS_D3D
 	CMD_WAIT_GPU					,
 	CMD_FENCE_WAIT					,
 	CMD_PRESENT						,
+	CMD_COMMAND_BEGIN				,
+	CMD_COMMAND_END					,
 };
 
 struct IG2AppFrameWin : public IG2AppFrame

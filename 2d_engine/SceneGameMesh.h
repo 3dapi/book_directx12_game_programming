@@ -35,7 +35,7 @@ protected:
 	void UpdateCamera(const GameTimer& gt);
 	void BuildBox();
 	void UpdateBox(const GameTimer& gt);
-    void DrawBox(ID3D12GraphicsCommandList* cmdList);
+    void DrawBox();
 
 public:
 	unique_ptr<ShaderUploadChain>	m_cbUploader	{};

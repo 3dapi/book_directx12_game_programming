@@ -30,6 +30,7 @@ SceneSpine::SceneSpine() noexcept
 
 SceneSpine::~SceneSpine()
 {
+	Destroy();
 }
 
 // Initialize the Direct3D resources required to run.
@@ -48,6 +49,12 @@ int SceneSpine::Init(const std::any&)
 
 int SceneSpine::Destroy()
 {
+	m_states  = {};
+	m_resourceDescriptors = {};
+	m_sprites = {};
+	m_font    = {};
+
+	m_checkerRsc.Reset();
 	return 0;
 }
 
