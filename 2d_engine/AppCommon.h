@@ -19,20 +19,4 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace G2;
 
-struct RenderItem
-{
-	RenderItem() = default;
-
-	// descriptor
-	ComPtr<ID3D12DescriptorHeap>	srvDesc{};
-	D3D_PRIMITIVE_TOPOLOGY			primitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	// vertex buffer
-	G2::StaticResBufVtx				vtx{};
-	G2::StaticResBufIdx				idx{};
-	// const buufer
-	ShaderConstTransform			cbTrs;
-	ShaderConstPass					cbPss;
-	ShaderConstMaterial				cbMtl;
-};
-
 #endif __APPCOMMON_H__

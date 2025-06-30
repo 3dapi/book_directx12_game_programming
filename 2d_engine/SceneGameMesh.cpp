@@ -31,7 +31,7 @@ int SceneGameMesh::Init(const std::any&)
 	auto d3d = IG2GraphicsD3D::instance();
 	auto device       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	float aspectRatio    = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
-	m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
+	m_boxCbPss.tmProj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 1000.0f);
 
 	SetupUploadChain();
 	BuildBox();
@@ -85,7 +85,7 @@ void SceneGameMesh::UpdateCamera(const GameTimer& t)
 {
 	GameTimer gt = std::any_cast<GameTimer>(t);
 	float aspectRatio = *any_cast<float*>(IG2GraphicsD3D::instance()->getAttrib(ATT_ASPECTRATIO));
-	m_wireBox.cbPss.tmProj = XMMatrixPerspectiveFovRH(0.25f * XM_PI, aspectRatio, 1.0f, 5000.0f);
+	m_boxCbPss.tmProj = XMMatrixPerspectiveFovRH(0.25f * XM_PI, aspectRatio, 1.0f, 5000.0f);
 
 	// Convert Spherical to Cartesian coordinates.
 	m_tmEyePos.x = mRadius * sinf(mPhi) * cosf(mTheta);
@@ -97,7 +97,7 @@ void SceneGameMesh::UpdateCamera(const GameTimer& t)
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	m_wireBox.cbPss.tmView = XMMatrixLookAtRH(pos, target, up);
+	m_boxCbPss.tmView = XMMatrixLookAtRH(pos, target, up);
 }
 
 void SceneGameMesh::UpdateBox(const GameTimer& gt)
@@ -105,20 +105,20 @@ void SceneGameMesh::UpdateBox(const GameTimer& gt)
 	//constant world transform
 	auto currObjectCB = m_subCur->m_cnstTrs.get();
 	{
-		currObjectCB->CopyData(0, m_wireBox.cbTrs);
+		currObjectCB->CopyData(0, m_boxCbTrs);
 	}
 
 	// constant pass
 	auto currPassCB = m_subCur->m_cnstPss.get();
 	{
-		m_wireBox.cbPss.tmViewProj = XMMatrixMultiply(m_wireBox.cbPss.tmView, m_wireBox.cbPss.tmProj);
-		currPassCB->CopyData(0, m_wireBox.cbPss);
+		m_boxCbPss.tmViewProj = XMMatrixMultiply(m_boxCbPss.tmView, m_boxCbPss.tmProj);
+		currPassCB->CopyData(0, m_boxCbPss);
 	}
 
 	// const material
 	auto currMaterialCB = m_subCur->m_cnstMtl.get();
 	{
-		currMaterialCB->CopyData(0, m_wireBox.cbMtl);
+		currMaterialCB->CopyData(0, m_boxCbMtl);
 	}
 }
 
@@ -155,14 +155,14 @@ void SceneGameMesh::BuildBox()
 	std::vector<std::uint16_t> indices = box.GetIndices16();
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-	m_wireBox.vtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
-	m_wireBox.idx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
+	m_boxVtx.Init(vertices.data(), vbByteSize, sizeof(G2::VTX_NT), d3dDevice, d3dCommandList);
+	m_boxIdx.Init(indices.data(),  ibByteSize, DXGI_FORMAT_R16_UINT, d3dDevice, d3dCommandList);
 
 	// constant values
 	//--------------------------------------------------------------------------
-	m_wireBox.cbMtl.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_wireBox.cbTrs.tmWorld = XMMatrixTranslation(3.0f, 2.0f, -9.0f);
-	m_wireBox.primitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	m_boxCbMtl.DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_boxCbTrs.tmWorld = XMMatrixTranslation(3.0f, 2.0f, -9.0f);
+	m_boxPrimitive = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	// setup srv decriptor
 	//
@@ -173,12 +173,12 @@ void SceneGameMesh::BuildBox()
 	srvHeapDesc.NumDescriptors = 10;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_wireBox.srvDesc)));
+	ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_boxSrvDesc)));
 
 	//
 	// Fill out the heap with actual descriptors.
 	//
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_wireBox.srvDesc->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_boxSrvDesc->GetCPUDescriptorHandleForHeapStart());
 	auto texture_factory = FactoryTexture::instance();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -215,7 +215,7 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 
 
 	// shader reource view desciptor 설정: texture 정보
-	ID3D12DescriptorHeap* descriptorHeaps[] = { m_wireBox.srvDesc.Get() };
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_boxSrvDesc.Get() };
 	cmdList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 	auto pls = pls_manager->FindRes("PLS_ALPHATEST");
@@ -231,12 +231,12 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	auto cbMtl = m_subCur->m_cnstMtl->Resource();
 
 
-	cmdList->IASetVertexBuffers(0, 1, &m_wireBox.vtx.VertexBufferView());
-	cmdList->IASetIndexBuffer(&m_wireBox.idx.IndexBufferView());
-	cmdList->IASetPrimitiveTopology(m_wireBox.primitive);
+	cmdList->IASetVertexBuffers(0, 1, &m_boxVtx.VertexBufferView());
+	cmdList->IASetIndexBuffer(&m_boxIdx.IndexBufferView());
+	cmdList->IASetPrimitiveTopology(m_boxPrimitive);
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_wireBox.srvDesc->GetGPUDescriptorHandleForHeapStart());
-	// m_wireBox.srvDesc 에 텍스처가 여러게 바인딩 되었을 때 해당 인덱스
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_tex_hp(m_boxSrvDesc->GetGPUDescriptorHandleForHeapStart());
+	// srvDesc 에 텍스처가 여러게 바인딩 되었을 때 해당 인덱스
 	gpu_tex_hp.Offset(0, srvDescSize);
 
 	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = cbTrs->GetGPUVirtualAddress();
@@ -248,5 +248,5 @@ void SceneGameMesh::DrawBox(ID3D12GraphicsCommandList* cmdList)
 	cmdList->SetGraphicsRootConstantBufferView(2, cbPss->GetGPUVirtualAddress());
 	cmdList->SetGraphicsRootConstantBufferView(3, matCBAddress);
 
-	cmdList->DrawIndexedInstanced(m_wireBox.idx.entryCount, 1, 0, 0, 0);
+	cmdList->DrawIndexedInstanced(m_boxIdx.entryCount, 1, 0, 0, 0);
 }
