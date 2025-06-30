@@ -167,6 +167,7 @@
     <ClCompile Include="Common\GameTimer.cpp" />
     <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\G2.EngineD3D.cpp" />
+    <ClCompile Include="SceneSpine.cpp" />
     <ClCompile Include="SceneXtkGame.cpp" />
     <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="SceneGameMesh.cpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="Common\G2.EngineD3D.h" />
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
+    <ClInclude Include="SceneSpine.h" />
     <ClInclude Include="SceneXtkGame.h" />
     <ClInclude Include="ShaderUploadChain.h" />
     <ClInclude Include="MainApp.h" />

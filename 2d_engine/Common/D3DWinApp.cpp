@@ -69,7 +69,7 @@ int D3DWinApp::Render3D()
 	if (m_willResize)
 	{
 		auto d3d = IG2Graphics::instance();
-		hr = d3d->command(CMD_FLUSH_COMMAND_QUEUE);  // 🔧 Resize 전 GPU 대기
+		hr = d3d->command(CMD_WAIT_GPU);  // 🔧 Resize 전 GPU 대기
 		hr = d3d->command(CMD_SCREEN_RESIZE, m_screenSize);
 		m_willResize = false;
 	}

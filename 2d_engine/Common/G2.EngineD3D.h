@@ -50,7 +50,7 @@ public:
 	void	CreateSwapChain();
 	void	CreateRtvAndDsvDescriptorHeaps();
 	int		Resize();
-	int		FlushCommandQueue();
+	int		WaitGpu();
 	int		FenceWait();
 	int		Present();
 
@@ -82,8 +82,8 @@ protected:
 	ComPtr<ID3D12Device>                m_d3dDevice             {};
 	ComPtr<IDXGISwapChain>              m_d3dSwapChain          {};
 	ComPtr<ID3D12Fence>                 m_d3dFence              {};
-	UINT64                              m_d3dFenceIndex         {};
-	UINT64                              m_d3dFenceCurrent       {};
+	UINT64                              m_d3dFenceIndex         {1};
+	UINT64                              m_d3dFenceCurrent       {1};
 	HANDLE                              m_fenceEvent            {};
 
 	ComPtr<ID3D12CommandQueue>          m_d3dCommandQueue       {};

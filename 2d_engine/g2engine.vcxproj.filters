@@ -69,6 +69,9 @@
     <ClCompile Include="SceneXtkGame.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="SceneSpine.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\D3DWinApp.h">
@@ -144,6 +147,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="AppCommonXTK.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneSpine.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

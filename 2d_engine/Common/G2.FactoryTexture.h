@@ -18,6 +18,10 @@ struct TD3D_TEXTURE
 	std::string				file;	// texture file
 	ComPtr<ID3D12Resource>	r{};	// resource
 	ComPtr<ID3D12Resource>	u{};	// upload heap
+	~TD3D_TEXTURE() {
+		r.Reset();
+		u.Reset();
+	}
 };
 
 class FactoryTexture : public IG2Factory<FactoryTexture, TD3D_TEXTURE>
