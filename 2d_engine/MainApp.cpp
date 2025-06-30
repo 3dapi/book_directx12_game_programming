@@ -68,12 +68,12 @@ int MainApp::init(const std::any& initialValue /* = */)
 		return hr;
 
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
-	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
-	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
+	auto device   = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto cmdList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
+	auto cmdAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
+	auto cmdQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
 	
-	ThrowIfFailed(d3dCommandList->Reset(d3dCommandAlloc, nullptr));
+	hr = cmdList->Reset(cmdAlloc, nullptr);
 
 	// 1. load texutre
 	auto tex_manager = FactoryTexture::instance();
@@ -100,10 +100,15 @@ int MainApp::init(const std::any& initialValue /* = */)
 
 	auto pls_manager = FactoryPipelineState::instance();
 
+	hr = cmdList->Close();
+	ID3D12CommandList* cmdsLists[] ={cmdList};
+	cmdQue->ExecuteCommandLists(_countof(cmdsLists),cmdsLists);
+	d3d->command(CMD_WAIT_GPU);
+
 
 	// create XTK Instance
-	m_graphicsMemory = std::make_unique<GraphicsMemory>(d3dDevice);
-	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(d3dDevice);
+	m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
+	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(device);
 	{
 		auto scene = std::make_unique<SceneGameMesh>();
 		if (scene)
@@ -134,16 +139,6 @@ int MainApp::init(const std::any& initialValue /* = */)
 			}
 		}
 	}
-	
-	
-	
-	// Execute the initialization commands.
-	//ThrowIfFailed(d3dCommandList->Close());
-	//ID3D12CommandList* cmdsLists[] = { d3dCommandList };
-	//d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	// Wait until initialization is complete.
-	hr = d3d->command(CMD_WAIT_GPU);
 
 	return S_OK;
 }
@@ -188,10 +183,10 @@ int MainApp::Render()
 {
 	int hr = S_OK;
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
-	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
-	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
-	auto d3dCommandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
+	auto device       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
+	auto cmdList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
+	auto cmdAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
+	auto cmdQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
 	auto d3dViewport     = std::any_cast<D3D12_VIEWPORT*            >(d3d->getAttrib(ATT_DEVICE_VIEWPORT));
 	auto d3dScissor      = std::any_cast<D3D12_RECT*                >(d3d->getAttrib(ATT_DEVICE_SCISSOR_RECT));
 	auto d3dBackBuffer   = std::any_cast<ID3D12Resource*            >(d3d->getCurrentBackBuffer());
@@ -200,32 +195,34 @@ int MainApp::Render()
 	auto pls_manager     = FactoryPipelineState::instance();
 
 	// 0. d3d 작업 완료 대기.
-	hr = d3d->command(EG2GRAPHICS_D3D::CMD_FENCE_WAIT);
+	hr = d3d->command(EG2GRAPHICS_D3D::CMD_WAIT_GPU);
 
 	// Reuse the memory associated with command recording.
 	// We can only reset when the associated command lists have finished execution on the GPU.
-	hr = d3dCommandAlloc->Reset();
+	hr = cmdAlloc->Reset();
 	if (FAILED(hr))
 		return hr;
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 	// Reusing the command list reuses memory.
-	hr = d3dCommandList->Reset(d3dCommandAlloc, nullptr);
+	hr = cmdList->Reset(cmdAlloc, nullptr);
 	if (FAILED(hr))
 		return hr;
 
-	d3dCommandList->RSSetViewports(1, d3dViewport);
-	d3dCommandList->RSSetScissorRects(1, d3dScissor);
-
 	// Indicate a state transition on the resource usage.
-	d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	cmdList->ResourceBarrier(1,&CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_PRESENT));
+
+
+	cmdList->RSSetViewports(1, d3dViewport);
+	cmdList->RSSetScissorRects(1, d3dScissor);
+
 
 	// Clear the back buffer and depth buffer.
 	XMFLOAT4 clearColor = { 0.0f, 0.4f, 0.6f, 1.0f };
-	d3dCommandList->ClearRenderTargetView(d3dBackBufferV, (float*)&clearColor, 0, nullptr);
-	d3dCommandList->ClearDepthStencilView(d3dDepthV, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	cmdList->ClearRenderTargetView(d3dBackBufferV, (float*)&clearColor, 0, nullptr);
+	cmdList->ClearDepthStencilView(d3dDepthV, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 	// Specify the buffers we are going to render to.
-	d3dCommandList->OMSetRenderTargets(1, &d3dBackBufferV, true, &d3dDepthV);
+	cmdList->OMSetRenderTargets(1, &d3dBackBufferV, true, &d3dDepthV);
 
 
 	if(m_pSceneMesh)
@@ -237,21 +234,15 @@ int MainApp::Render()
 
 
 	// Indicate a state transition on the resource usage.
-	d3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	cmdList->ResourceBarrier(1,&CD3DX12_RESOURCE_BARRIER::Transition(d3dBackBuffer,D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Done recording commands.
-	hr = d3dCommandList->Close();
-	if (FAILED(hr))
-		return hr;
-
+	hr = cmdList->Close();
 	// Add the command list to the queue for execution.
-	ID3D12CommandList* cmdsLists[] = { d3dCommandList };
-	d3dCommandQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	ID3D12CommandList* cmdsLists[] = { cmdList };
+	cmdQue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
-	// 1. 화면 표시.
 	hr = d3d->command(EG2GRAPHICS_D3D::CMD_PRESENT);
-	// 2. GPU가 해당 작업을 완료할 때까지 대기.
-	hr = d3d->command(EG2GRAPHICS_D3D::CMD_WAIT_GPU);
 
 	return S_OK;
 }

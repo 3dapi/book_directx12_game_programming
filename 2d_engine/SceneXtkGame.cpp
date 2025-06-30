@@ -184,8 +184,8 @@ static bool isFirstRender = true;
 int SceneXtkGame::Render()
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
-	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
+	auto device    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto cmdList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
 
 	// Don't try to render anything before the first Update.
 	if(isFirstRender)
@@ -195,7 +195,7 @@ int SceneXtkGame::Render()
 	}
 
 
-	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Render");
+	PIXBeginEvent(cmdList,PIX_COLOR_DEFAULT,L"Render");
 
 	// Draw procedurally generated dynamic grid
 	const XMVECTORF32 xaxis ={20.f,0.f,0.f};
@@ -204,36 +204,36 @@ int SceneXtkGame::Render()
 
 	// Set the descriptor heaps
 	ID3D12DescriptorHeap* heaps[] ={ (ID3D12DescriptorHeap*)m_resourceDescriptors->Heap(),(ID3D12DescriptorHeap*)m_states->Heap()};
-	commandList->SetDescriptorHeaps(_countof(heaps),heaps);
+	cmdList->SetDescriptorHeaps(_countof(heaps),heaps);
 
 	// Draw sprite
-	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw sprite");
-	m_sprites->Begin(commandList);
+	PIXBeginEvent(cmdList,PIX_COLOR_DEFAULT,L"Draw sprite");
+	m_sprites->Begin(cmdList);
 	m_sprites->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo), DirectX::GetTextureSize(m_checkerRsc.Get()), XMFLOAT2(10,75));
 
 	m_font->DrawString(m_sprites.get(),L"DirectXTK12 Simple Sample",XMFLOAT2(100,10),Colors::Yellow);
 	m_sprites->End();
-	PIXEndEvent(commandList);
+	PIXEndEvent(cmdList);
 
 	// Draw 3D object
-	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw teapot");
+	PIXBeginEvent(cmdList,PIX_COLOR_DEFAULT,L"Draw teapot");
 	XMMATRIX local = m_world * XMMatrixTranslation(-2.f,-2.f,-4.f);
 	m_shapeEffect->SetWorld(local);
-	m_shapeEffect->Apply(commandList);
-	m_shape->Draw(commandList);
-	PIXEndEvent(commandList);
+	m_shapeEffect->Apply(cmdList);
+	m_shape->Draw(cmdList);
+	PIXEndEvent(cmdList);
 
 	// Draw model
-	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw model");
+	PIXBeginEvent(cmdList,PIX_COLOR_DEFAULT,L"Draw model");
 	const XMVECTORF32 scale ={0.01f,0.01f,0.01f};
 	const XMVECTORF32 translate ={3.f,-2.f,-4.f};
 	const XMVECTOR rotate = XMQuaternionRotationRollPitchYaw(XM_PI / 2.f,0.f,-XM_PI / 2.f);
 	local = m_world * XMMatrixTransformation(g_XMZero,XMQuaternionIdentity(), scale, g_XMZero, rotate, translate);
 	Model::UpdateEffectMatrices(m_modelEffects,local,m_view,m_projection);
 	heaps[0] = m_modelResources->Heap();
-	commandList->SetDescriptorHeaps(_countof(heaps),heaps);
-	m_model->Draw(commandList,m_modelEffects.begin());
-	PIXEndEvent(commandList);
+	cmdList->SetDescriptorHeaps(_countof(heaps),heaps);
+	m_model->Draw(cmdList,m_modelEffects.begin());
+	PIXEndEvent(cmdList);
 
 	return S_OK;
 }
@@ -241,15 +241,15 @@ int SceneXtkGame::Render()
 void XM_CALLCONV SceneXtkGame::DrawGrid(DirectX::FXMVECTOR xAxis,DirectX::FXMVECTOR yAxis,DirectX::FXMVECTOR origin,size_t xdivs,size_t ydivs,DirectX::GXMVECTOR color)
 {
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
-	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
+	auto device    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto cmdList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
 	auto pBatch       = std::any_cast<XTK_BATCH* >(IG2AppFrame::instance()->getAttrib(EAPP_ATTRIB::EAPP_ATT_XTK_BATCH));
 
-	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw grid");
+	PIXBeginEvent(cmdList,PIX_COLOR_DEFAULT,L"Draw grid");
 
-	m_lineEffect->Apply(commandList);
+	m_lineEffect->Apply(cmdList);
 
-	pBatch->Begin(commandList);
+	pBatch->Begin(cmdList);
 
 	xdivs = std::max<size_t>(1,xdivs);
 	ydivs = std::max<size_t>(1,ydivs);
@@ -280,7 +280,7 @@ void XM_CALLCONV SceneXtkGame::DrawGrid(DirectX::FXMVECTOR xAxis,DirectX::FXMVEC
 
 	pBatch->End();
 
-	PIXEndEvent(commandList);
+	PIXEndEvent(cmdList);
 }
 #pragma endregion
 

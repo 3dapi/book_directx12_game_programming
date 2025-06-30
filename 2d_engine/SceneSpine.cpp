@@ -82,9 +82,10 @@ int SceneSpine::Update(const std::any& t)
 static bool isFirstRender = true;
 int SceneSpine::Render()
 {
+	return S_OK;
 	auto d3d = IG2GraphicsD3D::instance();
-	auto d3dDevice    = std::any_cast<ID3D12Device*>(d3d->getDevice());
-	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
+	auto device   = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto cmdList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
 
 	// Don't try to render anything before the first Update.
 	if(isFirstRender)
@@ -93,20 +94,20 @@ int SceneSpine::Render()
 		return S_OK;
 	}
 
-	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Render");
+	PIXBeginEvent(cmdList,PIX_COLOR_DEFAULT,L"Render");
 
 	// Set the descriptor heaps
 	ID3D12DescriptorHeap* heaps[] ={ (ID3D12DescriptorHeap*)m_resourceDescriptors->Heap(),(ID3D12DescriptorHeap*)m_states->Heap()};
-	commandList->SetDescriptorHeaps(_countof(heaps),heaps);
+	cmdList->SetDescriptorHeaps(_countof(heaps),heaps);
 
 	// Draw sprite
-	PIXBeginEvent(commandList,PIX_COLOR_DEFAULT,L"Draw sprite");
-	m_sprites->Begin(commandList);
+	PIXBeginEvent(cmdList,PIX_COLOR_DEFAULT,L"Draw sprite");
+	m_sprites->Begin(cmdList);
 	m_sprites->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo), DirectX::GetTextureSize(m_checkerRsc.Get()), XMFLOAT2(10,75));
 
 	m_font->DrawString(m_sprites.get(),L"DirectXTK12 Simple Sample",XMFLOAT2(100,10),Colors::Yellow);
 	m_sprites->End();
-	PIXEndEvent(commandList);
+	PIXEndEvent(cmdList);
 
 	return S_OK;
 }
