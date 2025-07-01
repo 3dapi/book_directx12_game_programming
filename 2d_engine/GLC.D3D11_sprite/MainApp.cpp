@@ -103,17 +103,30 @@ int MainApp::Init()
 		return hr;
 
 	// 3. Create vertex buffer
+	{
+		m_bufVtxCount = 2048;
+		D3D11_BUFFER_DESC ibDesc = {};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(Vertex) * m_bufVtxCount;
+		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufVtx);
+		if (FAILED(hr))
+			return hr;
+	}
 
-	m_bufVtxCount = 4;
-	D3D11_BUFFER_DESC spineBd = {};
-	spineBd.Usage = D3D11_USAGE_DYNAMIC;
-	spineBd.ByteWidth = sizeof(Vertex) * m_bufVtxCount;
-	spineBd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	spineBd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	hr = d3dDevice->CreateBuffer(&spineBd,nullptr,&m_bufVtx);
-	if (FAILED(hr))
-		return hr;
-
+	// 인덱스 버퍼 (최대 2048개까지 임시)
+	{
+		m_bufIdxCount = 4096;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(uint16_t) * m_bufIdxCount;
+		ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufIdx);
+		if(FAILED(hr))
+			return hr;
+	}
 
 	// 5. Create the constant buffer
 	// 5.1 world
@@ -202,7 +215,19 @@ int MainApp::Init()
 			return hr;
 		}
 	}
-	
+	{
+		D3D11_DEPTH_STENCIL_DESC  dsDesc ={};
+		dsDesc.DepthEnable = FALSE;								// no depth test
+		dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;	// no z write
+		dsDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;				// always pas
+		dsDesc.StencilEnable = FALSE;
+		hr = d3dDevice->CreateDepthStencilState(&dsDesc,&m_depthWriteEnabled);
+		if(FAILED(hr))
+		{
+			return hr;
+		}
+	}
+
 	Bone::setYDown(false);
 
 	m_spineAtlas = new Atlas("../assets/spine/spineboy-pma.atlas", this);
@@ -211,9 +236,9 @@ int MainApp::Init()
 
 
 	m_spineSkeleton = new Skeleton(m_spineSkeletonData);
-	m_spineSkeleton->setPosition(0.0F, 0.0F);
-	m_spineSkeleton->setScaleX(0.4f);
-	m_spineSkeleton->setScaleY(0.4f);
+	m_spineSkeleton->setPosition(0.0F, -300.0F);
+	m_spineSkeleton->setScaleX(0.6f);
+	m_spineSkeleton->setScaleY(0.6f);
 
 	AnimationStateData animationStateData(m_spineSkeletonData);
 	animationStateData.setDefaultMix(0.2f);
@@ -269,6 +294,7 @@ int MainApp::Render()
 	float blendFactor[4] ={0,0,0,0};
 	UINT sampleMask = 0xffffffff;
 	d3dContext->OMSetBlendState(m_stateBlend,blendFactor,sampleMask);
+	d3dContext->OMSetDepthStencilState(m_depthWriteEnabled, 0);
 
 	// 1. Update constant value
 	d3dContext->UpdateSubresource(m_cnstWorld, 0, {}, &m_mtWorld, 0, 0);
@@ -302,7 +328,91 @@ int MainApp::Render()
 		spine::Attachment* attachment = slot->getAttachment();
 		if(!attachment) continue;
 
-		if(attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
+		if(attachment->getRTTI().isExactly(spine::PathAttachment::rtti)) {
+			// PathAttachment는 IK나 베지어 경로용 → 무시
+			continue;
+		}
+		else if(attachment->getRTTI().isExactly(spine::BoundingBoxAttachment::rtti)) {
+			auto* attm = static_cast<spine::BoundingBoxAttachment*>(attachment);
+			int c;
+			c = 0;
+		}
+		else if(attachment->getRTTI().isExactly(spine::ClippingAttachment::rtti)) {
+			auto* attm = static_cast<spine::ClippingAttachment*>(attachment);
+			// 실제 렌더링은 하지 않지만,
+			// SkeletonClipping 또는 관련 클래스에 전달해야 클리핑 정상 동작
+
+			// 예: 클리핑 시작
+			//clippingInstance->clipStart(*slot,clip);
+			continue;
+		}
+		else if(attachment->getRTTI().isExactly(spine::MeshAttachment::rtti)) {
+			auto* attm = static_cast<spine::MeshAttachment*>(attachment);
+			auto* mesh = static_cast<spine::MeshAttachment*>(attachment);
+
+			size_t vtxCount = mesh->getWorldVerticesLength() / 2;
+			std::vector<float> worldVertices(mesh->getWorldVerticesLength());
+			mesh->computeWorldVertices(*slot,0,mesh->getWorldVerticesLength(),worldVertices.data(),0,2);
+
+			const float* uvs = mesh->getUVs().buffer();
+			const unsigned short* indices = mesh->getTriangles().buffer();
+			size_t indexCount = mesh->getTriangles().size();
+
+			// 색상
+			spine::Color c = slot->getColor();
+			c.a *= slot->getColor().a;
+			c.r *= slot->getColor().r;
+			c.g *= slot->getColor().g;
+			c.b *= slot->getColor().b;
+
+			spine::Color mColor = mesh->getColor();
+			c.a *= mColor.a; c.r *= mColor.r; c.g *= mColor.g; c.b *= mColor.b;
+
+			uint32_t rgba =
+				(uint32_t(c.a * 255) << 24) |
+				(uint32_t(c.r * 255) << 16) |
+				(uint32_t(c.g * 255) << 8)  |
+				(uint32_t(c.b * 255) << 0);
+
+			// 정점 복사
+			std::vector<Vertex> vertices(vtxCount);
+			for(size_t i = 0; i < vtxCount; ++i) {
+				vertices[i].p ={worldVertices[i * 2],worldVertices[i * 2 + 1],0.0f};
+				vertices[i].t ={uvs[i * 2],uvs[i * 2 + 1]};
+				vertices[i].c = rgba;
+			}
+
+			// 텍스처
+			spine::TextureRegion* texRegion = mesh->getRegion();
+			if(!texRegion) continue;
+
+			auto* atlasRegion = reinterpret_cast<spine::AtlasRegion*>(texRegion);
+			auto* texSRV = reinterpret_cast<ID3D11ShaderResourceView*>(atlasRegion->page->texture);
+			if(!texSRV) continue;
+
+			// 버퍼 복사
+			D3D11_MAPPED_SUBRESOURCE mappedVtx ={};
+			if(SUCCEEDED(d3dContext->Map(m_bufVtx, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedVtx))) {
+				memcpy(mappedVtx.pData,vertices.data(),sizeof(Vertex) * vtxCount);
+				d3dContext->Unmap(m_bufVtx, 0);
+			}
+
+			D3D11_MAPPED_SUBRESOURCE mappedIdx ={};
+			if(SUCCEEDED(d3dContext->Map(m_bufIdx, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedIdx))) {
+				memcpy(mappedIdx.pData, indices, sizeof(uint16_t) * indexCount);
+				d3dContext->Unmap(m_bufIdx, 0);
+			}
+
+			// 바인딩
+			UINT stride = sizeof(Vertex),offset = 0;
+			d3dContext->IASetVertexBuffers(0,1,&m_bufVtx,&stride,&offset);
+			d3dContext->IASetIndexBuffer(m_bufIdx, DXGI_FORMAT_R16_UINT, 0);
+			d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			d3dContext->PSSetShaderResources(0,1,&texSRV);
+
+			d3dContext->DrawIndexed(static_cast<UINT>(indexCount),0,0);
+		}
+		else if(attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
 			auto* region = static_cast<spine::RegionAttachment*>(attachment);
 
 			// 정점 좌표 계산
@@ -349,7 +459,7 @@ int MainApp::Render()
 			for(int v = 0; v < 4; ++v) {
 				vertices[v].p.x = worldVertices[v * 2];
 				vertices[v].p.y = worldVertices[v * 2 + 1];
-				vertices[v].p.z = 0;
+				vertices[v].p.z = 0.0F;
 				vertices[v].t.x = uvs[v * 2];
 				vertices[v].t.y = uvs[v * 2 + 1];
 				vertices[v].c = rgba; // DWORD 색상
@@ -369,7 +479,7 @@ int MainApp::Render()
 			d3dContext->PSSetShaderResources(0,1,&texSRV);
 
 			// 10. draw
-			d3dContext->Draw(m_bufVtxCount, 0);
+			d3dContext->Draw(4, 0);
 		}
 	}
 
