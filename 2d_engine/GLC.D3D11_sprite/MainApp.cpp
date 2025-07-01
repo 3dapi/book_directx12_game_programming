@@ -102,34 +102,8 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// 3. Create vertex buffer
-	{
-		m_bufVtxCount = 2048;
-		D3D11_BUFFER_DESC ibDesc = {};
-		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
-		ibDesc.ByteWidth = sizeof(Vertex) * m_bufVtxCount;
-		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufVtx);
-		if (FAILED(hr))
-			return hr;
-	}
-
-	// 인덱스 버퍼 (최대 2048개까지 임시)
-	{
-		m_bufIdxCount = 4096;
-		D3D11_BUFFER_DESC ibDesc ={};
-		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
-		ibDesc.ByteWidth = sizeof(uint16_t) * m_bufIdxCount;
-		ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufIdx);
-		if(FAILED(hr))
-			return hr;
-	}
-
-	// 5. Create the constant buffer
-	// 5.1 world
+	// 3. Create the constant buffer
+	// 3.1 world
 	D3D11_BUFFER_DESC bd = {};
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(m_mtWorld);
@@ -139,7 +113,7 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// 5.2 view
+	// 3.2 view
 	bd = {};
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(m_mtView);
@@ -149,7 +123,7 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// 5.3 projection matrtix
+	// 3.3 projection matrtix
 	bd = {};
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(m_mtProj);
@@ -159,23 +133,21 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// 6. setup the world, view, projection matrix
+	// 4. setup the world, view, projection matrix
 	// View, Projection Matrix
 	// Initialize the view matrix
 	XMVECTOR Eye = XMVectorSet( 0.0f, 0.0f, -1000.0f, 0.0f );
 	XMVECTOR At = XMVectorSet ( 0.0f, 0.0f,   0.0f, 0.0f );
 	XMVECTOR Up = XMVectorSet ( 0.0f, 1.0f,   0.0f, 0.0f );
 	m_mtView = XMMatrixLookAtLH(Eye, At, Up);
-
 	// Initialize the projection matrix
 	auto screeSize = std::any_cast<::SIZE*>(IG2GraphicsD3D::getInstance()->GetAttrib(ATTRIB_CMD::ATTRIB_SCREEN_SIZE));
 	m_mtProj = XMMatrixPerspectiveFovLH(XM_PIDIV4, screeSize->cx / (FLOAT)screeSize->cy, 1.0f, 5000.0f);
-
-	// 7. Initialize the world matrix
+	// 4.2 Initialize the world matrix
 	m_mtWorld = XMMatrixIdentity();
 
 
-	// 8. create texture sampler state
+	// 5. create texture sampler state
 	D3D11_SAMPLER_DESC sampDesc = {};
 	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -188,7 +160,7 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// 9. create texture sampler state
+	// 5. create texture sampler state
 	{
 		D3D11_RASTERIZER_DESC rasterDesc ={};
 		rasterDesc.FillMode = D3D11_FILL_SOLID;
@@ -243,11 +215,66 @@ int MainApp::Init()
 	m_spineSkeleton->setScaleX(0.6f);
 	m_spineSkeleton->setScaleY(0.6f);
 
+	spine::SkeletonData* skelData = m_spineSkeleton->getData();
+	auto& animations = skelData->getAnimations();
+
+	// animation name
+	std::vector<std::string>	vcAnimation;
+	for(int i = 0; i < animations.size(); ++i) {
+		spine::Animation* anim = animations[i];
+		std::string animName = anim->getName().buffer();
+		vcAnimation.push_back(animName);
+	}
+	size_t maxVertexCount = 0;
+	size_t maxIndexCount = 0;
+	auto drawOrder = m_spineSkeleton->getDrawOrder();
+	for(size_t i = 0; i < drawOrder.size(); ++i) {
+		spine::Slot* slot = drawOrder[i];
+		spine::Attachment* attachment = slot->getAttachment();
+		if(!attachment)
+			continue;
+		if(attachment->getRTTI().isExactly(spine::MeshAttachment::rtti)) {
+			auto* mesh = static_cast<spine::MeshAttachment*>(attachment);
+			size_t vtxCount = mesh->getWorldVerticesLength()/2;
+			if(vtxCount> maxVertexCount)
+				maxVertexCount = vtxCount;
+
+			size_t indexCount = mesh->getTriangles().size();
+			if(indexCount>maxIndexCount)
+				maxIndexCount = indexCount;
+		}
+	}
+	// 3. Create vertex buffer
+	{
+		m_bufVtxCount = (maxVertexCount > 8)? maxVertexCount: 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(Vertex) * (UINT)m_bufVtxCount;
+		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufVtx);
+		if(FAILED(hr))
+			return hr;
+	}
+
+	// 인덱스 버퍼
+	{
+		m_bufIdxCount = maxIndexCount >8? maxIndexCount : 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(uint16_t) * (UINT)m_bufIdxCount;
+		ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufIdx);
+		if(FAILED(hr))
+			return hr;
+	}
 	AnimationStateData animationStateData(m_spineSkeletonData);
 	animationStateData.setDefaultMix(0.2f);
 	m_spineAniState = new AnimationState(&animationStateData);
 	m_spineAniState->setAnimation(0,"gun-holster", false);
-	m_spineAniState->addAnimation(0,"walk",true, 0.8);
+	m_spineAniState->addAnimation(0,"roar",false, 0.8F);
+	m_spineAniState->addAnimation(0,"walk",true, 2.1F);
 
 	mTimer.Reset();
 	return S_OK;
@@ -259,6 +286,7 @@ int MainApp::Destroy()
 	G2::SAFE_RELEASE(m_shaderPxl);
 	G2::SAFE_RELEASE(m_vtxLayout);
 	G2::SAFE_RELEASE(m_bufVtx	);
+	G2::SAFE_RELEASE(m_bufIdx	);
 	G2::SAFE_RELEASE(m_cnstWorld);
 	G2::SAFE_RELEASE(m_cnstView	);
 	G2::SAFE_RELEASE(m_cnstProj	);
@@ -324,6 +352,9 @@ int MainApp::Render()
 	// 7. primitive topology
 	d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
+	//for(int i = 0,n = (int)m_spineSkeleton->getSlots().size(); i < n; ++i) {
+	//	Slot* slot = m_spineSkeleton->getDrawOrder()[i];}
+
 	auto drawOrder = m_spineSkeleton->getDrawOrder();
 
 	for(size_t i = 0; i < drawOrder.size(); ++i) {
@@ -373,9 +404,9 @@ int MainApp::Render()
 
 			uint32_t rgba =
 				(uint32_t(c.a * 255) << 24) |
-				(uint32_t(c.r * 255) << 16) |
+				(uint32_t(c.b * 255) << 16) |
 				(uint32_t(c.g * 255) << 8)  |
-				(uint32_t(c.b * 255) << 0);
+				(uint32_t(c.r * 255) << 0);
 
 			// 정점 복사
 			std::vector<Vertex> vertices(vtxCount);
