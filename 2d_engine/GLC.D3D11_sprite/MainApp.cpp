@@ -230,10 +230,13 @@ int MainApp::Init()
 
 	Bone::setYDown(false);
 
-	m_spineAtlas = new Atlas("../assets/spine/spineboy-pma.atlas", this);
-	SkeletonBinary binary(m_spineAtlas);
-	m_spineSkeletonData = binary.readSkeletonDataFile("../assets/spine/spineboy-pro.skel");
+	//m_spineAtlas = new Atlas("../assets/spine/spineboy-pma/spineboy-pma.atlas", this);
+	//SkeletonBinary binary(m_spineAtlas);
+	//m_spineSkeletonData = binary.readSkeletonDataFile("../assets/spine/spineboy-pma/spineboy-pro.skel");
 
+	m_spineAtlas = new Atlas("../assets/spine/raptor/raptor-pma.atlas",this);
+	SkeletonJson binary(m_spineAtlas);
+	m_spineSkeletonData = binary.readSkeletonDataFile("../assets/spine/raptor/raptor-pro.json");
 
 	m_spineSkeleton = new Skeleton(m_spineSkeletonData);
 	m_spineSkeleton->setPosition(0.0F, -300.0F);
@@ -243,8 +246,8 @@ int MainApp::Init()
 	AnimationStateData animationStateData(m_spineSkeletonData);
 	animationStateData.setDefaultMix(0.2f);
 	m_spineAniState = new AnimationState(&animationStateData);
-	m_spineAniState->setAnimation(0,"portal",true);
-	m_spineAniState->addAnimation(0,"run",true,0);
+	m_spineAniState->setAnimation(0,"gun-holster", false);
+	m_spineAniState->addAnimation(0,"walk",true, 0.8);
 
 	mTimer.Reset();
 	return S_OK;
