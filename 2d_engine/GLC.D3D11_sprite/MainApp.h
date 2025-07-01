@@ -6,8 +6,7 @@
 #include <d3d11.h>
 #include <DirectxMath.h>
 
-using DirectX::XMMATRIX;
-using DirectX::XMFLOAT4;
+using namespace DirectX;
 
 class MainApp
 {
@@ -24,8 +23,8 @@ protected:
 	ID3D11Buffer*			m_cnstProj		{};
 	ID3D11Buffer*			m_cnstDiff		{};
 
-	ID3D11ShaderResourceView*		m_srvTexture	{};
-	ID3D11SamplerState*				m_sampLinear	{};
+	ID3D11ShaderResourceView*	m_srvTexture	{};
+	ID3D11SamplerState*			m_sampLinear	{};
 
 	XMMATRIX				m_mtView		{};
 	XMMATRIX				m_mtProj		{};

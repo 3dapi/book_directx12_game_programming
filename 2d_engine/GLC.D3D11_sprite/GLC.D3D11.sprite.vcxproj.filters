@@ -24,9 +24,6 @@
     <ClCompile Include="D3DApp.cpp">
       <Filter>s</Filter>
     </ClCompile>
-    <ClCompile Include="MainApp.cpp">
-      <Filter>s</Filter>
-    </ClCompile>
     <ClCompile Include="G2Util.cpp">
       <Filter>s</Filter>
     </ClCompile>
@@ -39,12 +36,10 @@
     <ClCompile Include="spine-glfw.cpp">
       <Filter>s</Filter>
     </ClCompile>
+    <ClCompile Include="MainApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D3DApp.h">
-      <Filter>h</Filter>
-    </ClInclude>
-    <ClInclude Include="MainApp.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="G2Util.h">
@@ -62,9 +57,10 @@
     <ClInclude Include="stb_image.h">
       <Filter>h</Filter>
     </ClInclude>
+    <ClInclude Include="MainApp.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\simple.fxh">
+    <None Include="assets\simple.fx">
       <Filter>assets</Filter>
     </None>
   </ItemGroup>
