@@ -33,10 +33,10 @@
     <ClCompile Include="DDSTextureLoader.cpp">
       <Filter>s</Filter>
     </ClCompile>
-    <ClCompile Include="spine-glfw.cpp">
+    <ClCompile Include="MainApp.cpp" />
+    <ClCompile Include="GameTimer.cpp">
       <Filter>s</Filter>
     </ClCompile>
-    <ClCompile Include="MainApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D3DApp.h">
@@ -51,18 +51,16 @@
     <ClInclude Include="DDSTextureLoader.h">
       <Filter>h</Filter>
     </ClInclude>
-    <ClInclude Include="spine-glfw.h">
-      <Filter>h</Filter>
-    </ClInclude>
-    <ClInclude Include="stb_image.h">
-      <Filter>h</Filter>
-    </ClInclude>
     <ClInclude Include="MainApp.h" />
+    <ClInclude Include="GameTimer.h">
+      <Filter>s</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\simple.fx">
       <Filter>assets</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\seafloor.dds">

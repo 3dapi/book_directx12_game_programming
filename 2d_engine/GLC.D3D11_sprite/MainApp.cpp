@@ -2,33 +2,28 @@
 #include <Windows.h>
 #include <d3d11.h>
 #include <DirectxColors.h>
+#include <WICTextureLoader.h>
 #include "G2Base.h"
 #include "MainApp.h"
 #include "G2Util.h"
-#include <spine/Extension.h>
-
 using namespace DirectX;
+using namespace spine;
 
-// for lighting
-struct SimpleVertex
+inline std::wstring ansiToWstr(const std::string& str)
 {
-	XMFLOAT3		p{};
-	XMFLOAT2		t{};
-	uint8_t			d[4]{};
-};
-// constant buffer for the vertex shader
-struct ConstBufLight
-{
-	XMFLOAT4 vLightDir		[2]	;
-	XMFLOAT4 vLightColor	[2]	;
-	XMFLOAT4 vOutputColor		;
-};
+	int len = MultiByteToWideChar(CP_ACP,0,str.c_str(),-1,nullptr,0);
+	if(1 >= len)
+		return  L"";
+	std::wstring wstr(len - 1,0);
+	MultiByteToWideChar(CP_ACP,0,str.c_str(),-1,&wstr[0],len);
+	return wstr;
+}
 
 namespace spine {
 	SpineExtension *getDefaultExtension()
 	{
-		static SpineExtension* _spine_instance = new DefaultSpineExtension;
-		return _spine_instance;
+		static SpineExtension* _default_spineExtension = new DefaultSpineExtension;
+		return _default_spineExtension;
 	}
 }
 
@@ -41,16 +36,36 @@ MainApp::~MainApp()
 	Destroy();
 }
 
-int MainApp::Init()
-{
+void MainApp::load(spine::AtlasPage& page,const spine::String& path) {
+	auto fileName = path.buffer();
+	HRESULT hr = S_OK;
 	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
 	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
+	ID3D11Resource*				textureRsc{};
+	ID3D11ShaderResourceView*	textureView{};
+	auto wstr_file = ansiToWstr(fileName);
+	hr  = DirectX::CreateWICTextureFromFile(d3dDevice, d3dContext, wstr_file.c_str(), &textureRsc, &textureView);
+	if(SUCCEEDED(hr))
+	{
+		m_srvTexture = textureView;
+		page.texture = m_srvTexture;
+	}
+}
 
+void MainApp::unload(void* texture) {
+	texture = nullptr;
+}
+
+int MainApp::Init()
+{
+	HRESULT hr = S_OK;
+	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
+	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
 
 	// create vertex shader
 	// 1.1 Compile the vertex shader
 	ID3DBlob* pBlob{};
-	HRESULT hr = G2::DXCompileShaderFromFile("assets/simple.fx", "main_vtx", "vs_4_0", &pBlob);
+	hr = G2::DXCompileShaderFromFile("assets/simple.fx", "main_vtx", "vs_4_0", &pBlob);
 	if (FAILED(hr))
 	{
 		MessageBox({}, "The FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", "Error", MB_OK);
@@ -62,19 +77,17 @@ int MainApp::Init()
 		return hr;
 
 	// 1.3 create vertexLayout
-	// Define the input layout
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0 + sizeof(XMFLOAT3), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "DIFFUSE" , 0, DXGI_FORMAT_R8G8B8A8_UNORM   , 0, 0 + sizeof(XMFLOAT3) + sizeof(XMFLOAT2), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR"   , 0, DXGI_FORMAT_R8G8B8A8_UNORM , 0, 0 + sizeof(XMFLOAT3), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0 + sizeof(XMFLOAT3) + sizeof(uint32_t), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	hr = d3dDevice->CreateInputLayout(layout, numElements, pBlob->GetBufferPointer(), pBlob->GetBufferSize(), &m_vtxLayout);
 	G2::SAFE_RELEASE(pBlob);
 	if (FAILED(hr))
 		return hr;
-
 
 	// 2.1 Compile the pixel shader
 	hr = G2::DXCompileShaderFromFile("assets/simple.fx", "main_pxl", "ps_4_0", &pBlob);
@@ -90,44 +103,21 @@ int MainApp::Init()
 		return hr;
 
 	// 3. Create vertex buffer
-	SimpleVertex vertices[] =
-	{
-		{ { -1.0f,  1.0f,  0.0f },  { 1.0f, 0.0f },  { 255,   0,   0, 255 } },
-		{ {  1.0f,  1.0f,  0.0f },  { 0.0f, 0.0f },  {   0, 255,   0, 255 } },
-		{ {  1.0f, -1.0f,  0.0f },  { 0.0f, 1.0f },  {   0,   0, 255, 255 } },
-		{ { -1.0f, -1.0f,  0.0f },  { 1.0f, 1.0f },  { 255,   0, 255, 255 } },
-    };
-	m_bufVtxCount = sizeof(vertices) / sizeof(vertices[0]);
-	D3D11_BUFFER_DESC bd = {};
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(SimpleVertex) * m_bufVtxCount;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
 
-	D3D11_SUBRESOURCE_DATA InitData = {};
-	InitData.pSysMem = vertices;
-	hr = d3dDevice->CreateBuffer(&bd, &InitData, &m_bufVtx);
+	m_bufVtxCount = 4;
+	D3D11_BUFFER_DESC spineBd = {};
+	spineBd.Usage = D3D11_USAGE_DYNAMIC;
+	spineBd.ByteWidth = sizeof(Vertex) * m_bufVtxCount;
+	spineBd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	spineBd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	hr = d3dDevice->CreateBuffer(&spineBd,nullptr,&m_bufVtx);
 	if (FAILED(hr))
 		return hr;
 
-	// 4. Create Index buffer
-	WORD indices[] =
-	{
-		 0, 1, 2,  0, 2, 3,
-	};
-	m_bufIdxCount = sizeof(indices) / sizeof(indices[0]);
-
-	bd = {};
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(WORD) * m_bufIdxCount;        // 36 vertices needed for 12 triangles in a triangle list
-	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-	InitData.pSysMem = indices;
-	hr = d3dDevice->CreateBuffer(&bd, &InitData, &m_bufIdx);
 
 	// 5. Create the constant buffer
-	// world
-	bd = {};
+	// 5.1 world
+	D3D11_BUFFER_DESC bd = {};
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(m_mtWorld);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -136,7 +126,7 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// view
+	// 5.2 view
 	bd = {};
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(m_mtView);
@@ -146,7 +136,7 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// projection matrtix
+	// 5.3 projection matrtix
 	bd = {};
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(m_mtProj);
@@ -159,7 +149,7 @@ int MainApp::Init()
 	// 6. setup the world, view, projection matrix
 	// View, Projection Matrix
 	// Initialize the view matrix
-	XMVECTOR Eye = XMVectorSet( 0.0f, 0.0f, -10.0f, 0.0f );
+	XMVECTOR Eye = XMVectorSet( 0.0f, 0.0f, -1000.0f, 0.0f );
 	XMVECTOR At = XMVectorSet ( 0.0f, 0.0f,   0.0f, 0.0f );
 	XMVECTOR Up = XMVectorSet ( 0.0f, 1.0f,   0.0f, 0.0f );
 	m_mtView = XMMatrixLookAtLH(Eye, At, Up);
@@ -173,12 +163,6 @@ int MainApp::Init()
 
 
 	// 8. create texture sampler state
-	// Load the Texture
-	std::tie(hr, m_srvTexture, std::ignore) = G2::DXCreateDDSTextureFromFile("assets/seafloor.dds");
-	if (FAILED(hr))
-		return hr;
-
-	// Create the sample state
 	D3D11_SAMPLER_DESC sampDesc = {};
 	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -191,16 +175,53 @@ int MainApp::Init()
 	if (FAILED(hr))
 		return hr;
 
-	// Diffuse color for the mesh
-	bd = {};
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(m_difMesh);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = 0;
-	hr = d3dDevice->CreateBuffer(&bd, {}, &m_cnstDiff);
-	if (FAILED(hr))
-		return hr;
+	// 9. create texture sampler state
+	{
+		D3D11_RASTERIZER_DESC rasterDesc ={};
+		rasterDesc.FillMode = D3D11_FILL_SOLID;
+		rasterDesc.CullMode = D3D11_CULL_NONE;		// 또는 D3D11_CULL_NONE, D3D11_CULL_FRONT
+		rasterDesc.FrontCounterClockwise = TRUE;	// CCW 면이 앞면 (보통 OpenGL 스타일)
+		hr = d3dDevice->CreateRasterizerState(&rasterDesc,&m_stateRater);
+		if(SUCCEEDED(hr)) {
+			d3dContext->RSSetState(m_stateRater);
+		}
+	}
+	{
+		D3D11_BLEND_DESC blendDesc ={};
+		blendDesc.RenderTarget[0].BlendEnable = TRUE;
+		blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		hr = d3dDevice->CreateBlendState(&blendDesc,&m_stateBlend);
+		if(FAILED(hr))
+		{
+			return hr;
+		}
+	}
+	
+	Bone::setYDown(false);
 
+	m_spineAtlas = new Atlas("../assets/spine/spineboy-pma.atlas", this);
+	SkeletonBinary binary(m_spineAtlas);
+	m_spineSkeletonData = binary.readSkeletonDataFile("../assets/spine/spineboy-pro.skel");
+
+
+	m_spineSkeleton = new Skeleton(m_spineSkeletonData);
+	m_spineSkeleton->setPosition(0.0F, 0.0F);
+	m_spineSkeleton->setScaleX(0.4f);
+	m_spineSkeleton->setScaleY(0.4f);
+
+	AnimationStateData animationStateData(m_spineSkeletonData);
+	animationStateData.setDefaultMix(0.2f);
+	m_spineAniState = new AnimationState(&animationStateData);
+	m_spineAniState->setAnimation(0,"portal",true);
+	m_spineAniState->addAnimation(0,"run",true,0);
+
+	mTimer.Reset();
 	return S_OK;
 }
 
@@ -210,82 +231,147 @@ int MainApp::Destroy()
 	G2::SAFE_RELEASE(m_shaderPxl);
 	G2::SAFE_RELEASE(m_vtxLayout);
 	G2::SAFE_RELEASE(m_bufVtx	);
-	G2::SAFE_RELEASE(m_bufIdx	);
 	G2::SAFE_RELEASE(m_cnstWorld);
 	G2::SAFE_RELEASE(m_cnstView	);
 	G2::SAFE_RELEASE(m_cnstProj	);
 
 	G2::SAFE_RELEASE(m_srvTexture);
 	G2::SAFE_RELEASE(m_sampLinear);
-	G2::SAFE_RELEASE(m_cnstDiff	);
 	return S_OK;
 }
 
 int MainApp::Update()
 {
-	// Update our time
-	static float t = 0.0f;
+	mTimer.Tick();
 
-	static ULONGLONG timeStart = 0;
-	ULONGLONG timeCur = GetTickCount64();
-	if (timeStart == 0)
-		timeStart = timeCur;
-	t = (timeCur - timeStart) / 1000.0f;
+	auto t = mTimer.DeltaTime();
 
-	// Rotate cube around the origin
-	//m_mtWorld = XMMatrixRotationY(t);
+	// Update and apply the animation state to the skeleton
+	m_spineAniState->update(t);
+	m_spineAniState->apply(*m_spineSkeleton);
 
-	m_difMesh.x = (sinf(t * 1.0f) + 1.0f) * 0.5f;
-	m_difMesh.y = (cosf(t * 3.0f) + 1.0f) * 0.5f;
-	m_difMesh.z = (sinf(t * 5.0f) + 1.0f) * 0.5f;
+	// Update the skeleton time (used for physics)
+	m_spineSkeleton->update(t);
+
+	// Calculate the new pose
+	m_spineSkeleton->updateWorldTransform(spine::Physics_Update);
 
 	return S_OK;
 }
 
 int MainApp::Render()
 {
+	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
 	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
+
+	// 0. render state
+	d3dContext->RSSetState(m_stateRater);
+	float blendFactor[4] ={0,0,0,0};
+	UINT sampleMask = 0xffffffff;
+	d3dContext->OMSetBlendState(m_stateBlend,blendFactor,sampleMask);
 
 	// 1. Update constant value
 	d3dContext->UpdateSubresource(m_cnstWorld, 0, {}, &m_mtWorld, 0, 0);
 	d3dContext->UpdateSubresource(m_cnstView , 0, {}, &m_mtView , 0, 0);
 	d3dContext->UpdateSubresource(m_cnstProj , 0, {}, &m_mtProj , 0, 0);
-	d3dContext->UpdateSubresource(m_cnstDiff , 0, {}, &m_difMesh , 0, 0);
 
 	// 2. set the constant buffer
 	d3dContext->VSSetConstantBuffers(0, 1, &m_cnstWorld);
 	d3dContext->VSSetConstantBuffers(1, 1, &m_cnstView);
 	d3dContext->VSSetConstantBuffers(2, 1, &m_cnstProj);
-	d3dContext->PSSetConstantBuffers(3, 1, &m_cnstDiff);
-
+	
 	// 3. set vertex shader
-	d3dContext->VSSetShader(m_shaderVtx, {}, 0);
+	d3dContext->VSSetShader(m_shaderVtx,{},0);
 
 	// 4. set the input layout
 	d3dContext->IASetInputLayout(m_vtxLayout);
 
 	// 5. set the pixel shader
-	d3dContext->PSSetShader(m_shaderPxl, {}, 0);
+	d3dContext->PSSetShader(m_shaderPxl,{},0);
 
-	// 6. set the vertex buffer
-	UINT stride = sizeof(SimpleVertex);
-	UINT offset = 0;
-	d3dContext->IASetVertexBuffers(0, 1, &m_bufVtx, &stride, &offset);
+	// 6. set the sampler state
+	d3dContext->PSSetSamplers(0,1,&m_sampLinear);
 
-	// 7. set the index buffer
-	d3dContext->IASetIndexBuffer(m_bufIdx, DXGI_FORMAT_R16_UINT, 0);
+	// 7. primitive topology
+	d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-	// 8. set the texture
-	d3dContext->PSSetShaderResources(0, 1, &m_srvTexture);
+	auto drawOrder = m_spineSkeleton->getDrawOrder();
 
-	// 9. set the sampler state
-	d3dContext->PSSetSamplers(0, 1, &m_sampLinear);
+	for(size_t i = 0; i < drawOrder.size(); ++i) {
+		spine::Slot* slot = drawOrder[i];
+		spine::Attachment* attachment = slot->getAttachment();
+		if(!attachment) continue;
 
-	// 10. primitive topology
-	d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		if(attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
+			auto* region = static_cast<spine::RegionAttachment*>(attachment);
 
-	// 11.draw cube
-	d3dContext->DrawIndexed(m_bufIdxCount, 0, 0);
+			// 정점 좌표 계산
+			float worldVertices[8];
+			region->computeWorldVertices(*slot,worldVertices,0,2);
+
+			auto uvs = region->getUVs();
+
+			// RegionAttachment → TextureRegion
+			spine::TextureRegion* texRegion = region->getRegion();
+			if(!texRegion)
+				continue;
+
+			// TextureRegion → AtlasRegion
+			auto* atlasRegion = reinterpret_cast<spine::AtlasRegion*>(texRegion);
+
+			// AtlasPage → rendererObject
+			auto* page = atlasRegion->page;
+			auto* texSRV = reinterpret_cast<ID3D11ShaderResourceView*>(page->texture);
+			if(!texSRV)
+				continue;
+
+			// 색상 계산
+			spine::Color c = m_spineSkeleton->getColor();
+			c.a *= slot->getColor().a;
+			c.r *= slot->getColor().r;
+			c.g *= slot->getColor().g;
+			c.b *= slot->getColor().b;
+
+			spine::Color rColor = region->getColor();
+			c.a *= rColor.a;
+			c.r *= rColor.r;
+			c.g *= rColor.g;
+			c.b *= rColor.b;
+
+			uint32_t rgba =
+				(uint32_t(c.a * 255) << 24) |
+				(uint32_t(c.r * 255) << 16) |
+				(uint32_t(c.g * 255) << 8)  |
+				(uint32_t(c.b * 255) << 0);
+
+			// 정점 구성
+			Vertex vertices[4];
+			for(int v = 0; v < 4; ++v) {
+				vertices[v].p.x = worldVertices[v * 2];
+				vertices[v].p.y = worldVertices[v * 2 + 1];
+				vertices[v].p.z = 0;
+				vertices[v].t.x = uvs[v * 2];
+				vertices[v].t.y = uvs[v * 2 + 1];
+				vertices[v].c = rgba; // DWORD 색상
+			}
+
+			// 8. 렌더링 정점 복사
+			D3D11_MAPPED_SUBRESOURCE mapped ={};
+			if(SUCCEEDED(d3dContext->Map(m_bufVtx,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+				memcpy(mapped.pData,vertices,sizeof(vertices));
+				d3dContext->Unmap(m_bufVtx,0);
+			}
+
+			// 9. 바인딩
+			UINT stride = sizeof(Vertex),offset = 0;
+			d3dContext->IASetVertexBuffers(0,1,&m_bufVtx,&stride,&offset);
+			d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			d3dContext->PSSetShaderResources(0,1,&texSRV);
+
+			// 10. draw
+			d3dContext->Draw(m_bufVtxCount, 0);
+		}
+	}
 
 	return S_OK;
 }
