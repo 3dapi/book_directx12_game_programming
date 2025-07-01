@@ -5,21 +5,32 @@
 #include "G2Base.h"
 #include "MainApp.h"
 #include "G2Util.h"
+#include <spine/Extension.h>
+
 using namespace DirectX;
 
 // for lighting
 struct SimpleVertex
 {
-	DirectX::XMFLOAT3 p;
-	DirectX::XMFLOAT2 t;
+	XMFLOAT3		p{};
+	XMFLOAT2		t{};
+	uint8_t			d[4]{};
 };
 // constant buffer for the vertex shader
 struct ConstBufLight
 {
-	DirectX::XMFLOAT4 vLightDir[2];
-	DirectX::XMFLOAT4 vLightColor[2];
-	DirectX::XMFLOAT4 vOutputColor;
+	XMFLOAT4 vLightDir		[2]	;
+	XMFLOAT4 vLightColor	[2]	;
+	XMFLOAT4 vOutputColor		;
 };
+
+namespace spine {
+	SpineExtension *getDefaultExtension()
+	{
+		static SpineExtension* _spine_instance = new DefaultSpineExtension;
+		return _spine_instance;
+	}
+}
 
 MainApp::MainApp()
 {
@@ -30,6 +41,65 @@ MainApp::~MainApp()
 	Destroy();
 }
 
+template<typename T>
+class MY
+{
+private:
+	T data;
+
+public:
+	// 생성자
+	MY(const T& d): data(d) {}
+ 	template <typename T> T getMaxValue(T a, T b)
+	{
+		return a>=b? a:b;
+	}
+	template <typename T> T getAddValue(T a,T b)
+	{
+		return a + b;
+	}
+	template <typename T> T getSumValue(T a,T b)
+	{
+		return a+=b;
+	}
+	// 템플릿 멤버 함수
+	template <size_t I>
+	auto getVariable() const -> decltype(std::get<I>(data))::value_type {
+		return std::get<I>(data);
+	}
+};
+
+
+template<typename Interface>
+inline void safeRelease(__interface Interface** currentObject)
+{
+	if(currentObject != nullptr)
+	{
+		(*currentObject)->release();
+		*currentObject = nullptr;
+	}
+}
+
+template<typename Interface>
+inline Interface* safeAcquire(Interface* newObject)
+{
+	if(newObject != nullptr)
+	{
+		newObject->addRef();
+	}
+	return newObject;
+}
+
+template<typename Interface>
+inline void safeSet(Interface** currentObject, Interface* newObject)
+{
+	safeAcquire(newObject);
+	safeRelease(&currentObject);
+	currentObject = newObject;
+}
+
+
+
 int MainApp::Init()
 {
 	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
@@ -39,7 +109,7 @@ int MainApp::Init()
 	// create vertex shader
 	// 1.1 Compile the vertex shader
 	ID3DBlob* pBlob{};
-	HRESULT hr = G2::DXCompileShaderFromFile("assets/simple.fxh", "main_vtx", "vs_4_0", &pBlob);
+	HRESULT hr = G2::DXCompileShaderFromFile("assets/simple.fx", "main_vtx", "vs_4_0", &pBlob);
 	if (FAILED(hr))
 	{
 		MessageBox({}, "The FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", "Error", MB_OK);
@@ -55,7 +125,8 @@ int MainApp::Init()
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0 + sizeof(DirectX::XMFLOAT3), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0 + sizeof(XMFLOAT3), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "DIFFUSE" , 0, DXGI_FORMAT_R8G8B8A8_UNORM   , 0, 0 + sizeof(XMFLOAT3) + sizeof(XMFLOAT2), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	hr = d3dDevice->CreateInputLayout(layout, numElements, pBlob->GetBufferPointer(), pBlob->GetBufferSize(), &m_vtxLayout);
@@ -65,7 +136,7 @@ int MainApp::Init()
 
 
 	// 2.1 Compile the pixel shader
-	hr = G2::DXCompileShaderFromFile("assets/simple.fxh", "main_pxl", "ps_4_0", &pBlob);
+	hr = G2::DXCompileShaderFromFile("assets/simple.fx", "main_pxl", "ps_4_0", &pBlob);
 	if (FAILED(hr))
 	{
 		MessageBox({}, "Failed ComplThe FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", "Error", MB_OK);
@@ -80,35 +151,10 @@ int MainApp::Init()
 	// 3. Create vertex buffer
 	SimpleVertex vertices[] =
 	{
-		{ { -1.0f,  1.0f, -1.0f },  { 1.0f, 0.0f } },
-		{ {  1.0f,  1.0f, -1.0f },  { 0.0f, 0.0f } },
-		{ {  1.0f,  1.0f,  1.0f },  { 0.0f, 1.0f } },
-		{ { -1.0f,  1.0f,  1.0f },  { 1.0f, 1.0f } },
-   
-		{ { -1.0f, -1.0f, -1.0f },  { 0.0f, 0.0f } },
-		{ {  1.0f, -1.0f, -1.0f },  { 1.0f, 0.0f } },
-		{ {  1.0f, -1.0f,  1.0f },  { 1.0f, 1.0f } },
-		{ { -1.0f, -1.0f,  1.0f },  { 0.0f, 1.0f } },
-   
-		{ { -1.0f, -1.0f,  1.0f },  { 0.0f, 1.0f } },
-		{ { -1.0f, -1.0f, -1.0f },  { 1.0f, 1.0f } },
-		{ { -1.0f,  1.0f, -1.0f },  { 1.0f, 0.0f } },
-		{ { -1.0f,  1.0f,  1.0f },  { 0.0f, 0.0f } },
-   
-		{ {  1.0f, -1.0f,  1.0f },  { 1.0f, 1.0f } },
-		{ {  1.0f, -1.0f, -1.0f },  { 0.0f, 1.0f } },
-		{ {  1.0f,  1.0f, -1.0f },  { 0.0f, 0.0f } },
-		{ {  1.0f,  1.0f,  1.0f },  { 1.0f, 0.0f } },
-   
-		{ { -1.0f, -1.0f, -1.0f },  { 0.0f, 1.0f } },
-		{ {  1.0f, -1.0f, -1.0f },  { 1.0f, 1.0f } },
-		{ {  1.0f,  1.0f, -1.0f },  { 1.0f, 0.0f } },
-		{ { -1.0f,  1.0f, -1.0f },  { 0.0f, 0.0f } },
-   
-		{ { -1.0f, -1.0f,  1.0f },  { 1.0f, 1.0f } },
-		{ {  1.0f, -1.0f,  1.0f },  { 0.0f, 1.0f } },
-		{ {  1.0f,  1.0f,  1.0f },  { 0.0f, 0.0f } },
-		{ { -1.0f,  1.0f,  1.0f },  { 1.0f, 0.0f } },
+		{ { -1.0f,  1.0f,  0.0f },  { 1.0f, 0.0f },  { 255,   0,   0, 255 } },
+		{ {  1.0f,  1.0f,  0.0f },  { 0.0f, 0.0f },  {   0, 255,   0, 255 } },
+		{ {  1.0f, -1.0f,  0.0f },  { 0.0f, 1.0f },  {   0,   0, 255, 255 } },
+		{ { -1.0f, -1.0f,  0.0f },  { 1.0f, 1.0f },  { 255,   0, 255, 255 } },
     };
 	m_bufVtxCount = sizeof(vertices) / sizeof(vertices[0]);
 	D3D11_BUFFER_DESC bd = {};
@@ -126,12 +172,7 @@ int MainApp::Init()
 	// 4. Create Index buffer
 	WORD indices[] =
 	{
-		 3, 1, 0,  2, 1, 3,
-		 6, 4, 5,  7, 4, 6,
-		11, 9, 8, 10, 9,11,
-		14,12,13, 15,12,14,
-		19,17,16, 18,17,19,
-		22,20,21, 23,20,22
+		 0, 1, 2,  0, 2, 3,
 	};
 	m_bufIdxCount = sizeof(indices) / sizeof(indices[0]);
 
@@ -177,9 +218,9 @@ int MainApp::Init()
 	// 6. setup the world, view, projection matrix
 	// View, Projection Matrix
 	// Initialize the view matrix
-	XMVECTOR Eye = XMVectorSet( 0.0f, 4.0f, -10.0f, 0.0f );
-	XMVECTOR At = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-	XMVECTOR Up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+	XMVECTOR Eye = XMVectorSet( 0.0f, 0.0f, -10.0f, 0.0f );
+	XMVECTOR At = XMVectorSet ( 0.0f, 0.0f,   0.0f, 0.0f );
+	XMVECTOR Up = XMVectorSet ( 0.0f, 1.0f,   0.0f, 0.0f );
 	m_mtView = XMMatrixLookAtLH(Eye, At, Up);
 
 	// Initialize the projection matrix

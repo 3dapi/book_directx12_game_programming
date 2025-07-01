@@ -145,7 +145,7 @@
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\simple.fxh" />
+    <None Include="assets\simple.fx" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\seafloor.dds" />
