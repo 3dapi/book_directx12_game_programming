@@ -30,9 +30,9 @@ protected:
 	ID3D11PixelShader*			m_shaderPxl			{};
 	ID3D11InputLayout*			m_vtxLayout			{};
 	ID3D11Buffer*				m_bufVtx			{};
-	int							m_bufVtxCount		{};
+	size_t						m_bufVtxCount		{};
 	ID3D11Buffer*				m_bufIdx			{};
-	int							m_bufIdxCount		{};
+	size_t						m_bufIdxCount		{};
 	ID3D11Buffer*				m_cnstWorld			{};
 	ID3D11Buffer*				m_cnstView			{};
 	ID3D11Buffer*				m_cnstProj			{};
