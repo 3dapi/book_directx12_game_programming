@@ -75,6 +75,7 @@ public:
 protected:
 	void	InitSpine();
 	void	SetupSpineSquence(int order, void* attachment, VtxSequenceSpine::ESPINE_ATTACHMENT_TYPE attachmentType);
+	void	UpdateSpineBuffer();
 	void	load(spine::AtlasPage& page,const spine::String& path) override;
 	void	unload(void* texture) override;
 };
