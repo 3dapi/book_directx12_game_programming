@@ -69,7 +69,7 @@ inline void SAFE_RELEASE_VECTOR(std::vector<T*>& vec) {
 	vec.clear();
 }
 
-std::wstring StringToWString(const std::string& str);
+std::wstring ansiToWstr(const std::string& str);
 void        avx2_memcpy(void* dst, const void* src, size_t size);	// avx2 메모리 복사: memcpy 대신
 void        avx2_memset32(void* dst, int32_t val, size_t count);	// 32bit 값 채우기: memset 대신.
 HRESULT		DXCompileShaderFromFile(const std::string& szFileName, const std::string& szEntryPoint, const std::string& szShaderModel, ID3DBlob** ppBlobOut);

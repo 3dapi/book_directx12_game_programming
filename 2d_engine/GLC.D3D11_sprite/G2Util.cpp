@@ -21,7 +21,7 @@
 #include "G2Util.h"
 #include "DDSTextureLoader.h"
 
-std::wstring G2::StringToWString(const std::string& str)
+std::wstring G2::ansiToWstr(const std::string& str)
 {
 	int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, {}, 0);
 	std::wstring wstr(len, 0);
@@ -101,7 +101,7 @@ HRESULT G2::DXCompileShaderFromFile(const std::string& szFileName, const std::st
 	// Disable optimizations to further improve shader debugging
 	dwShaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
-	auto wFileName = G2::StringToWString(szFileName);
+	auto wFileName = G2::ansiToWstr(szFileName);
 	ID3DBlob* pErrorBlob {};
 	hr = D3DCompileFromFile(wFileName.c_str(), {}, {}, szEntryPoint.c_str(), szShaderModel.c_str(), dwShaderFlags, 0, ppBlobOut, &pErrorBlob);
 	if (FAILED(hr))
@@ -124,7 +124,7 @@ G2::DXCreateDDSTextureFromFile(const std::string& szFileName, bool mipMap)
 	HRESULT						ret_hr{};
 	ID3D11ShaderResourceView*	ret_srv{};
 	ID3D11Resource*				ret_rsc{};
-	auto wFileName = G2::StringToWString(szFileName);
+	auto wFileName = G2::ansiToWstr(szFileName);
 	auto d3dDevice = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
 	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
 	ret_hr = DirectX::CreateDDSTextureFromFile(d3dDevice, mipMap? d3dContext: nullptr, wFileName.c_str(), &ret_rsc, &ret_srv);
