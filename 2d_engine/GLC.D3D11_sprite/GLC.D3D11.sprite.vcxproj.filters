@@ -59,15 +59,7 @@
     <ClInclude Include="SceneSpine.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\simple.fx">
-      <Filter>assets</Filter>
-    </None>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="assets\seafloor.dds">
-      <Filter>assets</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="assets\spine.fx">
