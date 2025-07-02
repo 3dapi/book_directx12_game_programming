@@ -1,13 +1,11 @@
-﻿#pragma warning(disable: 4081 4267)
-
-#include <any>
+﻿#include <any>
 #include <Windows.h>
 #include <d3d11.h>
 #include <DirectxColors.h>
 #include <WICTextureLoader.h>
 #include "G2Base.h"
 #include "SceneSpine.h"
-
+#include "G2Util.h"
 using namespace DirectX;
 using namespace spine;
 
@@ -19,81 +17,6 @@ namespace spine {
 	}
 }
 
-int VtxSequenceSpine::resourceBinding(int order, void* attachment, ESPINE_ATTACHMENT_TYPE attachmentType, size_t vertexCount, size_t indexCount /*=0*/)
-{
-	HRESULT hr = S_OK;
-	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
-	if(!d3dDevice)
-		return E_FAIL;
-
-	if(0 >= vertexCount)
-		return E_FAIL;
-
-	this->drawOrder= order;
-	this->meshType = attachmentType;
-	this->countVtx = vertexCount;
-	this->countIdx = indexCount;
-	// vertex buffer
-	{
-		// position
-		D3D11_BUFFER_DESC ibDesc ={};
-		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
-		ibDesc.ByteWidth = (UINT)vertexCount * sizeof(XMFLOAT2);
-		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&bufPos);
-		if(FAILED(hr))
-			return hr;
-		// texture coord
-		ibDesc.ByteWidth = (UINT)vertexCount * sizeof(XMFLOAT2);
-		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&bufTex);
-		if(FAILED(hr))
-			return hr;
-		// diffuse
-		ibDesc.ByteWidth = (UINT)vertexCount * sizeof(uint32_t);
-		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&bufDif);
-		if(FAILED(hr))
-			return hr;
-
-		primitve = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-	}
-	// index buffer
-	if(indexCount)
-	{
-		D3D11_BUFFER_DESC ibDesc ={};
-		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
-		ibDesc.ByteWidth = (UINT)indexCount * sizeof(uint16_t);
-		ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&bufIdx);
-		if(FAILED(hr))
-			return hr;
-
-		primitve = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	}
-	return S_OK;
-}
-
-int VtxSequenceSpine::draw(ID3D11DeviceContext* d3dContext, ID3D11ShaderResourceView* texSRV)
-{
-	ID3D11Buffer* buffers[] ={ bufPos, bufDif, bufTex};
-	UINT strides[] ={sizeof(XMFLOAT2), sizeof(uint32_t), sizeof(XMFLOAT2)};
-	UINT offsets[] ={0,0,0};
-	d3dContext->IASetVertexBuffers(0, 3, buffers, strides, offsets);
-	d3dContext->IASetPrimitiveTopology(primitve);
-	d3dContext->PSSetShaderResources(0,1,&texSRV);
-	if(countIdx)
-	{
-		d3dContext->IASetIndexBuffer(bufIdx, DXGI_FORMAT_R16_UINT, 0);
-		d3dContext->DrawIndexed(countIdx, 0, 0);
-	}
-	else
-	{
-		d3dContext->Draw(countVtx, 0);
-	}
-	return 0;
-}
-
 SceneSpine::SceneSpine()
 {
 }
@@ -103,13 +26,34 @@ SceneSpine::~SceneSpine()
 	Destroy();
 }
 
+void SceneSpine::load(spine::AtlasPage& page,const spine::String& path) {
+	auto fileName = path.buffer();
+	HRESULT hr = S_OK;
+	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
+	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
+	ID3D11Resource*				textureRsc{};
+	ID3D11ShaderResourceView*	textureView{};
+	auto wstr_file = G2::ansiToWstr(fileName);
+	hr  = DirectX::CreateWICTextureFromFile(d3dDevice, d3dContext, wstr_file.c_str(), &textureRsc, &textureView);
+	if(SUCCEEDED(hr))
+	{
+		m_spineTexture = textureView;
+		page.texture = m_spineTexture;
+	}
+}
+
+void SceneSpine::unload(void* texture) {
+	texture = nullptr;
+}
+
 int SceneSpine::Init()
 {
 	HRESULT hr = S_OK;
 	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
 	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
 
-	// 1.1 create vertex shader
+	// create vertex shader
+	// 1.1 Compile the vertex shader
 	ID3DBlob* pBlob{};
 	hr = G2::DXCompileShaderFromFile("assets/spine.fx", "main_vtx", "vs_4_0", &pBlob);
 	if (FAILED(hr))
@@ -148,23 +92,33 @@ int SceneSpine::Init()
 	if (FAILED(hr))
 		return hr;
 
-	
-	// 3. create texture sampler state
-	{
-		D3D11_SAMPLER_DESC sampDesc = {};
-		sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-		sampDesc.MinLOD = 0;
-		sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-		hr = d3dDevice->CreateSamplerState(&sampDesc, &m_sampLinear);
-		if (FAILED(hr))
-			return hr;
-	}
+	// 3. Create the constant buffer
+	// 3.1 world
+	D3D11_BUFFER_DESC bd = {};
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(m_tmMVP);
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = 0;
+	hr = d3dDevice->CreateBuffer(&bd, {}, &m_cnstMVP);
+	if (FAILED(hr))
+		return hr;
 
-	// 4. render state
+	m_tmMVP = XMMatrixIdentity();
+
+	// 5. create texture sampler state
+	D3D11_SAMPLER_DESC sampDesc = {};
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MinLOD = 0;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	hr = d3dDevice->CreateSamplerState(&sampDesc, &m_sampLinear);
+	if (FAILED(hr))
+		return hr;
+
+	// 5. create texture sampler state
 	{
 		D3D11_RASTERIZER_DESC rasterDesc ={};
 		rasterDesc.FillMode = D3D11_FILL_SOLID;
@@ -197,31 +151,13 @@ int SceneSpine::Init()
 		dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;	// no z write
 		dsDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;				// always pas
 		dsDesc.StencilEnable = FALSE;
-		hr = d3dDevice->CreateDepthStencilState(&dsDesc,&m_depthWriteEnabled);
+		hr = d3dDevice->CreateDepthStencilState(&dsDesc,&m_stateDepthWrite);
 		if(FAILED(hr))
 		{
 			return hr;
 		}
 	}
 
-	// 5. Create the constant buffer
-	// 5.1 tm mvp
-	D3D11_BUFFER_DESC bd = {};
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(m_tmMVP);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = 0;
-	hr = d3dDevice->CreateBuffer(&bd, {}, &m_cnstMVP);
-	if (FAILED(hr))
-		return hr;
-
-	InitSpine();
-
-	return S_OK;
-}
-
-void SceneSpine::InitSpine()
-{
 	Bone::setYDown(false);
 
 	//m_spineAtlas = new Atlas("../assets/spine/spineboy-pma/spineboy-pma.atlas", this);
@@ -239,91 +175,88 @@ void SceneSpine::InitSpine()
 
 	spine::SkeletonData* skelData = m_spineSkeleton->getData();
 	auto& animations = skelData->getAnimations();
+
 	// animation name
+	std::vector<std::string>	vcAnimation;
 	for(int i = 0; i < animations.size(); ++i) {
 		spine::Animation* anim = animations[i];
 		std::string animName = anim->getName().buffer();
-		m_spineAnimations.push_back(animName);
+		vcAnimation.push_back(animName);
+	}
+	size_t maxVertexCount = 0;
+	size_t maxIndexCount = 0;
+	auto drawOrder = m_spineSkeleton->getDrawOrder();
+	for(size_t i = 0; i < drawOrder.size(); ++i) {
+		spine::Slot* slot = drawOrder[i];
+		spine::Attachment* attachment = slot->getAttachment();
+		if(!attachment)
+			continue;
+		if(attachment->getRTTI().isExactly(spine::MeshAttachment::rtti)) {
+			auto* mesh = static_cast<spine::MeshAttachment*>(attachment);
+			size_t vtxCount = mesh->getWorldVerticesLength()/2;
+			if(vtxCount> maxVertexCount)
+				maxVertexCount = vtxCount;
+
+			size_t indexCount = mesh->getTriangles().size();
+			if(indexCount>maxIndexCount)
+				maxIndexCount = indexCount;
+		}
+	}
+	// 3. Create vertex buffer
+	{
+		m_bufVtxCount = (maxVertexCount > 8)? maxVertexCount: 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(XMFLOAT2) * (UINT)m_bufVtxCount;
+		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufPos);
+		if(FAILED(hr))
+			return hr;
+	}
+	{
+		m_bufVtxCount = (maxVertexCount > 8)? maxVertexCount: 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(XMFLOAT2) * (UINT)m_bufVtxCount;
+		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufTex);
+		if(FAILED(hr))
+			return hr;
+	}
+	{
+		m_bufVtxCount = (maxVertexCount > 8)? maxVertexCount: 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(uint32_t) * (UINT)m_bufVtxCount;
+		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufDif);
+		if(FAILED(hr))
+			return hr;
 	}
 
+	// 인덱스 버퍼
+	{
+		m_bufIdxCount = maxIndexCount >8? maxIndexCount : 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(uint16_t) * (UINT)m_bufIdxCount;
+		ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufIdx);
+		if(FAILED(hr))
+			return hr;
+	}
 	AnimationStateData animationStateData(m_spineSkeletonData);
 	animationStateData.setDefaultMix(0.2f);
 	m_spineAniState = new AnimationState(&animationStateData);
 	m_spineAniState->setAnimation(0,"gun-holster", false);
 	m_spineAniState->addAnimation(0,"roar",false, 0.8F);
 	m_spineAniState->addAnimation(0,"walk",true, 2.1F);
-}
 
-void SceneSpine::SetupSpineSquence(int order, void* attachment, VtxSequenceSpine::ESPINE_ATTACHMENT_TYPE attachmentType)
-{
-	VtxSequenceSpine* sequenceCur{};
-	auto itr = m_spineSequence.find(order);
-	if(itr != m_spineSequence.end())
-	{
-		sequenceCur = itr->second;
-	}
-	
-	if(VtxSequenceSpine::ESPINE_ATTACHMENT_TYPE::ESPINE_MESH_ATTACH == attachmentType)
-	{
-		auto* mesh = static_cast<spine::MeshAttachment*>(attachment);
-		size_t vertexCount = mesh->getWorldVerticesLength()/2;
-		UINT   indexCount = mesh->getTriangles().size();
-		if(!sequenceCur
-			|| (
-				sequenceCur												// 존재 함
-				&& sequenceCur->meshType != attachmentType				// 다른 버텍스 크기
-				&& sequenceCur->countVtx != vertexCount					// 다른 버텍스 크기
-				&& sequenceCur->countIdx != indexCount					// 다른 인덱스 크기
-			)
-		)
-		{
-			if(sequenceCur)
-			{
-				// 먼저 삭제, 맵에서 제거
-				delete sequenceCur;
-				m_spineSequence.erase(itr);
-			}
-			sequenceCur = new VtxSequenceSpine;
-			sequenceCur->resourceBinding(order, attachment, VtxSequenceSpine::ESPINE_MESH_ATTACH, vertexCount, indexCount);
-			m_spineSequence.emplace(order, sequenceCur);
-		}
-		// 위치 복사
-	}
-	else if(VtxSequenceSpine::ESPINE_ATTACHMENT_TYPE::ESPINE_MESH_REGION == attachmentType)
-	{
-		auto* region = static_cast<spine::RegionAttachment*>(attachment);
-		size_t vertexCount = 4;
-		UINT   indexCount  = 0;
-		if(!sequenceCur
-			|| (
-				sequenceCur												// 존재 함
-				&& sequenceCur->meshType != attachmentType				// 다른 버텍스 크기
-				&& sequenceCur->countVtx != vertexCount					// 다른 버텍스 크기
-				&& sequenceCur->countIdx != indexCount					// 다른 인덱스 크기
-			)
-		)
-		{
-			if(sequenceCur)
-			{
-				// 먼저 삭제, 맵에서 제거
-				delete sequenceCur;
-				m_spineSequence.erase(itr);
-			}
-			sequenceCur = new VtxSequenceSpine;
-			sequenceCur->resourceBinding(order, attachment, VtxSequenceSpine::ESPINE_MESH_REGION, vertexCount, indexCount);
-			m_spineSequence.emplace(order, sequenceCur);
-		}
-		// 위치 복사
-	}
-	// 존재하는데 어느 타입도 아니라면 삭제
-	else
-	{
-		if(sequenceCur)
-		{
-			delete sequenceCur;
-		}
-		m_spineSequence.erase(itr);
-	}
+	return S_OK;
 }
 
 int SceneSpine::Destroy()
@@ -331,6 +264,10 @@ int SceneSpine::Destroy()
 	G2::SAFE_RELEASE(m_shaderVtx);
 	G2::SAFE_RELEASE(m_shaderPxl);
 	G2::SAFE_RELEASE(m_vtxLayout);
+	G2::SAFE_RELEASE(m_bufPos);
+	G2::SAFE_RELEASE(m_bufTex);
+	G2::SAFE_RELEASE(m_bufDif);
+	G2::SAFE_RELEASE(m_bufIdx	);
 	G2::SAFE_RELEASE(m_cnstMVP	);
 
 	G2::SAFE_RELEASE(m_spineTexture);
@@ -338,48 +275,62 @@ int SceneSpine::Destroy()
 	return S_OK;
 }
 
-int SceneSpine::Update(float deltaTime)
+int SceneSpine::Update(double deltaTime)
 {
+
 	// Update and apply the animation state to the skeleton
-	m_spineAniState->update(deltaTime);
+	m_spineAniState->update((float)deltaTime);
 	m_spineAniState->apply(*m_spineSkeleton);
 
 	// Update the skeleton time (used for physics)
-	m_spineSkeleton->update(deltaTime);
+	m_spineSkeleton->update((float)deltaTime);
 
 	// Calculate the new pose
 	m_spineSkeleton->updateWorldTransform(spine::Physics_Update);
 
+	return S_OK;
+}
+
+int SceneSpine::Render()
+{
+	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
+	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
+
+	// 0. render state
+	d3dContext->RSSetState(m_stateRater);
+	float blendFactor[4] ={0,0,0,0};
+	UINT sampleMask = 0xffffffff;
+	d3dContext->OMSetBlendState(m_stateBlend,blendFactor,sampleMask);
+	d3dContext->OMSetDepthStencilState(m_stateDepthWrite, 0);
+
+	// 1. Update constant value
+	d3dContext->UpdateSubresource(m_cnstMVP, 0, {}, &m_tmMVP, 0, 0);
+
+	// 2. set the constant buffer
+	d3dContext->VSSetConstantBuffers(0, 1, &m_cnstMVP);
+	
+	// 3. set vertex shader
+	d3dContext->VSSetShader(m_shaderVtx,{},0);
+
+	// 4. set the input layout
+	d3dContext->IASetInputLayout(m_vtxLayout);
+
+	// 5. set the pixel shader
+	d3dContext->PSSetShader(m_shaderPxl,{},0);
+
+	// 6. set the sampler state
+	d3dContext->PSSetSamplers(0,1,&m_sampLinear);
+
 	auto drawOrder = m_spineSkeleton->getDrawOrder();
-	// setup vertex, index buffer
-	for(size_t i = 0; i < drawOrder.size(); ++i) {
+
+	for(size_t i = 0; i < drawOrder.size(); ++i)
+	{
 		spine::Slot* slot = drawOrder[i];
 		spine::Attachment* attachment = slot->getAttachment();
 		if(!attachment)
 			continue;
-		if(attachment->getRTTI().isExactly(spine::MeshAttachment::rtti))
-		{
-			SetupSpineSquence(i, attachment, VtxSequenceSpine::ESPINE_MESH_ATTACH);
-		}
-		else if(attachment->getRTTI().isExactly(spine::RegionAttachment::rtti))
-		{
-			SetupSpineSquence(i, attachment, VtxSequenceSpine::ESPINE_MESH_REGION);
-		}
-	}
-	// update vertex
-	UpdateSpineBuffer();
-	return S_OK;
-}
 
-void SceneSpine::UpdateSpineBuffer()
-{
-	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
-	for(auto [drawOrder, curSqc] : m_spineSequence)
-	{
-		spine::Slot* slot = m_spineSkeleton->getDrawOrder().operator[](drawOrder);
-		spine::Attachment* attachment = slot->getAttachment();
-		if(curSqc->meshType == VtxSequenceSpine::ESPINE_ATTACHMENT_TYPE::ESPINE_MESH_ATTACH)
-		{
+		if(attachment->getRTTI().isExactly(spine::MeshAttachment::rtti)) {
 			auto* attm = static_cast<spine::MeshAttachment*>(attachment);
 			auto* mesh = static_cast<spine::MeshAttachment*>(attachment);
 
@@ -411,23 +362,20 @@ void SceneSpine::UpdateSpineBuffer()
 			{
 				size_t bufSize = mesh->getWorldVerticesLength();
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
-				if(SUCCEEDED(d3dContext->Map(curSqc->bufPos,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+				if(SUCCEEDED(d3dContext->Map(m_bufPos, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
 					float* ptr = (float*)mapped.pData;
-					mesh->computeWorldVertices(*slot,0,bufSize,ptr,0,2);
-					d3dContext->Unmap(curSqc->bufPos,0);
+					mesh->computeWorldVertices(*slot,0, bufSize, ptr, 0, 2);
+					d3dContext->Unmap(m_bufPos, 0);
 				}
 			}
 			// color
 			{
 				size_t vtxCount = mesh->getWorldVerticesLength()/2;
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
-				if(SUCCEEDED(d3dContext->Map(curSqc->bufDif,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+				if(SUCCEEDED(d3dContext->Map(m_bufDif,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
 					uint32_t* ptr = (uint32_t*)mapped.pData;
-					for(size_t i=0; i<vtxCount; ++i)
-					{
-						ptr[i] = rgba;
-					}
-					d3dContext->Unmap(curSqc->bufDif,0);
+					G2::avx2_memset32(ptr, rgba, vtxCount);
+					d3dContext->Unmap(m_bufDif,0);
 				}
 			}
 			// 텍스처 좌표 복사
@@ -435,9 +383,9 @@ void SceneSpine::UpdateSpineBuffer()
 				const float* uvs = mesh->getUVs().buffer();
 				auto bufSize = mesh->getUVs().size();
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
-				if(SUCCEEDED(d3dContext->Map(curSqc->bufTex,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
-					G2::avx2_memcpy(mapped.pData,uvs,sizeof(float) * bufSize);
-					d3dContext->Unmap(curSqc->bufTex,0);
+				if(SUCCEEDED(d3dContext->Map(m_bufTex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					G2::avx2_memcpy(mapped.pData, uvs, sizeof(float) * bufSize);
+					d3dContext->Unmap(m_bufTex, 0);
 				}
 			}
 			// index buffer
@@ -445,15 +393,32 @@ void SceneSpine::UpdateSpineBuffer()
 			UINT indexCount = mesh->getTriangles().size();
 			{
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
-				if(SUCCEEDED(d3dContext->Map(curSqc->bufIdx,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
-					G2::avx2_memcpy(mapped.pData,indices,sizeof(uint16_t) * indexCount);
-					d3dContext->Unmap(curSqc->bufIdx,0);
+				if(SUCCEEDED(d3dContext->Map(m_bufIdx, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					G2::avx2_memcpy(mapped.pData, indices, sizeof(uint16_t) * indexCount);
+					d3dContext->Unmap(m_bufIdx, 0);
 				}
 			}
+
+			// 바인딩
+			ID3D11Buffer* buffers[] ={m_bufPos, m_bufDif, m_bufTex};
+			UINT strides[] ={sizeof(XMFLOAT2), sizeof(uint32_t), sizeof(XMFLOAT2)};
+			UINT offsets[] ={0,0,0};
+			d3dContext->IASetVertexBuffers(0,3,buffers, strides, offsets);
+
+			d3dContext->IASetIndexBuffer(m_bufIdx, DXGI_FORMAT_R16_UINT, 0);
+			d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			d3dContext->PSSetShaderResources(0,1,&texSRV);
+
+			d3dContext->DrawIndexed(indexCount, 0, 0);
 		}
-		else if(curSqc->meshType == VtxSequenceSpine::ESPINE_ATTACHMENT_TYPE::ESPINE_MESH_REGION)
-		{
+		else if(attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
 			auto* region = static_cast<spine::RegionAttachment*>(attachment);
+
+			// 정점 좌표 계산
+			//float worldVertices[8];
+			//region->computeWorldVertices(*slot,worldVertices,0,2);
+
+			//auto uvs = region->getUVs();
 
 			// RegionAttachment → TextureRegion
 			spine::TextureRegion* texRegion = region->getRegion();
@@ -488,15 +453,27 @@ void SceneSpine::UpdateSpineBuffer()
 				(uint32_t(c.g * 255) << 8)  |
 				(uint32_t(c.b * 255) << 0);
 
+			// 정점 구성
+			//XMFLOAT2 pos[4];
+			//XMFLOAT2 tex[4];
+			//uint32_t dif[4];
+			//for(int v = 0; v < 4; ++v) {
+			//	pos[v].x = worldVertices[v * 2];
+			//	pos[v].y = worldVertices[v * 2 + 1];
+			//	tex[v].x = uvs[v * 2];
+			//	tex[v].y = uvs[v * 2 + 1];
+			//	dif[v] = rgba; // DWORD 색상
+			//}
+
 			// 8. 렌더링 정점 복사
 			// 위치 변환 및 복사
 			{
 				size_t vtxCount = 8;
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
-				if(SUCCEEDED(d3dContext->Map(curSqc->bufPos,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+				if(SUCCEEDED(d3dContext->Map(m_bufPos,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
 					float* ptr = (float*)mapped.pData;
-					region->computeWorldVertices(*slot,ptr,0,2);
-					d3dContext->Unmap(curSqc->bufPos,0);
+					region->computeWorldVertices(*slot, ptr, 0, 2);
+					d3dContext->Unmap(m_bufPos, 0);
 				}
 			}
 			// 텍스처 좌표 복사
@@ -504,86 +481,39 @@ void SceneSpine::UpdateSpineBuffer()
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
 				const float* uvs = region->getUVs().buffer();
 				auto uvSize = region->getUVs().size();
-				if(SUCCEEDED(d3dContext->Map(curSqc->bufTex,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+				if(SUCCEEDED(d3dContext->Map(m_bufTex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
 					float* ptr = (float*)mapped.pData;
-					G2::avx2_memcpy(mapped.pData,uvs,sizeof(float) * uvSize);
-					d3dContext->Unmap(curSqc->bufTex,0);
+					G2::avx2_memcpy(mapped.pData, uvs, sizeof(float) * uvSize);
+					d3dContext->Unmap(m_bufTex, 0);
 				}
 			}
 			// color
 			{
 				size_t vtxCount = 4;
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
-				if(SUCCEEDED(d3dContext->Map(curSqc->bufDif,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+				if(SUCCEEDED(d3dContext->Map(m_bufDif, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
 					uint32_t* ptr = (uint32_t*)mapped.pData;
-					G2::avx2_memset32(ptr,rgba,vtxCount);
-					d3dContext->Unmap(curSqc->bufDif,0);
+
+					G2::avx2_memset32(ptr, rgba, vtxCount);
+					d3dContext->Unmap(m_bufDif, 0);
 				}
 			}
+
+			// 9. 바인딩
+			ID3D11Buffer* buffers[] ={m_bufPos, m_bufDif, m_bufTex};
+			UINT strides[] ={sizeof(XMFLOAT2), sizeof(uint32_t), sizeof(XMFLOAT2)};
+			UINT offsets[] ={0,0,0};
+			d3dContext->IASetVertexBuffers(0,3,buffers, strides, offsets);
+
+			d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			d3dContext->PSSetShaderResources(0,1,&texSRV);
+
+
+			// 10. draw
+			d3dContext->Draw(4, 0);
 		}
 	}
 
-}
-
-int SceneSpine::Render()
-{
-	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
-	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
-
-
-	// 0. render state
-	d3dContext->RSSetState(m_stateRater);
-	float blendFactor[4] ={0,0,0,0};
-	UINT sampleMask = 0xffffffff;
-	d3dContext->OMSetBlendState(m_stateBlend,blendFactor,sampleMask);
-	d3dContext->OMSetDepthStencilState(m_depthWriteEnabled,0);
-
-	// 1. Update constant value
-	d3dContext->UpdateSubresource(m_cnstMVP, 0, {}, &m_tmMVP, 0, 0);
-
-	// 2. set the constant buffer
-	d3dContext->VSSetConstantBuffers(0, 1, &m_cnstMVP);
-
-	// 3. set vertex shader
-	d3dContext->VSSetShader(m_shaderVtx, {}, 0);
-	// 4. set the input layout
-	d3dContext->IASetInputLayout(m_vtxLayout);
-	// 5. set the pixel shader
-	d3dContext->PSSetShader(m_shaderPxl, {}, 0);
-
-	// 6. set the sampler state
-	d3dContext->PSSetSamplers(0,1,&m_sampLinear);
-
-	for(auto [drawOrder, curSqc] : m_spineSequence)
-	{
-		curSqc->draw(d3dContext, m_spineTexture);
-	}
-	
 	return S_OK;
-}
-
-void SceneSpine::SetMVP(const XMMATRIX& tmMVP)
-{
-	m_tmMVP = tmMVP;
-}
-
-void SceneSpine::load(spine::AtlasPage& page,const spine::String& path) {
-	auto fileName = path.buffer();
-	HRESULT hr = S_OK;
-	auto d3dDevice  = std::any_cast<ID3D11Device*>(IG2GraphicsD3D::getInstance()->GetDevice());
-	auto d3dContext = std::any_cast<ID3D11DeviceContext*>(IG2GraphicsD3D::getInstance()->GetContext());
-	ID3D11Resource*				textureRsc{};
-	ID3D11ShaderResourceView*	textureView{};
-	auto wstr_file = G2::ansiToWstr(fileName);
-	hr  = DirectX::CreateWICTextureFromFile(d3dDevice, d3dContext, wstr_file.c_str(), &textureRsc, &textureView);
-	if(SUCCEEDED(hr))
-	{
-		m_spineTexture = textureView;
-		page.texture = m_spineTexture;
-	}
-}
-
-void SceneSpine::unload(void* texture) {
-	texture = nullptr;
 }
 

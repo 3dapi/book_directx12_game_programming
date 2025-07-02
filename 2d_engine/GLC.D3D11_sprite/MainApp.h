@@ -6,7 +6,6 @@
 #include <d3d11.h>
 #include <DirectxMath.h>
 #include "GameTimer.h"
-#include "G2Util.h"
 #include "SceneSpine.h"
 
 using namespace DirectX;
