@@ -477,7 +477,7 @@ int MainApp::Render()
 				auto bufSize = mesh->getUVs().size();
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
 				if(SUCCEEDED(d3dContext->Map(m_bufVtxTex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
-					memcpy(mapped.pData, uvs, sizeof(float) * bufSize);
+					G2::avx2_memcpy(mapped.pData, uvs, sizeof(float) * bufSize);
 					d3dContext->Unmap(m_bufVtxTex, 0);
 				}
 			}
@@ -487,7 +487,7 @@ int MainApp::Render()
 			{
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
 				if(SUCCEEDED(d3dContext->Map(m_bufIdx, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
-					memcpy(mapped.pData, indices, sizeof(uint16_t) * indexCount);
+					G2::avx2_memcpy(mapped.pData, indices, sizeof(uint16_t) * indexCount);
 					d3dContext->Unmap(m_bufIdx, 0);
 				}
 			}
@@ -576,7 +576,7 @@ int MainApp::Render()
 				auto uvSize = region->getUVs().size();
 				if(SUCCEEDED(d3dContext->Map(m_bufVtxTex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
 					float* ptr = (float*)mapped.pData;
-					memcpy(mapped.pData, uvs, sizeof(float) * uvSize);
+					G2::avx2_memcpy(mapped.pData, uvs, sizeof(float) * uvSize);
 					d3dContext->Unmap(m_bufVtxTex, 0);
 				}
 			}
@@ -586,10 +586,8 @@ int MainApp::Render()
 				D3D11_MAPPED_SUBRESOURCE mapped ={};
 				if(SUCCEEDED(d3dContext->Map(m_bufVtxDif, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
 					uint32_t* ptr = (uint32_t*)mapped.pData;
-					for(size_t i=0; i<vtxCount; ++i)
-					{
-						ptr[i] = rgba;
-					}
+
+					G2::avx2_memset32(ptr, rgba, vtxCount);
 					d3dContext->Unmap(m_bufVtxDif, 0);
 				}
 			}
