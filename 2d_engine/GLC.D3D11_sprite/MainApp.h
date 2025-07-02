@@ -10,16 +10,6 @@
 
 using namespace DirectX;
 
-struct Vertex {
-	XMFLOAT3		p{};
-	union
-	{
-		uint8_t		d[4]{};
-		uint32_t	c;
-	};
-	XMFLOAT2		t{};
-};
-
 class MainApp : public spine::TextureLoader
 {
 protected:
@@ -29,7 +19,11 @@ protected:
 	ID3D11VertexShader*			m_shaderVtx			{};
 	ID3D11PixelShader*			m_shaderPxl			{};
 	ID3D11InputLayout*			m_vtxLayout			{};
-	ID3D11Buffer*				m_bufVtx			{};
+	
+	ID3D11Buffer*				m_bufVtxPos			{};
+	ID3D11Buffer*				m_bufVtxTex			{};
+	ID3D11Buffer*				m_bufVtxDif			{};
+
 	size_t						m_bufVtxCount		{};
 	ID3D11Buffer*				m_bufIdx			{};
 	size_t						m_bufIdxCount		{};

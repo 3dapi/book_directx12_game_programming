@@ -79,9 +79,9 @@ int MainApp::Init()
 	// 1.3 create vertexLayout
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR"   , 0, DXGI_FORMAT_R8G8B8A8_UNORM , 0, 0 + sizeof(XMFLOAT3), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0 + sizeof(XMFLOAT3) + sizeof(uint32_t), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0 , D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR"   , 0, DXGI_FORMAT_R8G8B8A8_UNORM , 1, 0 , D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT   , 2, 0 , D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	hr = d3dDevice->CreateInputLayout(layout, numElements, pBlob->GetBufferPointer(), pBlob->GetBufferSize(), &m_vtxLayout);
@@ -249,10 +249,32 @@ int MainApp::Init()
 		m_bufVtxCount = (maxVertexCount > 8)? maxVertexCount: 8;
 		D3D11_BUFFER_DESC ibDesc ={};
 		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
-		ibDesc.ByteWidth = sizeof(Vertex) * (UINT)m_bufVtxCount;
+		ibDesc.ByteWidth = sizeof(XMFLOAT2) * (UINT)m_bufVtxCount;
 		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufVtx);
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufVtxPos);
+		if(FAILED(hr))
+			return hr;
+	}
+	{
+		m_bufVtxCount = (maxVertexCount > 8)? maxVertexCount: 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(XMFLOAT2) * (UINT)m_bufVtxCount;
+		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufVtxTex);
+		if(FAILED(hr))
+			return hr;
+	}
+	{
+		m_bufVtxCount = (maxVertexCount > 8)? maxVertexCount: 8;
+		D3D11_BUFFER_DESC ibDesc ={};
+		ibDesc.Usage = D3D11_USAGE_DYNAMIC;
+		ibDesc.ByteWidth = sizeof(uint32_t) * (UINT)m_bufVtxCount;
+		ibDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		ibDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		hr = d3dDevice->CreateBuffer(&ibDesc,nullptr,&m_bufVtxDif);
 		if(FAILED(hr))
 			return hr;
 	}
@@ -285,7 +307,9 @@ int MainApp::Destroy()
 	G2::SAFE_RELEASE(m_shaderVtx);
 	G2::SAFE_RELEASE(m_shaderPxl);
 	G2::SAFE_RELEASE(m_vtxLayout);
-	G2::SAFE_RELEASE(m_bufVtx	);
+	G2::SAFE_RELEASE(m_bufVtxPos);
+	G2::SAFE_RELEASE(m_bufVtxTex);
+	G2::SAFE_RELEASE(m_bufVtxDif);
 	G2::SAFE_RELEASE(m_bufIdx	);
 	G2::SAFE_RELEASE(m_cnstWorld);
 	G2::SAFE_RELEASE(m_cnstView	);
@@ -384,13 +408,13 @@ int MainApp::Render()
 			auto* attm = static_cast<spine::MeshAttachment*>(attachment);
 			auto* mesh = static_cast<spine::MeshAttachment*>(attachment);
 
-			size_t vtxCount = mesh->getWorldVerticesLength() / 2;
-			std::vector<float> worldVertices(mesh->getWorldVerticesLength());
-			mesh->computeWorldVertices(*slot,0,mesh->getWorldVerticesLength(),worldVertices.data(),0,2);
+			//size_t vtxCount = mesh->getWorldVerticesLength() / 2;
+			//std::vector<float> worldVertices(mesh->getWorldVerticesLength());
+			//mesh->computeWorldVertices(*slot,0,mesh->getWorldVerticesLength(),worldVertices.data(),0,2);
 
-			const float* uvs = mesh->getUVs().buffer();
-			const unsigned short* indices = mesh->getTriangles().buffer();
-			size_t indexCount = mesh->getTriangles().size();
+			//const float* uvs = mesh->getUVs().buffer();
+			//const unsigned short* indices = mesh->getTriangles().buffer();
+			//size_t indexCount = mesh->getTriangles().size();
 
 			// 색상
 			spine::Color c = slot->getColor();
@@ -409,12 +433,12 @@ int MainApp::Render()
 				(uint32_t(c.r * 255) << 0);
 
 			// 정점 복사
-			std::vector<Vertex> vertices(vtxCount);
-			for(size_t i = 0; i < vtxCount; ++i) {
-				vertices[i].p ={worldVertices[i * 2],worldVertices[i * 2 + 1],0.0f};
-				vertices[i].t ={uvs[i * 2],uvs[i * 2 + 1]};
-				vertices[i].c = rgba;
-			}
+			//std::vector<Vertex> vertices(vtxCount);
+			//for(size_t i = 0; i < vtxCount; ++i) {
+			//	vertices[i].p ={worldVertices[i * 2], worldVertices[i * 2 + 1],0.0f};
+			//	vertices[i].t ={uvs[i * 2],uvs[i * 2 + 1]};
+			//	vertices[i].c = rgba;
+			//}
 
 			// 텍스처
 			spine::TextureRegion* texRegion = mesh->getRegion();
@@ -424,36 +448,70 @@ int MainApp::Render()
 			auto* texSRV = reinterpret_cast<ID3D11ShaderResourceView*>(atlasRegion->page->texture);
 			if(!texSRV) continue;
 
-			// 버퍼 복사
-			D3D11_MAPPED_SUBRESOURCE mappedVtx ={};
-			if(SUCCEEDED(d3dContext->Map(m_bufVtx, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedVtx))) {
-				memcpy(mappedVtx.pData,vertices.data(),sizeof(Vertex) * vtxCount);
-				d3dContext->Unmap(m_bufVtx, 0);
+			// 위치 변환 및 복사
+			{
+				size_t bufSize = mesh->getWorldVerticesLength();
+				D3D11_MAPPED_SUBRESOURCE mapped ={};
+				if(SUCCEEDED(d3dContext->Map(m_bufVtxPos, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					float* ptr = (float*)mapped.pData;
+					mesh->computeWorldVertices(*slot,0, bufSize, ptr, 0, 2);
+					d3dContext->Unmap(m_bufVtxPos, 0);
+				}
 			}
-
-			D3D11_MAPPED_SUBRESOURCE mappedIdx ={};
-			if(SUCCEEDED(d3dContext->Map(m_bufIdx, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedIdx))) {
-				memcpy(mappedIdx.pData, indices, sizeof(uint16_t) * indexCount);
-				d3dContext->Unmap(m_bufIdx, 0);
+			// color
+			{
+				size_t vtxCount = mesh->getWorldVerticesLength()/2;
+				D3D11_MAPPED_SUBRESOURCE mapped ={};
+				if(SUCCEEDED(d3dContext->Map(m_bufVtxDif,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+					uint32_t* ptr = (uint32_t*)mapped.pData;
+					for(size_t i=0; i<vtxCount; ++i)
+					{
+						ptr[i] = rgba;
+					}
+					d3dContext->Unmap(m_bufVtxDif,0);
+				}
+			}
+			// 텍스처 좌표 복사
+			{
+				const float* uvs = mesh->getUVs().buffer();
+				auto bufSize = mesh->getUVs().size();
+				D3D11_MAPPED_SUBRESOURCE mapped ={};
+				if(SUCCEEDED(d3dContext->Map(m_bufVtxTex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					memcpy(mapped.pData, uvs, sizeof(float) * bufSize);
+					d3dContext->Unmap(m_bufVtxTex, 0);
+				}
+			}
+			// index buffer
+			const uint16_t* indices = mesh->getTriangles().buffer();
+			UINT indexCount = mesh->getTriangles().size();
+			{
+				D3D11_MAPPED_SUBRESOURCE mapped ={};
+				if(SUCCEEDED(d3dContext->Map(m_bufIdx, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					memcpy(mapped.pData, indices, sizeof(uint16_t) * indexCount);
+					d3dContext->Unmap(m_bufIdx, 0);
+				}
 			}
 
 			// 바인딩
-			UINT stride = sizeof(Vertex),offset = 0;
-			d3dContext->IASetVertexBuffers(0,1,&m_bufVtx,&stride,&offset);
+			ID3D11Buffer* buffers[] ={m_bufVtxPos, m_bufVtxDif, m_bufVtxTex};
+			UINT strides[] ={sizeof(XMFLOAT2), sizeof(uint32_t), sizeof(XMFLOAT2)};
+			UINT offsets[] ={0,0,0};
+			d3dContext->IASetVertexBuffers(0,3,buffers, strides, offsets);
+
 			d3dContext->IASetIndexBuffer(m_bufIdx, DXGI_FORMAT_R16_UINT, 0);
 			d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			d3dContext->PSSetShaderResources(0,1,&texSRV);
 
-			d3dContext->DrawIndexed(static_cast<UINT>(indexCount),0,0);
+			d3dContext->DrawIndexed(indexCount, 0, 0);
 		}
 		else if(attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
 			auto* region = static_cast<spine::RegionAttachment*>(attachment);
 
 			// 정점 좌표 계산
-			float worldVertices[8];
-			region->computeWorldVertices(*slot,worldVertices,0,2);
+			//float worldVertices[8];
+			//region->computeWorldVertices(*slot,worldVertices,0,2);
 
-			auto uvs = region->getUVs();
+			//auto uvs = region->getUVs();
 
 			// RegionAttachment → TextureRegion
 			spine::TextureRegion* texRegion = region->getRegion();
@@ -489,28 +547,62 @@ int MainApp::Render()
 				(uint32_t(c.b * 255) << 0);
 
 			// 정점 구성
-			Vertex vertices[4];
-			for(int v = 0; v < 4; ++v) {
-				vertices[v].p.x = worldVertices[v * 2];
-				vertices[v].p.y = worldVertices[v * 2 + 1];
-				vertices[v].p.z = 0.0F;
-				vertices[v].t.x = uvs[v * 2];
-				vertices[v].t.y = uvs[v * 2 + 1];
-				vertices[v].c = rgba; // DWORD 색상
-			}
+			//XMFLOAT2 pos[4];
+			//XMFLOAT2 tex[4];
+			//uint32_t dif[4];
+			//for(int v = 0; v < 4; ++v) {
+			//	pos[v].x = worldVertices[v * 2];
+			//	pos[v].y = worldVertices[v * 2 + 1];
+			//	tex[v].x = uvs[v * 2];
+			//	tex[v].y = uvs[v * 2 + 1];
+			//	dif[v] = rgba; // DWORD 색상
+			//}
 
 			// 8. 렌더링 정점 복사
-			D3D11_MAPPED_SUBRESOURCE mapped ={};
-			if(SUCCEEDED(d3dContext->Map(m_bufVtx,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
-				memcpy(mapped.pData,vertices,sizeof(vertices));
-				d3dContext->Unmap(m_bufVtx,0);
+			// 위치 변환 및 복사
+			{
+				size_t vtxCount = 8;
+				D3D11_MAPPED_SUBRESOURCE mapped ={};
+				if(SUCCEEDED(d3dContext->Map(m_bufVtxPos,0,D3D11_MAP_WRITE_DISCARD,0,&mapped))) {
+					float* ptr = (float*)mapped.pData;
+					region->computeWorldVertices(*slot, ptr, 0, 2);
+					d3dContext->Unmap(m_bufVtxPos, 0);
+				}
+			}
+			// 텍스처 좌표 복사
+			{
+				D3D11_MAPPED_SUBRESOURCE mapped ={};
+				const float* uvs = region->getUVs().buffer();
+				auto uvSize = region->getUVs().size();
+				if(SUCCEEDED(d3dContext->Map(m_bufVtxTex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					float* ptr = (float*)mapped.pData;
+					memcpy(mapped.pData, uvs, sizeof(float) * uvSize);
+					d3dContext->Unmap(m_bufVtxTex, 0);
+				}
+			}
+			// color
+			{
+				size_t vtxCount = 4;
+				D3D11_MAPPED_SUBRESOURCE mapped ={};
+				if(SUCCEEDED(d3dContext->Map(m_bufVtxDif, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					uint32_t* ptr = (uint32_t*)mapped.pData;
+					for(size_t i=0; i<vtxCount; ++i)
+					{
+						ptr[i] = rgba;
+					}
+					d3dContext->Unmap(m_bufVtxDif, 0);
+				}
 			}
 
 			// 9. 바인딩
-			UINT stride = sizeof(Vertex),offset = 0;
-			d3dContext->IASetVertexBuffers(0,1,&m_bufVtx,&stride,&offset);
+			ID3D11Buffer* buffers[] ={m_bufVtxPos, m_bufVtxDif, m_bufVtxTex};
+			UINT strides[] ={sizeof(XMFLOAT2), sizeof(uint32_t), sizeof(XMFLOAT2)};
+			UINT offsets[] ={0,0,0};
+			d3dContext->IASetVertexBuffers(0,3,buffers, strides, offsets);
+
 			d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			d3dContext->PSSetShaderResources(0,1,&texSRV);
+
 
 			// 10. draw
 			d3dContext->Draw(4, 0);
