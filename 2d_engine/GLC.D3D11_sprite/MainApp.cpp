@@ -7,7 +7,6 @@
 #include <WICTextureLoader.h>
 #include "G2Base.h"
 #include "MainApp.h"
-#include "G2Util.h"
 
 using namespace DirectX;
 
