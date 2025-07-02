@@ -133,6 +133,7 @@
     <ClCompile Include="G2Base.cpp" />
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="MainApp.cpp" />
+    <ClCompile Include="SceneSpine.cpp" />
     <ClCompile Include="_main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +143,7 @@
     <ClInclude Include="G2Base.h" />
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="MainApp.h" />
+    <ClInclude Include="SceneSpine.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\simple.fx">
@@ -160,6 +162,12 @@
     <ProjectReference Include="..\3rdparty\spine-cpp\spine-cpp.vcxproj">
       <Project>{3d2f4e62-79e0-4b6c-9c67-f8f4c377ef55}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="assets\spine.fx">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

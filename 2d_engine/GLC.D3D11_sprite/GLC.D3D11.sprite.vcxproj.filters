@@ -37,6 +37,7 @@
     <ClCompile Include="GameTimer.cpp">
       <Filter>s</Filter>
     </ClCompile>
+    <ClCompile Include="SceneSpine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D3DApp.h">
@@ -55,6 +56,7 @@
     <ClInclude Include="GameTimer.h">
       <Filter>s</Filter>
     </ClInclude>
+    <ClInclude Include="SceneSpine.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\simple.fx">
@@ -66,5 +68,10 @@
     <Image Include="assets\seafloor.dds">
       <Filter>assets</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="assets\spine.fx">
+      <Filter>assets</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
