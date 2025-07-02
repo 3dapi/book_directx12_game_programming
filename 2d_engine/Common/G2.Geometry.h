@@ -24,6 +24,23 @@ namespace G2 {
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------
 // vertex format
 
+struct VTX2D_DT			// P:position, D: diffuse T: texture coord
+{
+	XMFLOAT2 p;
+	uint32_t d;
+	XMFLOAT2 t;
+
+	VTX2D_DT() = default;
+	VTX2D_DT(const XMFLOAT2& _p, const uint32_t _d, const XMFLOAT2& _t) : p{ _p }, d{ _d }, t{ _t } {}
+
+	inline static const std::array<const D3D12_INPUT_ELEMENT_DESC, 3> INPUT_LAYOUT
+	{{
+		{ "POSITION" , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0                                                     , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOR"    , 0, DXGI_FORMAT_R8G8B8A8_UNORM , 0, 0+sizeof(XMFLOAT2)                                    , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD" , 0, DXGI_FORMAT_R32G32_FLOAT   , 0, 0+sizeof(XMFLOAT2)+sizeof(uint32_t)                   , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	}};
+};
+
 struct VTX2D_DTI		// P:position, D: diffuse T: texture I:seperate texture index
 {
 	XMFLOAT2 p;

@@ -14,6 +14,7 @@
 #include "SceneGameMesh.h"
 #include "SceneXtkGame.h"
 #include "SceneSpine.h"
+#include "SceneSample2D.h"
 
 static MainApp* g_pMain{};
 G2::IG2AppFrame* G2::IG2AppFrame::instance()
@@ -127,9 +128,19 @@ int MainApp::init(const std::any& initialValue /* = */)
 		auto scene = std::make_unique<SceneSpine>();
 		if(scene)
 		{
+			//if(SUCCEEDED(scene->Init()))
+			{
+				//m_pSceneSpine = std::move(scene);
+			}
+		}
+	}
+	{
+		auto scene=std::make_unique<SceneSample2D>();
+		if(scene)
+		{
 			if(SUCCEEDED(scene->Init()))
 			{
-				m_pSceneSpine = std::move(scene);
+				m_pSceneSample = std::move(scene);
 			}
 		}
 	}
@@ -174,6 +185,9 @@ int MainApp::Update(const std::any& t)
 	if(m_pSceneSpine)
 		m_pSceneSpine->Update(t);
 
+	if(m_pSceneSample)
+		m_pSceneSample->Update(t);
+
 	return S_OK;
 }
 
@@ -184,7 +198,7 @@ int MainApp::Render()
 	auto d3dDevice       = std::any_cast<ID3D12Device*              >(d3d->getDevice());
 	auto d3dCommandList  = std::any_cast<ID3D12GraphicsCommandList* >(d3d->getCommandList());
 	auto d3dCommandAlloc = std::any_cast<ID3D12CommandAllocator*    >(d3d->getCommandAllocator());
-	auto commandQue   = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
+	auto commandQue      = std::any_cast<ID3D12CommandQueue*        >(d3d->getCommandQueue());
 	auto d3dViewport     = std::any_cast<D3D12_VIEWPORT*            >(d3d->getAttrib(ATT_DEVICE_VIEWPORT));
 	auto d3dScissor      = std::any_cast<D3D12_RECT*                >(d3d->getAttrib(ATT_DEVICE_SCISSOR_RECT));
 	auto d3dBackBuffer   = std::any_cast<ID3D12Resource*            >(d3d->getCurrentBackBuffer());
@@ -227,6 +241,9 @@ int MainApp::Render()
 		m_pSceneXKT->Render();
 	if(m_pSceneSpine)
 		m_pSceneSpine->Render();
+
+	if(m_pSceneSample)
+		m_pSceneSample->Render();
 
 
 	// Indicate a state transition on the resource usage.

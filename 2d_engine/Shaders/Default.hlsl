@@ -6,7 +6,7 @@ SamplerState gsamLinearClamp      : register(s3);
 SamplerState gsamAnisotropicWrap  : register(s4);
 SamplerState gsamAnisotropicClamp : register(s5);
 
-Texture2D    gTexDiifuse : register(t0);
+Texture2D    gTexDiffuse : register(t0);
 
 cbuffer cbTrs : register(b0)
 {
@@ -54,7 +54,7 @@ PS_IN VS(VS_IN vin)
 
 float4 PS(PS_IN pin) : SV_Target
 {
-	float4 diffuse = gTexDiifuse.Sample(gsamAnisotropicWrap, pin.t) * gDiffAlbedo;
+	float4 diffuse = gTexDiffuse.Sample(gsamAnisotropicWrap, pin.t) * gDiffAlbedo;
 	clip(diffuse.a - 0.1f);
 	return diffuse;
 }

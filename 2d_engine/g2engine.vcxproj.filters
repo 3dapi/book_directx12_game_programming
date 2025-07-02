@@ -16,9 +16,6 @@
     <Filter Include="assets">
       <UniqueIdentifier>{7c3405bb-5876-4a15-9d39-5194a7d4995a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\spine-glfw">
-      <UniqueIdentifier>{767c6833-9cd9-43ab-a0c0-fec11664a91e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="_main.cpp">
@@ -75,8 +72,8 @@
     <ClCompile Include="SceneSpine.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="spine-glfw\spine-glfw.cpp">
-      <Filter>src\spine-glfw</Filter>
+    <ClCompile Include="SceneSample2D.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -149,20 +146,14 @@
     <ClInclude Include="SceneXtkGame.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="StepTimer.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="AppCommonXTK.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="SceneSpine.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="spine-glfw\spine-glfw.h">
-      <Filter>src\spine-glfw</Filter>
-    </ClInclude>
-    <ClInclude Include="spine-glfw\stb_image.h">
-      <Filter>src\spine-glfw</Filter>
+    <ClInclude Include="SceneSample2D.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -170,6 +161,9 @@
       <Filter>res</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\2dsprite.hlsl">
+      <Filter>res</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\spine.fx">
       <Filter>res</Filter>
     </FxCompile>
   </ItemGroup>

@@ -55,7 +55,7 @@ int VtxSequenceSpine::resourceBinding(int order, void* attachment, ESPINE_ATTACH
 		if(FAILED(hr))
 			return hr;
 
-		primitve = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+		primitive = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 	}
 	// index buffer
 	if(indexCount)
@@ -69,7 +69,7 @@ int VtxSequenceSpine::resourceBinding(int order, void* attachment, ESPINE_ATTACH
 		if(FAILED(hr))
 			return hr;
 
-		primitve = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		primitive = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	}
 	return S_OK;
 }
@@ -80,7 +80,7 @@ int VtxSequenceSpine::draw(ID3D11DeviceContext* d3dContext, ID3D11ShaderResource
 	UINT strides[] ={sizeof(XMFLOAT2), sizeof(uint32_t), sizeof(XMFLOAT2)};
 	UINT offsets[] ={0,0,0};
 	d3dContext->IASetVertexBuffers(0, 3, buffers, strides, offsets);
-	d3dContext->IASetPrimitiveTopology(primitve);
+	d3dContext->IASetPrimitiveTopology(primitive);
 	d3dContext->PSSetShaderResources(0,1,&texSRV);
 	if(countIdx)
 	{

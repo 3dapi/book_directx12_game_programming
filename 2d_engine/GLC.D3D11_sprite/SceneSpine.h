@@ -25,7 +25,7 @@ struct VtxSequenceSpine
 	ID3D11Buffer*	bufIdx		{};
 	size_t			countVtx	{};
 	size_t			countIdx	{};
-	D3D_PRIMITIVE_TOPOLOGY	primitve {D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP};
+	D3D_PRIMITIVE_TOPOLOGY	primitive {D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP};
 	~VtxSequenceSpine()	{
 		G2::SAFE_RELEASE(bufPos);
 		G2::SAFE_RELEASE(bufTex);

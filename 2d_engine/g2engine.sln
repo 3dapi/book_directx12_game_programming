@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTK12", "3rdparty\Dir
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spine-cpp", "3rdparty\spine-cpp\spine-cpp.vcxproj", "{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3rdparty", "3rdparty", "{0F134572-9365-4639-8460-FD2FD4608144}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -68,6 +70,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3049D276-BC04-419E-B8E7-1842BF09A49E} = {0F134572-9365-4639-8460-FD2FD4608144}
+		{3D2F4E62-79E0-4B6C-9C67-F8F4C377EF55} = {0F134572-9365-4639-8460-FD2FD4608144}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {98DF29D9-F2AE-419A-9EBB-EB70D79FE1F0}

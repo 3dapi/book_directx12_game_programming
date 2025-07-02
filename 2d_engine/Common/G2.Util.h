@@ -113,6 +113,9 @@ inline void debugToOutputWindow(const char* format, ...)
 	va_end(args);
 }
 
+void avx2_memcpy(void* dst, const void* src, size_t size);	// avx2 메모리 복사: memcpy 대신
+void avx2_memset32(void* dst, int32_t val, size_t count);	// 32bit 값 채우기: memset 대신.
+
 inline UINT alignTo256(UINT byteSize)
 {
 	// Constant buffers must be a multiple of the minimum hardware

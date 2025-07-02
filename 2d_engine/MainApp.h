@@ -46,4 +46,5 @@ protected:
 	unique_ptr<IG2Scene>					m_pSceneMesh	{};
 	unique_ptr<IG2Scene>					m_pSceneXKT		{};
 	unique_ptr<IG2Scene>					m_pSceneSpine	{};
+	unique_ptr<IG2Scene>					m_pSceneSample	{};
 };

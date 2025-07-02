@@ -183,8 +183,8 @@ int SceneXtkGame::Update(const std::any& t)
 static bool isFirstRender = true;
 int SceneXtkGame::Render()
 {
-	auto d3d = IG2GraphicsD3D::instance();
-	auto device    = std::any_cast<ID3D12Device*>(d3d->getDevice());
+	auto d3d          =  IG2GraphicsD3D::instance();
+	auto device       = std::any_cast<ID3D12Device*>(d3d->getDevice());
 	auto commandList  = std::any_cast<ID3D12GraphicsCommandList*>(d3d->getCommandList());
 
 	// Don't try to render anything before the first Update.
@@ -320,62 +320,11 @@ void SceneXtkGame::CreateDeviceDependentResources()
 
 		resourceUpload.Begin();
 
-		m_model->LoadStaticBuffers(device,resourceUpload);
-
-		ThrowIfFailed(CreateDDSTextureFromFile(device,resourceUpload,L"assets/seafloor.dds",m_texture1.ReleaseAndGetAddressOf()) );
-		CreateShaderResourceView(device,m_texture1.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::SeaFloor));
 		ThrowIfFailed( CreateWICTextureFromFileEx(device,resourceUpload,L"assets/texture/res_checker.png", 0, D3D12_RESOURCE_FLAG_NONE, WIC_LOADER_DEFAULT, m_checkerRsc.ReleaseAndGetAddressOf()) );
-
 		CreateShaderResourceView(device,m_checkerRsc.Get(),m_resourceDescriptors->GetCpuHandle(Descriptors::WindowsLogo));
 
-		const RenderTargetState rtState(formatBackBuffer, formatDepthBuffer);
-		{
-			SpriteBatchPipelineStateDescription pd(rtState);
-			m_sprites = std::make_unique<SpriteBatch>(device,resourceUpload,pd);
-		}
 
-		{
-			EffectPipelineStateDescription pd(
-				&VertexPositionColor::InputLayout,
-				CommonStates::Opaque,
-				CommonStates::DepthNone,
-				CommonStates::CullNone,
-				rtState,
-				D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
-			m_lineEffect = std::make_unique<BasicEffect>(device,EffectFlags::VertexColor,pd);
-		}
-
-		{
-			EffectPipelineStateDescription pd(
-				&GeometricPrimitive::VertexType::InputLayout,
-				CommonStates::Opaque,
-				CommonStates::DepthDefault,
-				CommonStates::CullNone,
-				rtState);
-
-			m_shapeEffect = std::make_unique<BasicEffect>(device,EffectFlags::PerPixelLighting | EffectFlags::Texture,pd);
-			m_shapeEffect->EnableDefaultLighting();
-			m_shapeEffect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::SeaFloor),m_states->LinearWrap());
-		}
-
-		m_modelResources = m_model->LoadTextures(device,resourceUpload, L"assets");
-
-		{
-			const EffectPipelineStateDescription psd(
-				nullptr,
-				CommonStates::Opaque,
-				CommonStates::DepthDefault,
-				CommonStates::CullNone,
-				rtState);
-
-			m_modelEffects = m_model->CreateEffects(psd,psd,m_modelResources->Heap(),m_states->Heap());
-		}
-
-		m_font = std::make_unique<SpriteFont>(device,resourceUpload,
-			L"assets/SegoeUI_18.spritefont",
-			m_resourceDescriptors->GetCpuHandle(Descriptors::SegoeFont),
-			m_resourceDescriptors->GetGpuHandle(Descriptors::SegoeFont));
 
 		// Upload the resources to the GPU.
 		auto cmdQueue      = std::any_cast<ID3D12CommandQueue*>(d3d->getCommandQueue());
@@ -384,7 +333,6 @@ void SceneXtkGame::CreateDeviceDependentResources()
 		// Wait for the command list to finish executing
 		d3d->command(EG2GRAPHICS_D3D::CMD_WAIT_GPU);
 		
-		// Wait for the upload thread to terminate
 		uploadResourcesFinished.wait();
 	}
 }

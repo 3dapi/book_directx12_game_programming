@@ -167,11 +167,11 @@
     <ClCompile Include="Common\GameTimer.cpp" />
     <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\G2.EngineD3D.cpp" />
+    <ClCompile Include="SceneSample2D.cpp" />
     <ClCompile Include="SceneSpine.cpp" />
     <ClCompile Include="SceneXtkGame.cpp" />
     <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="SceneGameMesh.cpp" />
-    <ClCompile Include="spine-glfw\spine-glfw.cpp" />
     <ClCompile Include="_main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -195,14 +195,12 @@
     <ClInclude Include="Common\G2.EngineD3D.h" />
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
+    <ClInclude Include="SceneSample2D.h" />
     <ClInclude Include="SceneSpine.h" />
     <ClInclude Include="SceneXtkGame.h" />
     <ClInclude Include="ShaderUploadChain.h" />
     <ClInclude Include="MainApp.h" />
     <ClInclude Include="SceneGameMesh.h" />
-    <ClInclude Include="spine-glfw\spine-glfw.h" />
-    <ClInclude Include="spine-glfw\stb_image.h" />
-    <ClInclude Include="StepTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\2dsprite.hlsl">
@@ -214,6 +212,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\spine.fx">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
